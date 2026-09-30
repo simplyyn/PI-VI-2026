@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}SmartBiz AI — Configurações{% endblock %}
+
+{% block content %}
+<div class="config-container">
+
+  <!-- Abas laterais -->
+  <div class="config-tabs">
+    <button class="config-tab-btn active" onclick="showTab('perfil', this)">
+      <i data-lucide="building-2"></i> Perfil do Negócio
+    </button>
+    <button class="config-tab-btn" onclick="showTab('ia', this)">
+      <i data-lucide="bot"></i> Configurações da IA
+    </button>
+    <button class="config-tab-btn" onclick="showTab('integracoes', this)">
+      <i data-lucide="plug"></i> Integrações
+    </button>
+    <button class="config-tab-btn" onclick="showTab('notificacoes', this)">
+      <i data-lucide="bell"></i> Notificações
+    </button>
+  </div>
+
+  <!-- Conteúdo das abas -->
+  <div class="config-content">
+
+    <!-- Perfil -->
+    <div class="config-panel" id="tab-perfil">
+      <div class="config-section">
+        <div class="config-section-title">Informações do Negócio</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nome do Negócio</label>
+            <input type="text" value="Padaria do João">
+          </div>
+          <div class="form-group">
+            <label>CNPJ</label>
+            <input type="text" value="12.345.678/0001-90">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Telefone</label>
+            <input type="text" value="(11) 99999-0001">
+          </div>
+          <div class="form-group">
+            <label>E-mail de contato</label>
+            <input type="email" value="contato@padariadojoao.com.br">
+          </div>
+        </div>
+        <div class="form-row" style="grid-template-columns: 1fr;">
+          <div class="form-group">
+            <label>Endereço</label>
+            <input type="text" value="Rua das Flores, 123 — Campinas, SP">
+          </div>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <div class="config-section-title">Horários de Funcionamento</div>
+        <div class="horarios-grid">
+          {% for dia, horario in [('Segunda a Sexta', '07:00 – 19:00'), ('Sábado', '07:00 – 15:00'), ('Domingo', '07:00 – 13:00')] %}
+          <div class="horario-row">
+            <span class="horario-dia">{{ dia }}</span>
+            <input type="text" class="horario-input" value="{{ horario }}">
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button class="btn-primary">Salvar alterações</button>
+      </div>
+    </div>
+
+    <!-- IA -->
+    <div class="config-panel hidden" id="tab-ia">
+      <div class="config-section">
+        <div class="config-section-title">Comportamento do Assistente</div>
+        <div class="form-row" style="grid-template-columns: 1fr;">
+          <div class="form-group">
+            <label>Tom de voz</label>
+            <select>
+              <option>Amigável e informal</option>
+              <option>Profissional e formal</option>
+              <option>Técnico e objetivo</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row" style="grid-template-columns: 1fr;">
+          <div class="form-group">
+            <label>Mensagem de boas-vindas</label>
+            <textarea>Olá! Sou o assistente virtual da Padaria do João. Como posso te ajudar hoje? 😊</textarea>
+          </div>
+        </div>
+        <div class="config-toggle-row">
+          <div>
+            <strong>Escalar automaticamente</strong>
+            <p>Encaminha para atendente humano quando a IA não tem confiança suficiente na resposta</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="config-toggle-row">
+          <div>
+            <strong>Resumo automático</strong>
+            <p>Gera um resumo da conversa ao finalizar cada atendimento</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="config-toggle-row">
+          <div>
+            <strong>Responder fora do horário</strong>
+            <p>A IA continua respondendo fora do horário de funcionamento informando o horário disponível</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end;">
+        <button class="btn-primary">Salvar alterações</button>
+      </div>
+    </div>
+
+    <!-- Integrações -->
+    <div class="config-panel hidden" id="tab-integracoes">
+      <div class="config-section">
+        <div class="config-section-title">Canais de Atendimento</div>
+        <div class="integration-list">
+          {% set integracoes = [
+            {'nome': 'WhatsApp Business', 'icon': 'message-circle', 'status': True,  'detalhe': 'Conectado · +55 11 99999-0001'},
+            {'nome': 'Instagram DM',      'icon': 'camera',         'status': False, 'detalhe': 'Não conectado'},
+            {'nome': 'E-mail',            'icon': 'mail',           'status': True,  'detalhe': 'contato@padariadojoao.com.br'},
+            {'nome': 'Webchat (site)',    'icon': 'globe',          'status': True,  'detalhe': 'Widget ativo · 3 sessões abertas'}
+          ] %}
+          {% for i in integracoes %}
+          <div class="integration-item">
+            <div class="integration-icon {% if i.status %}connected{% endif %}">
+              <i data-lucide="{{ i.icon }}"></i>
+            </div>
+            <div class="integration-info">
+              <strong>{{ i.nome }}</strong>
+              <span>{{ i.detalhe }}</span>
+            </div>
+            <label class="toggle" style="margin-left:auto;">
+              <input type="checkbox" {% if i.status %}checked{% endif %}>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Notificações -->
+    <div class="config-panel hidden" id="tab-notificacoes">
+      <div class="config-section">
+        <div class="config-section-title">Alertas e Notificações</div>
+        {% for texto, ativo in [
+          ('Atendimento escalado para humano', True),
+          ('Novo atendimento sem resposta por +10 min', True),
+          ('Relatório semanal por e-mail', True),
+          ('Alerta de palavras-chave sensíveis', False),
+          ('Resumo diário via WhatsApp', False)
+        ] %}
+        <div class="config-toggle-row">
+          <div><strong>{{ texto }}</strong></div>
+          <label class="toggle">
+            <input type="checkbox" {% if ativo %}checked{% endif %}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="display:flex; justify-content:flex-end;">
+        <button class="btn-primary">Salvar preferências</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function showTab(name, btn) {
+    document.querySelectorAll('.config-panel').forEach(p => p.classList.add('hidden'));
+    document.querySelectorAll('.config-tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.remove('hidden');
+    btn.classList.add('active');
+  }
+</script>
+{% endblock %}

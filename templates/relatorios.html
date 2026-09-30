@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}SmartBiz AI — Relatórios & IA{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h1>Relatórios & IA</h1>
+      <p class="page-subtitle">Últimos 7 dias · Atualizado agora</p>
+    </div>
+    <div class="date-filter">
+      <button class="date-btn active">7 dias</button>
+      <button class="date-btn">30 dias</button>
+      <button class="date-btn">90 dias</button>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <section class="metrics-grid" style="margin-bottom: 24px;">
+      <div class="card metric">
+        <div class="card-icon blue"><i data-lucide="message-circle"></i></div>
+        <div class="metric-info">
+          <h3>{{ metricas.atendimentos_semana }}</h3>
+          <p>Total de atendimentos</p>
+        </div>
+      </div>
+      <div class="card metric">
+        <div class="card-icon green"><i data-lucide="bot"></i></div>
+        <div class="metric-info">
+          <h3>{{ metricas.taxa_automatizacao }}%</h3>
+          <p>Automatizados pela IA</p>
+        </div>
+      </div>
+      <div class="card metric">
+        <div class="card-icon orange"><i data-lucide="clock"></i></div>
+        <div class="metric-info">
+          <h3>{{ metricas.tempo_resposta }}</h3>
+          <p>Tempo médio de resposta</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">Atendimentos por dia</span>
+          <span class="badge badge-ai">IA vs Humano</span>
+        </div>
+        <canvas id="chartLine" height="110"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span class="chart-card-title">IA vs Humano</span>
+        </div>
+        <div style="display:flex; justify-content:center; align-items:center; height: 190px;">
+          <canvas id="chartDoughnut"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom: 24px;">
+      <div class="chart-card-header">
+        <span class="chart-card-title">Principais tópicos de dúvidas</span>
+      </div>
+      <canvas id="chartBar" height="80"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>💡 Análise da IA sobre este período</h3>
+      </div>
+      <div class="insights-container">
+        <div class="insight-item warning">
+          <i data-lucide="trending-up"></i>
+          <div>
+            <h4>Pico de atendimentos na quarta-feira</h4>
+            <p>O volume foi 40% acima da média semanal. Considere reforçar a base de conhecimento com respostas para dúvidas de frete antes das quartas.</p>
+            <button class="btn-action">Ver detalhes</button>
+          </div>
+        </div>
+        <div class="insight-item success">
+          <i data-lucide="zap"></i>
+          <div>
+            <h4>IA respondeu {{ metricas.taxa_automatizacao }}% sem intervenção</h4>
+            <p>Os artigos "Prazo de Entrega" e "Formas de Pagamento" foram os mais acessados pela IA esta semana.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const isDark      = document.documentElement.classList.contains('dark');
+  const textColor   = isDark ? '#64748b' : '#94a3b8';
+  const gridColor   = isDark ? '#1e2235' : '#e2e8f0';
+  const primary     = isDark ? '#818cf8' : '#4f46e5';
+  const accent      = isDark ? '#fb923c' : '#f97316';
+
+  Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+  Chart.defaults.font.size   = 12;
+
+  new Chart(document.getElementById('chartLine'), {
+    type: 'line',
+    data: {
+      labels: {{ grafico.labels | tojson }},
+      datasets: [
+        {
+          label: 'IA',
+          data: {{ grafico.ia | tojson }},
+          borderColor: primary,
+          backgroundColor: primary + '1a',
+          borderWidth: 2.5,
+          tension: 0.45,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: primary,
+        },
+        {
+          label: 'Humano',
+          data: {{ grafico.humano | tojson }},
+          borderColor: accent,
+          backgroundColor: accent + '1a',
+          borderWidth: 2,
+          tension: 0.45,
+          fill: true,
+          pointRadius: 3,
+          pointBackgroundColor: accent,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: textColor } } },
+      scales: {
+        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+        y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('chartDoughnut'), {
+    type: 'doughnut',
+    data: {
+      labels: ['IA', 'Humano'],
+      datasets: [{
+        data: [{{ metricas.taxa_automatizacao }}, {{ 100 - metricas.taxa_automatizacao }}],
+        backgroundColor: [primary, accent],
+        borderWidth: 0,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '72%',
+      plugins: { legend: { position: 'bottom', labels: { color: textColor, padding: 16 } } }
+    }
+  });
+
+  new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+      labels: {{ grafico.topicos.labels | tojson }},
+      datasets: [{
+        label: 'Atendimentos',
+        data: {{ grafico.topicos.valores | tojson }},
+        backgroundColor: primary + 'cc',
+        borderRadius: 8,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: textColor }, grid: { display: false } },
+        y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+      }
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartBiz AI — Painel Admin</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    (function () {
+      var d = localStorage.getItem('smartbiz-dark');
+      if (d === '1') document.documentElement.classList.add('dark');
+    })();
+  </script>
+</head>
+<body>
+<div class="app-container">
+
+  <!-- Sidebar Admin -->
+  <aside class="sidebar">
+    <div>
+      <div class="logo">
+        <div class="logo-brand">
+          <i data-lucide="bot"></i>
+          <h2>Smart<span>Biz</span></h2>
+        </div>
+        <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
+          <i data-lucide="bot"></i>
+        </button>
+      </div>
+
+      <div class="admin-role-badge">
+        <i data-lucide="shield-check"></i> Painel Administrativo
+      </div>
+
+      <nav class="menu">
+        <a href="/admin" class="active">
+          <i data-lucide="building-2"></i> Empresas
+        </a>
+        <a href="#">
+          <i data-lucide="users"></i> Usuários
+        </a>
+        <a href="#">
+          <i data-lucide="bar-chart-2"></i> Métricas Globais
+        </a>
+        <a href="#">
+          <i data-lucide="settings"></i> Configurações
+        </a>
+      </nav>
+    </div>
+
+    <div class="user-profile">
+      <div class="avatar">{{ usuario.iniciais }}</div>
+      <div class="user-info">
+        <h4>{{ usuario.nome }}</h4>
+        <span>Administrador</span>
+      </div>
+      <a href="/logout" class="btn-logout" title="Sair">
+        <i data-lucide="log-out"></i>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Conteúdo -->
+  <div class="page-container">
+
+    <div class="page-header">
+      <div>
+        <h1>Empresas Cadastradas</h1>
+        <p class="page-subtitle">{{ empresas | length }} empresas · {{ empresas | selectattr('suporte') | list | length }} aguardando suporte</p>
+      </div>
+      <button class="btn-primary">
+        <i data-lucide="plus"></i> Nova Empresa
+      </button>
+    </div>
+
+    <div class="page-body">
+
+      {% for emp in empresas %}
+      <div class="admin-empresa-card {% if emp.suporte %}suporte-ativo{% endif %}">
+
+        <div class="admin-empresa-info">
+          <div class="admin-empresa-avatar">
+            {{ emp.nome[:2].upper() }}
+          </div>
+          <div>
+            <div class="admin-empresa-nome">
+              {{ emp.nome }}
+              {% if emp.suporte %}
+              <span class="badge badge-escalated" style="margin-left:8px;">Suporte solicitado</span>
+              {% endif %}
+            </div>
+            <div class="admin-empresa-meta">
+              Plano {{ emp.plano }} · {{ emp.atendimentos_mes }} atendimentos este mês
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-empresa-acoes">
+          <span class="badge {% if emp.status == 'ativo' %}badge-resolved{% else %}badge-pending{% endif %}">
+            {{ emp.status | capitalize }}
+          </span>
+          {% if emp.suporte %}
+          <button class="btn-primary" style="padding: 8px 14px; font-size: 12px;">
+            <i data-lucide="headphones"></i> Iniciar Suporte
+          </button>
+          {% else %}
+          <button class="btn-icon" title="Ver conta">
+            <i data-lucide="eye"></i>
+          </button>
+          {% endif %}
+        </div>
+
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  lucide.createIcons();
+
+  function toggleDark() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    document.getElementById('btn-dark-toggle').classList.toggle('active', isDark);
+    localStorage.setItem('smartbiz-dark', isDark ? '1' : '');
+  }
+
+  if (localStorage.getItem('smartbiz-dark') === '1') {
+    document.getElementById('btn-dark-toggle').classList.add('active');
+  }
+
+  document.querySelectorAll('a[href]').forEach(link => {
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('http')) return;
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const c = document.querySelector('.app-container');
+      c.classList.add('page-exit');
+      setTimeout(() => { window.location.href = link.getAttribute('href'); }, 300);
+    });
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const c = document.querySelector('.app-container');
+    c.classList.add('page-enter');
+    c.addEventListener('animationend', () => c.classList.remove('page-enter'), { once: true });
+  });
+</script>
+</body>
+</html>

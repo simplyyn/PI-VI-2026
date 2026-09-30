@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}SmartBiz AI — Início{% endblock %}
+
+{% block content %}
+<main class="main-content">
+
+  <header class="top-header">
+    <div class="welcome-text">
+      <h1>Olá, João! 👋</h1>
+      <p>Seu assistente virtual já realizou <strong>{{ metricas.total_hoje }} atendimentos</strong> hoje.</p>
+    </div>
+    <div class="status-badge">
+      <span class="dot"></span> IA Operacional
+    </div>
+  </header>
+
+  <section class="ai-assistant-card">
+    <div class="ai-header">
+      <div class="ai-title">
+        <i data-lucide="sparkles"></i>
+        <h3>Pergunte ou peça algo ao seu Assistente</h3>
+      </div>
+      <span class="tag">Base de dados atualizada</span>
+    </div>
+    <div class="ai-input-group">
+      <input type="text" placeholder="Ex: 'Resuma os principais motivos de reclamação desta semana' ou 'Qual o prazo de entrega para Campinas?'">
+      <button><i data-lucide="send"></i> Perguntar</button>
+    </div>
+  </section>
+
+  <section class="metrics-grid">
+    <div class="card metric">
+      <div class="card-icon blue"><i data-lucide="message-circle"></i></div>
+      <div class="metric-info">
+        <h3>{{ metricas.atendimentos_semana }}</h3>
+        <p>Dúvidas respondidas (semana)</p>
+      </div>
+    </div>
+    <div class="card metric">
+      <div class="card-icon green"><i data-lucide="check-circle"></i></div>
+      <div class="metric-info">
+        <h3>{{ metricas.taxa_automatizacao }}%</h3>
+        <p>Respostas sem intervenção humana</p>
+      </div>
+    </div>
+    <div class="card metric">
+      <div class="card-icon orange"><i data-lucide="alert-circle"></i></div>
+      <div class="metric-info">
+        <h3>Prazo de Entrega</h3>
+        <p>Principal dúvida do dia</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-grid">
+    <div class="card dashboard-card">
+      <div class="card-header">
+        <h3>Últimas Interações da IA</h3>
+        <a href="/atendimentos" class="link-more">Ver todos</a>
+      </div>
+      <ul class="recent-list">
+        {% for at in atendimentos %}
+        <li class="chat-item">
+          <div class="chat-info">
+            <strong>{{ at.cliente }}: "{{ at.preview }}"</strong>
+            <p><span>IA Respondeu</span> · {{ at.hora }}</p>
+          </div>
+          <span class="time">{{ at.hora }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card dashboard-card">
+      <div class="card-header">
+        <h3>💡 Insights & Sugestões da IA</h3>
+      </div>
+      <div class="insights-container">
+        <div class="insight-item warning">
+          <i data-lucide="trending-up"></i>
+          <div>
+            <h4>Aumento de dúvidas sobre Frete</h4>
+            <p>3 clientes perguntaram sobre taxas para a região norte. Deseja cadastrar essa tabela na Base de Conhecimento?</p>
+            <button class="btn-action">Atualizar Base</button>
+          </div>
+        </div>
+        <div class="insight-item success">
+          <i data-lucide="smile"></i>
+          <div>
+            <h4>Satisfação Alta</h4>
+            <p>O tempo médio de resposta caiu para {{ metricas.tempo_resposta }} com a automação.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+{% endblock %}

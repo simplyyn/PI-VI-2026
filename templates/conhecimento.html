@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}SmartBiz AI — Base de Conhecimento{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h1>Base de Conhecimento</h1>
+      <p class="page-subtitle">{{ artigos | length }} artigos cadastrados · usados pela IA para responder clientes</p>
+    </div>
+    <button class="btn-primary">
+      <i data-lucide="plus"></i> Novo Artigo
+    </button>
+  </div>
+
+  <div class="page-body">
+
+    <div class="kb-filters">
+      <input type="text" class="search-input kb-search" placeholder="Buscar artigo...">
+      <div class="filter-tabs" style="flex-shrink: 0;">
+        <button class="filter-tab active">Todos</button>
+        <button class="filter-tab">Logística</button>
+        <button class="filter-tab">Financeiro</button>
+        <button class="filter-tab">Pós-venda</button>
+        <button class="filter-tab">Geral</button>
+      </div>
+    </div>
+
+    <table class="kb-table">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Categoria</th>
+          <th>Visualizações pela IA</th>
+          <th>Última atualização</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for artigo in artigos %}
+        <tr>
+          <td>
+            <div class="kb-title-cell">
+              <i data-lucide="file-text"></i>
+              {{ artigo.titulo }}
+            </div>
+          </td>
+          <td><span class="badge-category">{{ artigo.categoria }}</span></td>
+          <td>
+            <span class="views-count">
+              <i data-lucide="eye"></i> {{ artigo.views }}
+            </span>
+          </td>
+          <td style="color: var(--text-secondary); font-size: 12px;">{{ artigo.atualizado }}</td>
+          <td>
+            <label class="toggle">
+              <input type="checkbox" {% if artigo.status %}checked{% endif %}>
+              <span class="toggle-slider"></span>
+            </label>
+          </td>
+          <td>
+            <div class="kb-actions">
+              <button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button>
+              <button class="btn-icon danger" title="Excluir"><i data-lucide="trash-2"></i></button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+</div>
+{% endblock %}

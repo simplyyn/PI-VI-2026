@@ -14,13 +14,23 @@
     <!-- Menu Lateral (Sidebar) -->
     <aside class="sidebar">
       <div class="logo">
-        <i data-lucide="bot"></i>
-        <h2>Smart<span>Biz</span></h2>
+        <div class="logo-brand">
+          <i data-lucide="bot"></i>
+          <h2>Smart<span>Biz</span></h2>
+        </div>
+        <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
+          <i data-lucide="bot"></i>
+        </button>
+      </div>
+
+      <div class="theme-switcher" style="margin-top: 20px;">
+        <button class="theme-btn active" id="btn-negocio" onclick="setTheme('business')">Negócio</button>
+        <button class="theme-btn" id="btn-hospital" onclick="setTheme('hospital')">Hospital</button>
       </div>
 
       <nav class="menu">
-        <a href="#" class="active"><i data-lucide="layout-dashboard"></i> Início</a>
-        <a href="#"><i data-lucide="message-square"></i> Atendimentos</a>
+        <a href="index.html" class="active"><i data-lucide="layout-dashboard"></i> Início</a>
+        <a href="atendimentos.html"><i data-lucide="message-square"></i> Atendimentos</a>
         <a href="#"><i data-lucide="database"></i> Base de Conhecimento</a>
         <a href="#"><i data-lucide="bar-chart-2"></i> Relatórios & IA</a>
         <a href="#"><i data-lucide="settings"></i> Configurações</a>
@@ -143,9 +153,102 @@
     </main>
   </div>
 
-  <!-- Ativação dos ícones Lucide -->
   <script>
     lucide.createIcons();
+
+    function setTheme(theme) {
+      document.getElementById('btn-negocio').classList.toggle('active', theme === 'business');
+      document.getElementById('btn-hospital').classList.toggle('active', theme === 'hospital');
+      const html = document.documentElement;
+      html.removeAttribute('data-theme');
+      if (theme === 'hospital') html.setAttribute('data-theme', 'hospital');
+      localStorage.setItem('smartbiz-theme', theme);
+    }
+
+    function spawnParticles(btn, type) {
+      const r = btn.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+
+      if (type === 'spark') {
+        const colors = ['#fbbf24','#f97316','#fef08a','#fb923c','#fde047','#ff6b35'];
+        for (let i = 0; i < 9; i++) {
+          const el = document.createElement('div');
+          el.className = 'particle particle-spark';
+          const angle = (i / 9) * 360 + (Math.random() * 20 - 10);
+          const dist = 20 + Math.random() * 30;
+          const rad = angle * Math.PI / 180;
+          const size = 3 + Math.random() * 4;
+          Object.assign(el.style, {
+            width: size + 'px', height: size + 'px',
+            background: colors[Math.floor(Math.random() * colors.length)],
+            left: (cx - size / 2) + 'px', top: (cy - size / 2) + 'px',
+            '--tx': (Math.cos(rad) * dist) + 'px',
+            '--ty': (Math.sin(rad) * dist) + 'px',
+            animationDelay: (Math.random() * 0.07) + 's'
+          });
+          document.body.appendChild(el);
+          el.addEventListener('animationend', () => el.remove());
+        }
+      } else {
+        const grays = ['rgba(148,163,184,0.75)','rgba(100,116,139,0.6)','rgba(203,213,225,0.55)'];
+        for (let i = 0; i < 5; i++) {
+          const el = document.createElement('div');
+          el.className = 'particle particle-smoke';
+          const drift = (Math.random() - 0.5) * 20;
+          const rise = -(26 + Math.random() * 34);
+          const size = 9 + Math.random() * 7;
+          Object.assign(el.style, {
+            width: size + 'px', height: size + 'px',
+            background: grays[Math.floor(Math.random() * grays.length)],
+            left: (cx + (Math.random() - 0.5) * 8 - size / 2) + 'px',
+            top: (cy - size / 2) + 'px',
+            '--tx': drift + 'px',
+            '--ty': rise + 'px',
+            animationDelay: (i * 0.09) + 's'
+          });
+          document.body.appendChild(el);
+          el.addEventListener('animationend', () => el.remove());
+        }
+      }
+    }
+
+    function toggleDark() {
+      const html = document.documentElement;
+      const isDark = html.classList.toggle('dark');
+      const btn = document.getElementById('btn-dark-toggle');
+      btn.classList.toggle('active', isDark);
+      localStorage.setItem('smartbiz-dark', isDark ? '1' : '');
+      spawnParticles(btn, isDark ? 'smoke' : 'spark');
+    }
+
+    const savedTheme = localStorage.getItem('smartbiz-theme');
+    if (savedTheme) setTheme(savedTheme);
+
+    if (localStorage.getItem('smartbiz-dark') === '1') {
+      document.documentElement.classList.add('dark');
+      document.getElementById('btn-dark-toggle').classList.add('active');
+    }
+
+    // Transição de entrada
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = document.querySelector('.app-container');
+      c.classList.add('page-enter');
+      c.addEventListener('animationend', () => c.classList.remove('page-enter'), { once: true });
+    });
+
+    // Transição de saída ao navegar
+    document.querySelectorAll('a[href]').forEach(link => {
+      const href = link.getAttribute('href');
+      if (!href || href.startsWith('#') || href.startsWith('http')) return;
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const target = link.getAttribute('href');
+        const c = document.querySelector('.app-container');
+        c.classList.add('page-exit');
+        setTimeout(() => { window.location.href = target; }, 300);
+      });
+    });
   </script>
 </body>
 </html>

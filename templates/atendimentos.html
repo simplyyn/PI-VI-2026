@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}SmartBiz AI — Atendimentos{% endblock %}
+
+{% block content %}
+<div class="atend-container">
+
+  <!-- Painel esquerdo: lista de conversas -->
+  <div class="conv-list-panel">
+    <div class="conv-list-header">
+      <div class="conv-list-top">
+        <div class="conv-list-title">
+          <h2>Atendimentos</h2>
+          <span class="count-badge">{{ atendimentos | length }}</span>
+        </div>
+      </div>
+      <input type="text" class="search-input" placeholder="Buscar conversa ou cliente...">
+      <div class="filter-tabs">
+        <button class="filter-tab active">Todos</button>
+        <button class="filter-tab">Pendentes</button>
+        <button class="filter-tab">Resolvidos</button>
+        <button class="filter-tab">Escalados</button>
+      </div>
+    </div>
+
+    <div class="conv-list">
+      {% for at in atendimentos %}
+      <div class="conv-item {% if loop.first %}active{% endif %}">
+        <div class="conv-avatar {% if at.cor %}{{ at.cor }}{% endif %}">{{ at.iniciais }}</div>
+        <div class="conv-body">
+          <div class="conv-row">
+            <span class="conv-name">{{ at.cliente }}</span>
+            <span class="conv-time">{{ at.hora }}</span>
+          </div>
+          <p class="conv-preview">{{ at.preview }}</p>
+          <div class="conv-tags">
+            <span class="badge badge-{{ at.status }}">
+              {% if at.status == 'resolved' %}Resolvido{% elif at.status == 'pending' %}Pendente{% else %}Escalado{% endif %}
+            </span>
+            <span class="badge badge-{{ at.canal }}">
+              {% if at.canal == 'ai' %}IA{% else %}Humano{% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Painel direito: detalhe da conversa -->
+  <div class="conv-detail-panel">
+    <div class="conv-detail-header">
+      <div class="conv-detail-info">
+        <div class="conv-detail-avatar">MS</div>
+        <div>
+          <div class="conv-detail-name">Maria Santos</div>
+          <div class="conv-detail-sub">
+            <span class="badge badge-resolved">Resolvido</span>
+            <span>14:20 — 14:23 · 4 mensagens · respondido pela IA</span>
+          </div>
+        </div>
+      </div>
+      <div class="conv-detail-actions">
+        <button class="btn-summary"><i data-lucide="sparkles"></i> Resumo da IA</button>
+        <button class="btn-escalate">Escalar</button>
+      </div>
+    </div>
+
+    <div class="ai-summary-card">
+      <div class="ai-summary-header">
+        <i data-lucide="sparkles"></i>
+        Resumo gerado pela IA
+      </div>
+      <p class="ai-summary-text">
+        Cliente consultou sobre <strong>prazo de entrega para o Rio de Janeiro</strong> e possibilidade de <strong>frete grátis</strong>.
+        A IA respondeu com as informações da base de conhecimento: prazo de 3 a 5 dias úteis e frete gratuito para compras acima de R$ 150,00.
+        Conversa encerrada com sucesso — nenhuma intervenção humana necessária.
+      </p>
+    </div>
+
+    <div class="messages-area">
+      <div class="message-row client">
+        <div class="msg-badge client-badge">MS</div>
+        <div class="message-content">
+          <div class="message-bubble">Oi! Qual o prazo de entrega para o Rio de Janeiro?</div>
+          <span class="msg-time">14:20</span>
+        </div>
+      </div>
+      <div class="message-row ai">
+        <div class="msg-badge">IA</div>
+        <div class="message-content">
+          <div class="message-bubble">Olá, Maria! Para o Rio de Janeiro, o prazo é de <strong>3 a 5 dias úteis</strong> após a confirmação do pagamento. O frete tem custo de R$ 18,90, mas é <strong>gratuito para compras acima de R$ 150,00</strong>.</div>
+          <span class="msg-time">14:20</span>
+        </div>
+      </div>
+      <div class="message-row client">
+        <div class="msg-badge client-badge">MS</div>
+        <div class="message-content">
+          <div class="message-bubble">Ótimo! E como faço para rastrear o pedido depois que fizer a compra?</div>
+          <span class="msg-time">14:22</span>
+        </div>
+      </div>
+      <div class="message-row ai">
+        <div class="msg-badge">IA</div>
+        <div class="message-content">
+          <div class="message-bubble">Assim que o pedido for despachado, você receberá um <strong>e-mail com o código de rastreamento</strong>. Se precisar de ajuda, é só me chamar com o número do pedido!</div>
+          <span class="msg-time">14:23</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input-bar">
+      <input type="text" placeholder="Responder como atendente humano...">
+      <button class="btn-suggest"><i data-lucide="sparkles"></i> Sugestão IA</button>
+      <button class="btn-send"><i data-lucide="send"></i> Enviar</button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

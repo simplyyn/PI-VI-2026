@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartBiz AI — Atendimentos</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div>
+        <div class="logo">
+          <div class="logo-brand">
+            <i data-lucide="bot"></i>
+            <h2>Smart<span>Biz</span></h2>
+          </div>
+          <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
+            <i data-lucide="bot"></i>
+          </button>
+        </div>
+
+        <div class="theme-switcher" style="margin-top: 20px;">
+          <button class="theme-btn active" id="btn-negocio" onclick="setTheme('business')">Negócio</button>
+          <button class="theme-btn" id="btn-hospital" onclick="setTheme('hospital')">Hospital</button>
+        </div>
+
+        <nav class="menu">
+          <a href="index.html"><i data-lucide="layout-dashboard"></i> Início</a>
+          <a href="atendimentos.html" class="active"><i data-lucide="message-square"></i> Atendimentos</a>
+          <a href="#"><i data-lucide="database"></i> Base de Conhecimento</a>
+          <a href="#"><i data-lucide="bar-chart-2"></i> Relatórios & IA</a>
+          <a href="#"><i data-lucide="settings"></i> Configurações</a>
+        </nav>
+      </div>
+
+      <div class="user-profile">
+        <div class="avatar">PC</div>
+        <div class="user-info">
+          <h4>Padaria do João</h4>
+          <span>Plano Pro</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Container de Atendimentos -->
+    <div class="atend-container">
+
+      <!-- Painel Esquerdo — Lista de Conversas -->
+      <div class="conv-list-panel">
+        <div class="conv-list-header">
+          <div class="conv-list-top">
+            <div class="conv-list-title">
+              <h2>Atendimentos</h2>
+              <span class="count-badge">12</span>
+            </div>
+          </div>
+
+          <input type="text" class="search-input" placeholder="Buscar conversa ou cliente...">
+
+          <div class="filter-tabs">
+            <button class="filter-tab active">Todos</button>
+            <button class="filter-tab">Pendentes</button>
+            <button class="filter-tab">Resolvidos</button>
+            <button class="filter-tab">Escalados</button>
+          </div>
+        </div>
+
+        <div class="conv-list">
+
+          <div class="conv-item active">
+            <div class="conv-avatar">MS</div>
+            <div class="conv-body">
+              <div class="conv-row">
+                <span class="conv-name">Maria Santos</span>
+                <span class="conv-time">14:23</span>
+              </div>
+              <p class="conv-preview">Qual o prazo de entrega para o Rio?</p>
+              <div class="conv-tags">
+                <span class="badge badge-resolved">Resolvido</span>
+                <span class="badge badge-ai">IA</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="conv-item">
+            <div class="conv-avatar red">CO</div>
+            <div class="conv-body">
+              <div class="conv-row">
+                <span class="conv-name">Carlos Oliveira</span>
+                <span class="conv-time">13:50</span>
+              </div>
+              <p class="conv-preview">Quero cancelar meu pedido urgente</p>
+              <div class="conv-tags">
+                <span class="badge badge-escalated">Escalado</span>
+                <span class="badge badge-human">Humano</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="conv-item">
+            <div class="conv-avatar">AC</div>
+            <div class="conv-body">
+              <div class="conv-row">
+                <span class="conv-name">Ana Costa</span>
+                <span class="conv-time">13:10</span>
+              </div>
+              <p class="conv-preview">Vocês aceitam pagamento no Pix?</p>
+              <div class="conv-tags">
+                <span class="badge badge-resolved">Resolvido</span>
+                <span class="badge badge-ai">IA</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="conv-item">
+            <div class="conv-avatar orange">PS</div>
+            <div class="conv-body">
+              <div class="conv-row">
+                <span class="conv-name">Pedro Silva</span>
+                <span class="conv-time">12:45</span>
+              </div>
+              <p class="conv-preview">O produto chegou com defeito...</p>
+              <div class="conv-tags">
+                <span class="badge badge-pending">Pendente</span>
+                <span class="badge badge-human">Humano</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="conv-item">
+            <div class="conv-avatar">JF</div>
+            <div class="conv-body">
+              <div class="conv-row">
+                <span class="conv-name">Juliana Ferreira</span>
+                <span class="conv-time">11:30</span>
+              </div>
+              <p class="conv-preview">Qual o horário de funcionamento?</p>
+              <div class="conv-tags">
+                <span class="badge badge-resolved">Resolvido</span>
+                <span class="badge badge-ai">IA</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="conv-item">
+            <div class="conv-avatar">RL</div>
+            <div class="conv-body">
+              <div class="conv-row">
+                <span class="conv-name">Roberto Lima</span>
+                <span class="conv-time">10:55</span>
+              </div>
+              <p class="conv-preview">Tem promoção para clientes antigos?</p>
+              <div class="conv-tags">
+                <span class="badge badge-pending">Pendente</span>
+                <span class="badge badge-ai">IA</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Painel Direito — Detalhe da Conversa -->
+      <div class="conv-detail-panel">
+
+        <!-- Cabeçalho do chat -->
+        <div class="conv-detail-header">
+          <div class="conv-detail-info">
+            <div class="conv-detail-avatar">MS</div>
+            <div>
+              <div class="conv-detail-name">Maria Santos</div>
+              <div class="conv-detail-sub">
+                <span class="badge badge-resolved">Resolvido</span>
+                <span>14:20 — 14:23 · 4 mensagens · respondido pela IA</span>
+              </div>
+            </div>
+          </div>
+          <div class="conv-detail-actions">
+            <button class="btn-summary">
+              <i data-lucide="sparkles"></i> Resumo da IA
+            </button>
+            <button class="btn-escalate">Escalar</button>
+          </div>
+        </div>
+
+        <!-- Resumo automático da IA -->
+        <div class="ai-summary-card">
+          <div class="ai-summary-header">
+            <i data-lucide="sparkles"></i>
+            Resumo gerado pela IA
+          </div>
+          <p class="ai-summary-text">
+            Cliente consultou sobre <strong>prazo de entrega para o Rio de Janeiro</strong> e possibilidade de <strong>frete grátis</strong>.
+            A IA respondeu com as informações da base de conhecimento: prazo de 3 a 5 dias úteis e frete gratuito para compras acima de R$ 150,00.
+            Em seguida, o cliente perguntou sobre rastreamento, e a IA explicou o processo por e-mail.
+            Conversa encerrada com sucesso — nenhuma intervenção humana necessária.
+          </p>
+        </div>
+
+        <!-- Mensagens -->
+        <div class="messages-area">
+
+          <div class="message-row client">
+            <div class="msg-badge client-badge">MS</div>
+            <div class="message-content">
+              <div class="message-bubble">Oi! Qual o prazo de entrega para o Rio de Janeiro?</div>
+              <span class="msg-time">14:20</span>
+            </div>
+          </div>
+
+          <div class="message-row ai">
+            <div class="msg-badge">IA</div>
+            <div class="message-content">
+              <div class="message-bubble">
+                Olá, Maria! Para o Rio de Janeiro, o prazo é de <strong>3 a 5 dias úteis</strong> após a confirmação do pagamento.
+                O frete tem custo de R$ 18,90, mas é <strong>gratuito para compras acima de R$ 150,00</strong>. Posso te ajudar com mais alguma coisa?
+              </div>
+              <span class="msg-time">14:20</span>
+            </div>
+          </div>
+
+          <div class="message-row client">
+            <div class="msg-badge client-badge">MS</div>
+            <div class="message-content">
+              <div class="message-bubble">Ótimo! E como faço para rastrear o pedido depois que fizer a compra?</div>
+              <span class="msg-time">14:22</span>
+            </div>
+          </div>
+
+          <div class="message-row ai">
+            <div class="msg-badge">IA</div>
+            <div class="message-content">
+              <div class="message-bubble">
+                Assim que o pedido for despachado, você receberá um <strong>e-mail com o código de rastreamento</strong>.
+                Você pode acompanhar pelo site dos Correios ou pela transportadora indicada. Se precisar de ajuda com o rastreamento, é só me chamar com o número do pedido!
+              </div>
+              <span class="msg-time">14:23</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Barra de input -->
+        <div class="chat-input-bar">
+          <input type="text" placeholder="Responder como atendente humano...">
+          <button class="btn-suggest">
+            <i data-lucide="sparkles"></i> Sugestão IA
+          </button>
+          <button class="btn-send">
+            <i data-lucide="send"></i> Enviar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    function setTheme(theme) {
+      document.getElementById('btn-negocio').classList.toggle('active', theme === 'business');
+      document.getElementById('btn-hospital').classList.toggle('active', theme === 'hospital');
+      const html = document.documentElement;
+      html.removeAttribute('data-theme');
+      if (theme === 'hospital') html.setAttribute('data-theme', 'hospital');
+      localStorage.setItem('smartbiz-theme', theme);
+    }
+
+    function spawnParticles(btn, type) {
+      const r = btn.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+
+      if (type === 'spark') {
+        const colors = ['#fbbf24','#f97316','#fef08a','#fb923c','#fde047','#ff6b35'];
+        for (let i = 0; i < 9; i++) {
+          const el = document.createElement('div');
+          el.className = 'particle particle-spark';
+          const angle = (i / 9) * 360 + (Math.random() * 20 - 10);
+          const dist = 20 + Math.random() * 30;
+          const rad = angle * Math.PI / 180;
+          const size = 3 + Math.random() * 4;
+          Object.assign(el.style, {
+            width: size + 'px', height: size + 'px',
+            background: colors[Math.floor(Math.random() * colors.length)],
+            left: (cx - size / 2) + 'px', top: (cy - size / 2) + 'px',
+            '--tx': (Math.cos(rad) * dist) + 'px',
+            '--ty': (Math.sin(rad) * dist) + 'px',
+            animationDelay: (Math.random() * 0.07) + 's'
+          });
+          document.body.appendChild(el);
+          el.addEventListener('animationend', () => el.remove());
+        }
+      } else {
+        const grays = ['rgba(148,163,184,0.75)','rgba(100,116,139,0.6)','rgba(203,213,225,0.55)'];
+        for (let i = 0; i < 5; i++) {
+          const el = document.createElement('div');
+          el.className = 'particle particle-smoke';
+          const drift = (Math.random() - 0.5) * 20;
+          const rise = -(26 + Math.random() * 34);
+          const size = 9 + Math.random() * 7;
+          Object.assign(el.style, {
+            width: size + 'px', height: size + 'px',
+            background: grays[Math.floor(Math.random() * grays.length)],
+            left: (cx + (Math.random() - 0.5) * 8 - size / 2) + 'px',
+            top: (cy - size / 2) + 'px',
+            '--tx': drift + 'px',
+            '--ty': rise + 'px',
+            animationDelay: (i * 0.09) + 's'
+          });
+          document.body.appendChild(el);
+          el.addEventListener('animationend', () => el.remove());
+        }
+      }
+    }
+
+    function toggleDark() {
+      const html = document.documentElement;
+      const isDark = html.classList.toggle('dark');
+      const btn = document.getElementById('btn-dark-toggle');
+      btn.classList.toggle('active', isDark);
+      localStorage.setItem('smartbiz-dark', isDark ? '1' : '');
+      spawnParticles(btn, isDark ? 'smoke' : 'spark');
+    }
+
+    const savedTheme = localStorage.getItem('smartbiz-theme');
+    if (savedTheme) setTheme(savedTheme);
+
+    if (localStorage.getItem('smartbiz-dark') === '1') {
+      document.documentElement.classList.add('dark');
+      document.getElementById('btn-dark-toggle').classList.add('active');
+    }
+
+    // Transição de entrada
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = document.querySelector('.app-container');
+      c.classList.add('page-enter');
+      c.addEventListener('animationend', () => c.classList.remove('page-enter'), { once: true });
+    });
+
+    // Transição de saída ao navegar
+    document.querySelectorAll('a[href]').forEach(link => {
+      const href = link.getAttribute('href');
+      if (!href || href.startsWith('#') || href.startsWith('http')) return;
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const target = link.getAttribute('href');
+        const c = document.querySelector('.app-container');
+        c.classList.add('page-exit');
+        setTimeout(() => { window.location.href = target; }, 300);
+      });
+    });
+  </script>
+
+</body>
+</html>

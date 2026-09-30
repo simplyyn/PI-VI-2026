@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ usuario.empresa_nome }} — Assistente Virtual</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    (function () {
+      var d = localStorage.getItem('smartbiz-dark');
+      if (d === '1') document.documentElement.classList.add('dark');
+    })();
+  </script>
+</head>
+<body>
+<div class="chat-fullpage">
+
+  <!-- Header da empresa -->
+  <header class="chat-header">
+    <div class="chat-header-info">
+      <div class="chat-empresa-avatar">
+        {{ usuario.empresa_nome[:2].upper() }}
+      </div>
+      <div>
+        <div class="chat-empresa-nome">{{ usuario.empresa_nome }}</div>
+        <div class="chat-status">
+          <span class="dot"></span> Assistente online
+        </div>
+      </div>
+    </div>
+    <div class="chat-header-actions">
+      <div class="chat-user-info">
+        <i data-lucide="user"></i>
+        {{ usuario.nome }}
+      </div>
+      <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
+        <i data-lucide="bot"></i>
+      </button>
+      <a href="/logout" class="btn-icon" title="Sair">
+        <i data-lucide="log-out"></i>
+      </a>
+    </div>
+  </header>
+
+  <!-- Área de mensagens -->
+  <div class="chat-messages" id="chat-messages">
+
+    <!-- Mensagem de boas-vindas da IA -->
+    <div class="chat-msg-group">
+      <div class="chat-msg ai-msg">
+        <div class="chat-msg-bubble">
+          Olá, <strong>{{ usuario.nome }}</strong>! 👋<br>
+          Sou o assistente virtual da <strong>{{ usuario.empresa_nome }}</strong>. Como posso te ajudar hoje?
+        </div>
+        <span class="chat-msg-time">agora</span>
+      </div>
+    </div>
+
+    <!-- Sugestões rápidas -->
+    <div class="chat-suggestions">
+      <button class="suggestion-chip" onclick="enviarSugestao(this)">📦 Rastrear meu pedido</button>
+      <button class="suggestion-chip" onclick="enviarSugestao(this)">🕐 Horário de funcionamento</button>
+      <button class="suggestion-chip" onclick="enviarSugestao(this)">💳 Formas de pagamento</button>
+      <button class="suggestion-chip" onclick="enviarSugestao(this)">🚚 Prazo de entrega</button>
+    </div>
+
+  </div>
+
+  <!-- Barra de input -->
+  <div class="chat-input-footer">
+    <div class="chat-input-bar">
+      <input
+        type="text"
+        id="chat-input"
+        placeholder="Digite sua mensagem..."
+        onkeydown="if(event.key==='Enter') enviarMensagem()"
+      >
+      <button class="btn-send" onclick="enviarMensagem()">
+        <i data-lucide="send"></i>
+      </button>
+    </div>
+    <p class="chat-disclaimer">Assistente com IA · As respostas são geradas automaticamente</p>
+  </div>
+
+</div>
+
+<script>
+  lucide.createIcons();
+
+  function toggleDark() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    document.getElementById('btn-dark-toggle').classList.toggle('active', isDark);
+    localStorage.setItem('smartbiz-dark', isDark ? '1' : '');
+  }
+
+  if (localStorage.getItem('smartbiz-dark') === '1') {
+    document.getElementById('btn-dark-toggle').classList.add('active');
+  }
+
+  const respostasIA = {
+    "rastrear": "Para rastrear seu pedido, acesse o link enviado no e-mail de confirmação ou me informe o número do pedido que busco para você!",
+    "horário": "Funcionamos de segunda a sexta das 07h às 19h, sábados das 07h às 15h e domingos das 07h às 13h.",
+    "pagamento": "Aceitamos Pix, cartão de crédito (até 12x) e débito. Para pagamentos via boleto, o prazo é de 2 dias úteis.",
+    "entrega": "O prazo de entrega varia por região: capitais em 2 a 3 dias úteis, interior em 3 a 5 dias. Frete grátis acima de R$ 150,00!",
+    "default": "Entendido! Vou verificar essa informação para você. Aguarde um momento... 😊 Para uma resposta mais rápida, tente reformular sua pergunta.",
+  };
+
+  function getRespostaIA(texto) {
+    const t = texto.toLowerCase();
+    if (t.includes("rastr") || t.includes("pedido")) return respostasIA.rastrear;
+    if (t.includes("horár") || t.includes("funciona") || t.includes("abre")) return respostasIA.horário;
+    if (t.includes("pagam") || t.includes("pix") || t.includes("cartão") || t.includes("boleto")) return respostasIA.pagamento;
+    if (t.includes("entrega") || t.includes("prazo") || t.includes("frete")) return respostasIA.entrega;
+    return respostasIA.default;
+  }
+
+  function adicionarMensagem(texto, tipo) {
+    const container = document.getElementById('chat-messages');
+    const grupo = document.createElement('div');
+    grupo.className = 'chat-msg-group';
+
+    const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    grupo.innerHTML = `
+      <div class="chat-msg ${tipo}-msg">
+        <div class="chat-msg-bubble">${texto}</div>
+        <span class="chat-msg-time">${agora}</span>
+      </div>
+    `;
+
+    container.appendChild(grupo);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function mostrarDigitando() {
+    const container = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg-group';
+    div.id = 'typing-indicator';
+    div.innerHTML = `
+      <div class="chat-msg ai-msg">
+        <div class="chat-msg-bubble typing-bubble">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function enviarMensagem() {
+    const input = document.getElementById('chat-input');
+    const texto = input.value.trim();
+    if (!texto) return;
+
+    // Remove sugestões após primeira mensagem
+    const sugestoes = document.querySelector('.chat-suggestions');
+    if (sugestoes) sugestoes.remove();
+
+    adicionarMensagem(texto, 'user');
+    input.value = '';
+
+    mostrarDigitando();
+    setTimeout(() => {
+      document.getElementById('typing-indicator')?.remove();
+      adicionarMensagem(getRespostaIA(texto), 'ai');
+    }, 900 + Math.random() * 600);
+  }
+
+  function enviarSugestao(btn) {
+    document.getElementById('chat-input').value = btn.textContent.replace(/^[^\w]+/, '').trim();
+    enviarMensagem();
+  }
+</script>
+</body>
+</html>
