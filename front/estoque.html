@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="hospital">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDent AI — Estoque</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <aside class="sidebar">
+      <div>
+        <div class="logo">
+          <div class="logo-brand">
+            <i data-lucide="tooth"></i>
+            <h2>Smart<span>Dent</span></h2>
+          </div>
+          <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
+            <i data-lucide="moon"></i>
+          </button>
+        </div>
+
+        <div class="theme-switcher" style="margin-top: 20px;">
+          <button class="theme-btn" id="btn-negocio" onclick="setTheme('business')">Padrão</button>
+          <button class="theme-btn active" id="btn-clinica" onclick="setTheme('hospital')">Clínica</button>
+        </div>
+
+        <nav class="menu">
+          <a href="index.html"><i data-lucide="layout-dashboard"></i> Início</a>
+          <a href="atendimentos.html"><i data-lucide="message-square"></i> Atendimentos</a>
+          <a href="estoque.html" class="active"><i data-lucide="package"></i> Estoque</a>
+          <a href="#"><i data-lucide="book-open"></i> Base de Conhecimento</a>
+          <a href="#"><i data-lucide="bar-chart-2"></i> Relatórios & IA</a>
+          <a href="#"><i data-lucide="settings"></i> Configurações</a>
+        </nav>
+      </div>
+
+      <div class="user-profile">
+        <div class="avatar">AP</div>
+        <div class="user-info">
+          <h4>Clínica Sorriso</h4>
+          <span>Plano Pro</span>
+        </div>
+      </div>
+    </aside>
+
+    <div class="page-container">
+
+      <div class="page-header">
+        <div>
+          <h1>Estoque de Insumos</h1>
+          <p class="page-subtitle">10 itens cadastrados · 3 com estoque baixo · 1 esgotado</p>
+        </div>
+        <button class="btn-primary">
+          <i data-lucide="plus"></i> Adicionar Item
+        </button>
+      </div>
+
+      <div class="page-body">
+
+        <section class="metrics-grid" style="margin-bottom: 24px;">
+          <div class="card metric">
+            <div class="card-icon blue"><i data-lucide="package"></i></div>
+            <div class="metric-info">
+              <h3>10</h3>
+              <p>Itens no cadastro</p>
+            </div>
+          </div>
+          <div class="card metric">
+            <div class="card-icon orange"><i data-lucide="alert-triangle"></i></div>
+            <div class="metric-info">
+              <h3>3</h3>
+              <p>Itens com estoque baixo</p>
+            </div>
+          </div>
+          <div class="card metric">
+            <div class="card-icon" style="background:#fee2e2; color:#dc2626;"><i data-lucide="x-circle"></i></div>
+            <div class="metric-info">
+              <h3>1</h3>
+              <p>Itens esgotados</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="insight-item warning" style="margin-bottom: 20px; border-radius: 12px;">
+          <i data-lucide="alert-triangle"></i>
+          <div>
+            <h4>Atenção: 4 iten(s) precisam de reposição</h4>
+            <p>Verifique os itens marcados em laranja (baixo) e vermelho (esgotado) na tabela abaixo e solicite reposição com o fornecedor.</p>
+          </div>
+        </div>
+
+        <div class="kb-filters">
+          <input type="text" class="search-input kb-search" placeholder="Buscar insumo...">
+          <div class="filter-tabs" style="flex-shrink: 0;">
+            <button class="filter-tab active">Todos</button>
+            <button class="filter-tab">EPI</button>
+            <button class="filter-tab">Anestésicos</button>
+            <button class="filter-tab">Instrumental</button>
+            <button class="filter-tab">Restauração</button>
+            <button class="filter-tab">Endodontia</button>
+          </div>
+        </div>
+
+        <table class="kb-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Categoria</th>
+              <th>Unidade</th>
+              <th>Quantidade</th>
+              <th>Mínimo</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="kb-title-cell"><i data-lucide="package-2"></i> Luvas de Procedimento (M)</div></td>
+              <td><span class="badge-category">EPI</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">Caixa (100 un)</td>
+              <td><span class="stock-qty">8</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">5</td>
+              <td><span class="badge badge-stock-ok">OK</span></td>
+              <td><div class="kb-actions"><button class="btn-icon" title="Adicionar"><i data-lucide="plus-circle"></i></button><button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button><button class="btn-icon danger" title="Excluir"><i data-lucide="trash-2"></i></button></div></td>
+            </tr>
+            <tr>
+              <td><div class="kb-title-cell"><i data-lucide="package-2"></i> Anestésico Articaína 4%</div></td>
+              <td><span class="badge-category">Anestésicos</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">Caixa (50 un)</td>
+              <td><span class="stock-qty baixo">2</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">3</td>
+              <td><span class="badge badge-stock-baixo">Baixo</span></td>
+              <td><div class="kb-actions"><button class="btn-icon" title="Adicionar"><i data-lucide="plus-circle"></i></button><button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button><button class="btn-icon danger" title="Excluir"><i data-lucide="trash-2"></i></button></div></td>
+            </tr>
+            <tr>
+              <td><div class="kb-title-cell"><i data-lucide="package-2"></i> Brocas Diamantadas Esféricas</div></td>
+              <td><span class="badge-category">Instrumental</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">Kit (10 un)</td>
+              <td><span class="stock-qty esgotado">0</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">2</td>
+              <td><span class="badge badge-stock-esgotado">Esgotado</span></td>
+              <td><div class="kb-actions"><button class="btn-icon" title="Adicionar"><i data-lucide="plus-circle"></i></button><button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button><button class="btn-icon danger" title="Excluir"><i data-lucide="trash-2"></i></button></div></td>
+            </tr>
+            <tr>
+              <td><div class="kb-title-cell"><i data-lucide="package-2"></i> Resina Composta A2</div></td>
+              <td><span class="badge-category">Restauração</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">Seringa 4g</td>
+              <td><span class="stock-qty">12</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">6</td>
+              <td><span class="badge badge-stock-ok">OK</span></td>
+              <td><div class="kb-actions"><button class="btn-icon" title="Adicionar"><i data-lucide="plus-circle"></i></button><button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button><button class="btn-icon danger" title="Excluir"><i data-lucide="trash-2"></i></button></div></td>
+            </tr>
+            <tr>
+              <td><div class="kb-title-cell"><i data-lucide="package-2"></i> Alginato (500g)</div></td>
+              <td><span class="badge-category">Moldagem</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">Pote</td>
+              <td><span class="stock-qty baixo">1</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">3</td>
+              <td><span class="badge badge-stock-baixo">Baixo</span></td>
+              <td><div class="kb-actions"><button class="btn-icon" title="Adicionar"><i data-lucide="plus-circle"></i></button><button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button><button class="btn-icon danger" title="Excluir"><i data-lucide="trash-2"></i></button></div></td>
+            </tr>
+            <tr>
+              <td><div class="kb-title-cell"><i data-lucide="package-2"></i> Máscaras Cirúrgicas</div></td>
+              <td><span class="badge-category">EPI</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">Caixa (50 un)</td>
+              <td><span class="stock-qty">15</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">10</td>
+              <td><span class="badge badge-stock-ok">OK</span></td>
+              <td><div class="kb-actions"><button class="btn-icon" title="Adicionar"><i data-lucide="plus-circle"></i></button><button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button><button class="btn-icon danger" title="Excluir"><i data-lucide="trash-2"></i></button></div></td>
+            </tr>
+            <tr>
+              <td><div class="kb-title-cell"><i data-lucide="package-2"></i> Lima Endodôntica #15</div></td>
+              <td><span class="badge-category">Endodontia</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">Caixa (6 un)</td>
+              <td><span class="stock-qty baixo">1</span></td>
+              <td style="color:var(--text-secondary);font-size:13px;">4</td>
+              <td><span class="badge badge-stock-baixo">Baixo</span></td>
+              <td><div class="kb-actions"><button class="btn-icon" title="Adicionar"><i data-lucide="plus-circle"></i></button><button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button><button class="btn-icon danger" title="Excluir"><i data-lucide="trash-2"></i></button></div></td>
+            </tr>
+          </tbody>
+        </table>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    function setTheme(theme) {
+      document.getElementById('btn-negocio').classList.toggle('active', theme === 'business');
+      document.getElementById('btn-clinica').classList.toggle('active', theme === 'hospital');
+      const html = document.documentElement;
+      html.removeAttribute('data-theme');
+      if (theme === 'hospital') html.setAttribute('data-theme', 'hospital');
+      localStorage.setItem('smartdent-theme', theme);
+    }
+
+    function toggleDark() {
+      const html = document.documentElement;
+      const isDark = html.classList.toggle('dark');
+      document.getElementById('btn-dark-toggle').classList.toggle('active', isDark);
+      localStorage.setItem('smartdent-dark', isDark ? '1' : '');
+    }
+
+    const savedTheme = localStorage.getItem('smartdent-theme') || 'hospital';
+    setTheme(savedTheme);
+
+    if (localStorage.getItem('smartdent-dark') === '1') {
+      document.documentElement.classList.add('dark');
+      document.getElementById('btn-dark-toggle').classList.add('active');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = document.querySelector('.app-container');
+      c.classList.add('page-enter');
+      c.addEventListener('animationend', () => c.classList.remove('page-enter'), { once: true });
+    });
+
+    document.querySelectorAll('a[href]').forEach(link => {
+      const href = link.getAttribute('href');
+      if (!href || href.startsWith('#') || href.startsWith('http')) return;
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const target = link.getAttribute('href');
+        const c = document.querySelector('.app-container');
+        c.classList.add('page-exit');
+        setTimeout(() => { window.location.href = target; }, 300);
+      });
+    });
+  </script>
+
+</body>
+</html>

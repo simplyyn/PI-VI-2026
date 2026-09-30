@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}SmartDent AI — Estoque{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h1>Estoque de Insumos</h1>
+      <p class="page-subtitle">{{ total }} itens cadastrados · {{ baixo }} com estoque baixo · {{ esgotado }} esgotados</p>
+    </div>
+    <button class="btn-primary">
+      <i data-lucide="plus"></i> Adicionar Item
+    </button>
+  </div>
+
+  <div class="page-body">
+
+    <!-- Métricas rápidas de estoque -->
+    <section class="metrics-grid" style="margin-bottom: 24px;">
+      <div class="card metric">
+        <div class="card-icon blue"><i data-lucide="package"></i></div>
+        <div class="metric-info">
+          <h3>{{ total }}</h3>
+          <p>Itens no cadastro</p>
+        </div>
+      </div>
+      <div class="card metric">
+        <div class="card-icon orange"><i data-lucide="alert-triangle"></i></div>
+        <div class="metric-info">
+          <h3>{{ baixo }}</h3>
+          <p>Itens com estoque baixo</p>
+        </div>
+      </div>
+      <div class="card metric">
+        <div class="card-icon" style="background:#fee2e2; color:#dc2626;"><i data-lucide="x-circle"></i></div>
+        <div class="metric-info">
+          <h3>{{ esgotado }}</h3>
+          <p>Itens esgotados</p>
+        </div>
+      </div>
+    </section>
+
+    {% if (baixo + esgotado) > 0 %}
+    <div class="insight-item warning" style="margin-bottom: 20px; border-radius: 12px;">
+      <i data-lucide="alert-triangle"></i>
+      <div>
+        <h4>Atenção: {{ baixo + esgotado }} iten(s) precisam de reposição</h4>
+        <p>Verifique os itens marcados em laranja (baixo) e vermelho (esgotado) na tabela abaixo e solicite reposição com o fornecedor.</p>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="kb-filters">
+      <input type="text" class="search-input kb-search" placeholder="Buscar insumo...">
+      <div class="filter-tabs" style="flex-shrink: 0;">
+        <button class="filter-tab active">Todos</button>
+        <button class="filter-tab">EPI</button>
+        <button class="filter-tab">Anestésicos</button>
+        <button class="filter-tab">Instrumental</button>
+        <button class="filter-tab">Restauração</button>
+        <button class="filter-tab">Endodontia</button>
+      </div>
+    </div>
+
+    <table class="kb-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Categoria</th>
+          <th>Unidade</th>
+          <th>Quantidade</th>
+          <th>Mínimo</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in estoque %}
+        <tr>
+          <td>
+            <div class="kb-title-cell">
+              <i data-lucide="package-2"></i>
+              {{ item.nome }}
+            </div>
+          </td>
+          <td><span class="badge-category">{{ item.categoria }}</span></td>
+          <td style="color: var(--text-secondary); font-size: 13px;">{{ item.unidade }}</td>
+          <td>
+            <span class="stock-qty {% if item.status != 'ok' %}{{ item.status }}{% endif %}">
+              {{ item.quantidade }}
+            </span>
+          </td>
+          <td style="color: var(--text-secondary); font-size: 13px;">{{ item.minimo }}</td>
+          <td>
+            {% if item.status == 'ok' %}
+              <span class="badge badge-stock-ok">OK</span>
+            {% elif item.status == 'baixo' %}
+              <span class="badge badge-stock-baixo">Baixo</span>
+            {% else %}
+              <span class="badge badge-stock-esgotado">Esgotado</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="kb-actions">
+              <button class="btn-icon" title="Adicionar unidades"><i data-lucide="plus-circle"></i></button>
+              <button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button>
+              <button class="btn-icon danger" title="Excluir"><i data-lucide="trash-2"></i></button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+</div>
+{% endblock %}

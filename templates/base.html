@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}SmartBiz AI{% endblock %}</title>
+  <title>{% block title %}SmartDent AI{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Aplica tema antes do paint para evitar flash -->
   <script>
     (function () {
-      var t = localStorage.getItem('smartbiz-theme');
-      var d = localStorage.getItem('smartbiz-dark');
+      var t = localStorage.getItem('smartdent-theme') || 'hospital';
+      var d = localStorage.getItem('smartdent-dark');
       if (t === 'hospital') document.documentElement.setAttribute('data-theme', 'hospital');
       if (d === '1') document.documentElement.classList.add('dark');
     })();
@@ -24,17 +23,17 @@
       <div>
         <div class="logo">
           <div class="logo-brand">
-            <i data-lucide="bot"></i>
-            <h2>Smart<span>Biz</span></h2>
+            <i data-lucide="tooth"></i>
+            <h2>Smart<span>Dent</span></h2>
           </div>
           <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
-            <i data-lucide="bot"></i>
+            <i data-lucide="moon"></i>
           </button>
         </div>
 
         <div class="theme-switcher" style="margin-top: 20px;">
-          <button class="theme-btn active" id="btn-negocio" onclick="setTheme('business')">Negócio</button>
-          <button class="theme-btn" id="btn-hospital" onclick="setTheme('hospital')">Hospital</button>
+          <button class="theme-btn" id="btn-negocio" onclick="setTheme('business')">Padrão</button>
+          <button class="theme-btn active" id="btn-clinica" onclick="setTheme('hospital')">Clínica</button>
         </div>
 
         <nav class="menu">
@@ -44,8 +43,11 @@
           <a href="/atendimentos" class="{% if pagina == 'atendimentos' %}active{% endif %}">
             <i data-lucide="message-square"></i> Atendimentos
           </a>
+          <a href="/estoque" class="{% if pagina == 'estoque' %}active{% endif %}">
+            <i data-lucide="package"></i> Estoque
+          </a>
           <a href="/base-conhecimento" class="{% if pagina == 'conhecimento' %}active{% endif %}">
-            <i data-lucide="database"></i> Base de Conhecimento
+            <i data-lucide="book-open"></i> Base de Conhecimento
           </a>
           <a href="/relatorios" class="{% if pagina == 'relatorios' %}active{% endif %}">
             <i data-lucide="bar-chart-2"></i> Relatórios & IA
@@ -78,11 +80,11 @@
 
     function setTheme(theme) {
       document.getElementById('btn-negocio').classList.toggle('active', theme === 'business');
-      document.getElementById('btn-hospital').classList.toggle('active', theme === 'hospital');
+      document.getElementById('btn-clinica').classList.toggle('active', theme === 'hospital');
       const html = document.documentElement;
       html.removeAttribute('data-theme');
       if (theme === 'hospital') html.setAttribute('data-theme', 'hospital');
-      localStorage.setItem('smartbiz-theme', theme);
+      localStorage.setItem('smartdent-theme', theme);
     }
 
     function spawnParticles(btn, type) {
@@ -136,25 +138,23 @@
       const isDark = document.documentElement.classList.toggle('dark');
       const btn = document.getElementById('btn-dark-toggle');
       btn.classList.toggle('active', isDark);
-      localStorage.setItem('smartbiz-dark', isDark ? '1' : '');
+      localStorage.setItem('smartdent-dark', isDark ? '1' : '');
       spawnParticles(btn, isDark ? 'smoke' : 'spark');
     }
 
-    const savedTheme = localStorage.getItem('smartbiz-theme');
-    if (savedTheme) setTheme(savedTheme);
+    const savedTheme = localStorage.getItem('smartdent-theme') || 'hospital';
+    setTheme(savedTheme);
 
-    if (localStorage.getItem('smartbiz-dark') === '1') {
+    if (localStorage.getItem('smartdent-dark') === '1') {
       document.getElementById('btn-dark-toggle').classList.add('active');
     }
 
-    // Transição de entrada
     document.addEventListener('DOMContentLoaded', () => {
       const c = document.querySelector('.app-container');
       c.classList.add('page-enter');
       c.addEventListener('animationend', () => c.classList.remove('page-enter'), { once: true });
     });
 
-    // Transição de saída
     document.querySelectorAll('a[href]').forEach(link => {
       const href = link.getAttribute('href');
       if (!href || href.startsWith('#') || href.startsWith('http')) return;

@@ -1,39 +1,34 @@
-# auth.py
-# Banco em memória — estrutura pronta para trocar por MongoDB
-# Quando migrar: substituir USERS por consultas ao Motor/PyMongo
-
 USERS = {
-    "admin@smartbiz.com": {
+    "admin@smartdent.com": {
         "id": "u_001",
-        "nome": "Equipe SmartBiz",
-        "iniciais": "SB",
+        "nome": "Equipe SmartDent",
+        "iniciais": "SD",
         "role": "admin",
         "senha": "admin123",
     },
-    "joao@padaria.com": {
+    "dra.ana@clinicasorriso.com": {
         "id": "u_002",
-        "nome": "João Silva",
-        "iniciais": "JS",
+        "nome": "Dra. Ana Paula",
+        "iniciais": "AP",
         "role": "owner",
-        "senha": "dono123",
-        "empresa": "Padaria do João",
-        "empresa_id": "padaria-do-joao",
+        "senha": "clinica123",
+        "empresa": "Clínica Sorriso",
+        "empresa_id": "clinica-sorriso",
         "plano": "Pro",
     },
-    "maria@cliente.com": {
+    "joao@paciente.com": {
         "id": "u_003",
-        "nome": "Maria Santos",
-        "iniciais": "MS",
+        "nome": "João Silva",
+        "iniciais": "JS",
         "role": "customer",
-        "senha": "cliente123",
-        "empresa_id": "padaria-do-joao",
-        "empresa_nome": "Padaria do João",
+        "senha": "paciente123",
+        "empresa_id": "clinica-sorriso",
+        "empresa_nome": "Clínica Sorriso",
     },
 }
 
 
 def autenticar(email: str, senha: str):
-    """Valida credenciais e retorna o usuário. None se inválido."""
     user = USERS.get(email.lower().strip())
     if user and user["senha"] == senha:
         return {"email": email, **user}
@@ -41,7 +36,6 @@ def autenticar(email: str, senha: str):
 
 
 def usuario_logado(request):
-    """Retorna o usuário da sessão ou None."""
     return request.session.get("usuario")
 
 

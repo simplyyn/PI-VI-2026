@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}SmartBiz AI — Relatórios & IA{% endblock %}
+{% block title %}SmartDent AI — Relatórios & IA{% endblock %}
 
 {% block content %}
 <div class="page-container">
@@ -20,7 +20,7 @@
 
     <section class="metrics-grid" style="margin-bottom: 24px;">
       <div class="card metric">
-        <div class="card-icon blue"><i data-lucide="message-circle"></i></div>
+        <div class="card-icon blue"><i data-lucide="calendar-check"></i></div>
         <div class="metric-info">
           <h3>{{ metricas.atendimentos_semana }}</h3>
           <p>Total de atendimentos</p>
@@ -62,7 +62,7 @@
 
     <div class="chart-card" style="margin-bottom: 24px;">
       <div class="chart-card-header">
-        <span class="chart-card-title">Principais tópicos de dúvidas</span>
+        <span class="chart-card-title">Principais dúvidas dos pacientes</span>
       </div>
       <canvas id="chartBar" height="80"></canvas>
     </div>
@@ -75,8 +75,8 @@
         <div class="insight-item warning">
           <i data-lucide="trending-up"></i>
           <div>
-            <h4>Pico de atendimentos na quarta-feira</h4>
-            <p>O volume foi 40% acima da média semanal. Considere reforçar a base de conhecimento com respostas para dúvidas de frete antes das quartas.</p>
+            <h4>Pico de consultas na quarta-feira</h4>
+            <p>Volume 40% acima da média semanal. Considere reforçar a base com informações sobre agendamento e procedimentos mais consultados.</p>
             <button class="btn-action">Ver detalhes</button>
           </div>
         </div>
@@ -84,7 +84,7 @@
           <i data-lucide="zap"></i>
           <div>
             <h4>IA respondeu {{ metricas.taxa_automatizacao }}% sem intervenção</h4>
-            <p>Os artigos "Prazo de Entrega" e "Formas de Pagamento" foram os mais acessados pela IA esta semana.</p>
+            <p>Os artigos "Planos de Saúde Aceitos" e "Clareamento Dental" foram os mais acessados pela IA esta semana.</p>
           </div>
         </div>
       </div>
@@ -100,8 +100,9 @@
   const isDark      = document.documentElement.classList.contains('dark');
   const textColor   = isDark ? '#64748b' : '#94a3b8';
   const gridColor   = isDark ? '#1e2235' : '#e2e8f0';
-  const primary     = isDark ? '#818cf8' : '#4f46e5';
-  const accent      = isDark ? '#fb923c' : '#f97316';
+  const isClinica   = document.documentElement.getAttribute('data-theme') === 'hospital';
+  const primary     = isDark ? '#818cf8' : (isClinica ? '#0284c7' : '#4f46e5');
+  const accent      = isDark ? '#fb923c' : (isClinica ? '#059669' : '#f97316');
 
   Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
   Chart.defaults.font.size   = 12;

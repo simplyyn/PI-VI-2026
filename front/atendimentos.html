@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="hospital">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartBiz AI — Atendimentos</title>
+  <title>SmartDent AI — Atendimentos</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -11,57 +11,53 @@
 
   <div class="app-container">
 
-    <!-- Sidebar -->
     <aside class="sidebar">
       <div>
         <div class="logo">
           <div class="logo-brand">
-            <i data-lucide="bot"></i>
-            <h2>Smart<span>Biz</span></h2>
+            <i data-lucide="tooth"></i>
+            <h2>Smart<span>Dent</span></h2>
           </div>
           <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
-            <i data-lucide="bot"></i>
+            <i data-lucide="moon"></i>
           </button>
         </div>
 
         <div class="theme-switcher" style="margin-top: 20px;">
-          <button class="theme-btn active" id="btn-negocio" onclick="setTheme('business')">Negócio</button>
-          <button class="theme-btn" id="btn-hospital" onclick="setTheme('hospital')">Hospital</button>
+          <button class="theme-btn" id="btn-negocio" onclick="setTheme('business')">Padrão</button>
+          <button class="theme-btn active" id="btn-clinica" onclick="setTheme('hospital')">Clínica</button>
         </div>
 
         <nav class="menu">
           <a href="index.html"><i data-lucide="layout-dashboard"></i> Início</a>
           <a href="atendimentos.html" class="active"><i data-lucide="message-square"></i> Atendimentos</a>
-          <a href="#"><i data-lucide="database"></i> Base de Conhecimento</a>
+          <a href="estoque.html"><i data-lucide="package"></i> Estoque</a>
+          <a href="#"><i data-lucide="book-open"></i> Base de Conhecimento</a>
           <a href="#"><i data-lucide="bar-chart-2"></i> Relatórios & IA</a>
           <a href="#"><i data-lucide="settings"></i> Configurações</a>
         </nav>
       </div>
 
       <div class="user-profile">
-        <div class="avatar">PC</div>
+        <div class="avatar">AP</div>
         <div class="user-info">
-          <h4>Padaria do João</h4>
+          <h4>Clínica Sorriso</h4>
           <span>Plano Pro</span>
         </div>
       </div>
     </aside>
 
-    <!-- Container de Atendimentos -->
     <div class="atend-container">
 
-      <!-- Painel Esquerdo — Lista de Conversas -->
       <div class="conv-list-panel">
         <div class="conv-list-header">
           <div class="conv-list-top">
             <div class="conv-list-title">
               <h2>Atendimentos</h2>
-              <span class="count-badge">12</span>
+              <span class="count-badge">6</span>
             </div>
           </div>
-
-          <input type="text" class="search-input" placeholder="Buscar conversa ou cliente...">
-
+          <input type="text" class="search-input" placeholder="Buscar paciente ou assunto...">
           <div class="filter-tabs">
             <button class="filter-tab active">Todos</button>
             <button class="filter-tab">Pendentes</button>
@@ -77,9 +73,9 @@
             <div class="conv-body">
               <div class="conv-row">
                 <span class="conv-name">Maria Santos</span>
-                <span class="conv-time">14:23</span>
+                <span class="conv-time">09:15</span>
               </div>
-              <p class="conv-preview">Qual o prazo de entrega para o Rio?</p>
+              <p class="conv-preview">Quero agendar uma consulta de rotina</p>
               <div class="conv-tags">
                 <span class="badge badge-resolved">Resolvido</span>
                 <span class="badge badge-ai">IA</span>
@@ -92,9 +88,9 @@
             <div class="conv-body">
               <div class="conv-row">
                 <span class="conv-name">Carlos Oliveira</span>
-                <span class="conv-time">13:50</span>
+                <span class="conv-time">09:45</span>
               </div>
-              <p class="conv-preview">Quero cancelar meu pedido urgente</p>
+              <p class="conv-preview">Tenho dor de dente forte desde ontem</p>
               <div class="conv-tags">
                 <span class="badge badge-escalated">Escalado</span>
                 <span class="badge badge-human">Humano</span>
@@ -107,9 +103,9 @@
             <div class="conv-body">
               <div class="conv-row">
                 <span class="conv-name">Ana Costa</span>
-                <span class="conv-time">13:10</span>
+                <span class="conv-time">10:20</span>
               </div>
-              <p class="conv-preview">Vocês aceitam pagamento no Pix?</p>
+              <p class="conv-preview">Quanto custa um clareamento dental?</p>
               <div class="conv-tags">
                 <span class="badge badge-resolved">Resolvido</span>
                 <span class="badge badge-ai">IA</span>
@@ -118,13 +114,13 @@
           </div>
 
           <div class="conv-item">
-            <div class="conv-avatar orange">PS</div>
+            <div class="conv-avatar orange">PL</div>
             <div class="conv-body">
               <div class="conv-row">
-                <span class="conv-name">Pedro Silva</span>
-                <span class="conv-time">12:45</span>
+                <span class="conv-name">Pedro Lima</span>
+                <span class="conv-time">10:55</span>
               </div>
-              <p class="conv-preview">O produto chegou com defeito...</p>
+              <p class="conv-preview">Preciso remarcar minha consulta de amanhã</p>
               <div class="conv-tags">
                 <span class="badge badge-pending">Pendente</span>
                 <span class="badge badge-human">Humano</span>
@@ -136,10 +132,10 @@
             <div class="conv-avatar">JF</div>
             <div class="conv-body">
               <div class="conv-row">
-                <span class="conv-name">Juliana Ferreira</span>
+                <span class="conv-name">Julia Ferreira</span>
                 <span class="conv-time">11:30</span>
               </div>
-              <p class="conv-preview">Qual o horário de funcionamento?</p>
+              <p class="conv-preview">Vocês atendem pelo plano Unimed?</p>
               <div class="conv-tags">
                 <span class="badge badge-resolved">Resolvido</span>
                 <span class="badge badge-ai">IA</span>
@@ -148,13 +144,13 @@
           </div>
 
           <div class="conv-item">
-            <div class="conv-avatar">RL</div>
+            <div class="conv-avatar">RM</div>
             <div class="conv-body">
               <div class="conv-row">
-                <span class="conv-name">Roberto Lima</span>
-                <span class="conv-time">10:55</span>
+                <span class="conv-name">Roberto Mendes</span>
+                <span class="conv-time">11:50</span>
               </div>
-              <p class="conv-preview">Tem promoção para clientes antigos?</p>
+              <p class="conv-preview">Quero informações sobre implantes dentários</p>
               <div class="conv-tags">
                 <span class="badge badge-pending">Pendente</span>
                 <span class="badge badge-ai">IA</span>
@@ -165,10 +161,8 @@
         </div>
       </div>
 
-      <!-- Painel Direito — Detalhe da Conversa -->
       <div class="conv-detail-panel">
 
-        <!-- Cabeçalho do chat -->
         <div class="conv-detail-header">
           <div class="conv-detail-info">
             <div class="conv-detail-avatar">MS</div>
@@ -176,7 +170,7 @@
               <div class="conv-detail-name">Maria Santos</div>
               <div class="conv-detail-sub">
                 <span class="badge badge-resolved">Resolvido</span>
-                <span>14:20 — 14:23 · 4 mensagens · respondido pela IA</span>
+                <span>09:12 — 09:15 · 4 mensagens · respondido pela IA</span>
               </div>
             </div>
           </div>
@@ -188,28 +182,26 @@
           </div>
         </div>
 
-        <!-- Resumo automático da IA -->
         <div class="ai-summary-card">
           <div class="ai-summary-header">
             <i data-lucide="sparkles"></i>
             Resumo gerado pela IA
           </div>
           <p class="ai-summary-text">
-            Cliente consultou sobre <strong>prazo de entrega para o Rio de Janeiro</strong> e possibilidade de <strong>frete grátis</strong>.
-            A IA respondeu com as informações da base de conhecimento: prazo de 3 a 5 dias úteis e frete gratuito para compras acima de R$ 150,00.
-            Em seguida, o cliente perguntou sobre rastreamento, e a IA explicou o processo por e-mail.
+            Paciente solicitou <strong>agendamento de consulta de rotina</strong> e informações sobre <strong>limpeza dental</strong>.
+            A IA forneceu os horários disponíveis e explicou o procedimento de profilaxia.
+            Consulta agendada para quinta-feira às 10h com a Dra. Ana Paula.
             Conversa encerrada com sucesso — nenhuma intervenção humana necessária.
           </p>
         </div>
 
-        <!-- Mensagens -->
         <div class="messages-area">
 
           <div class="message-row client">
             <div class="msg-badge client-badge">MS</div>
             <div class="message-content">
-              <div class="message-bubble">Oi! Qual o prazo de entrega para o Rio de Janeiro?</div>
-              <span class="msg-time">14:20</span>
+              <div class="message-bubble">Olá! Gostaria de agendar uma consulta de rotina. Quais horários estão disponíveis?</div>
+              <span class="msg-time">09:12</span>
             </div>
           </div>
 
@@ -217,18 +209,17 @@
             <div class="msg-badge">IA</div>
             <div class="message-content">
               <div class="message-bubble">
-                Olá, Maria! Para o Rio de Janeiro, o prazo é de <strong>3 a 5 dias úteis</strong> após a confirmação do pagamento.
-                O frete tem custo de R$ 18,90, mas é <strong>gratuito para compras acima de R$ 150,00</strong>. Posso te ajudar com mais alguma coisa?
+                Olá, Maria! Temos os seguintes horários disponíveis essa semana: <strong>Quinta-feira às 10h ou 14h</strong>, e <strong>Sexta-feira às 09h</strong>. Todos com a Dra. Ana Paula. Qual prefere?
               </div>
-              <span class="msg-time">14:20</span>
+              <span class="msg-time">09:12</span>
             </div>
           </div>
 
           <div class="message-row client">
             <div class="msg-badge client-badge">MS</div>
             <div class="message-content">
-              <div class="message-bubble">Ótimo! E como faço para rastrear o pedido depois que fizer a compra?</div>
-              <span class="msg-time">14:22</span>
+              <div class="message-bubble">Quinta às 10h fica ótimo! Vocês fazem limpeza na mesma consulta?</div>
+              <span class="msg-time">09:14</span>
             </div>
           </div>
 
@@ -236,16 +227,14 @@
             <div class="msg-badge">IA</div>
             <div class="message-content">
               <div class="message-bubble">
-                Assim que o pedido for despachado, você receberá um <strong>e-mail com o código de rastreamento</strong>.
-                Você pode acompanhar pelo site dos Correios ou pela transportadora indicada. Se precisar de ajuda com o rastreamento, é só me chamar com o número do pedido!
+                Sim! Na consulta de rotina já incluímos a <strong>profilaxia (limpeza dental)</strong>. Consulta agendada para <strong>quinta-feira às 10h</strong>. Você receberá uma confirmação por WhatsApp. Até lá!
               </div>
-              <span class="msg-time">14:23</span>
+              <span class="msg-time">09:15</span>
             </div>
           </div>
 
         </div>
 
-        <!-- Barra de input -->
         <div class="chat-input-bar">
           <input type="text" placeholder="Responder como atendente humano...">
           <button class="btn-suggest">
@@ -265,20 +254,19 @@
 
     function setTheme(theme) {
       document.getElementById('btn-negocio').classList.toggle('active', theme === 'business');
-      document.getElementById('btn-hospital').classList.toggle('active', theme === 'hospital');
+      document.getElementById('btn-clinica').classList.toggle('active', theme === 'hospital');
       const html = document.documentElement;
       html.removeAttribute('data-theme');
       if (theme === 'hospital') html.setAttribute('data-theme', 'hospital');
-      localStorage.setItem('smartbiz-theme', theme);
+      localStorage.setItem('smartdent-theme', theme);
     }
 
     function spawnParticles(btn, type) {
       const r = btn.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
-
       if (type === 'spark') {
-        const colors = ['#fbbf24','#f97316','#fef08a','#fb923c','#fde047','#ff6b35'];
+        const colors = ['#fbbf24','#f97316','#fef08a','#fb923c'];
         for (let i = 0; i < 9; i++) {
           const el = document.createElement('div');
           el.className = 'particle particle-spark';
@@ -298,7 +286,7 @@
           el.addEventListener('animationend', () => el.remove());
         }
       } else {
-        const grays = ['rgba(148,163,184,0.75)','rgba(100,116,139,0.6)','rgba(203,213,225,0.55)'];
+        const grays = ['rgba(148,163,184,0.75)','rgba(100,116,139,0.6)'];
         for (let i = 0; i < 5; i++) {
           const el = document.createElement('div');
           el.className = 'particle particle-smoke';
@@ -325,26 +313,24 @@
       const isDark = html.classList.toggle('dark');
       const btn = document.getElementById('btn-dark-toggle');
       btn.classList.toggle('active', isDark);
-      localStorage.setItem('smartbiz-dark', isDark ? '1' : '');
+      localStorage.setItem('smartdent-dark', isDark ? '1' : '');
       spawnParticles(btn, isDark ? 'smoke' : 'spark');
     }
 
-    const savedTheme = localStorage.getItem('smartbiz-theme');
-    if (savedTheme) setTheme(savedTheme);
+    const savedTheme = localStorage.getItem('smartdent-theme') || 'hospital';
+    setTheme(savedTheme);
 
-    if (localStorage.getItem('smartbiz-dark') === '1') {
+    if (localStorage.getItem('smartdent-dark') === '1') {
       document.documentElement.classList.add('dark');
       document.getElementById('btn-dark-toggle').classList.add('active');
     }
 
-    // Transição de entrada
     document.addEventListener('DOMContentLoaded', () => {
       const c = document.querySelector('.app-container');
       c.classList.add('page-enter');
       c.addEventListener('animationend', () => c.classList.remove('page-enter'), { once: true });
     });
 
-    // Transição de saída ao navegar
     document.querySelectorAll('a[href]').forEach(link => {
       const href = link.getAttribute('href');
       if (!href || href.startsWith('#') || href.startsWith('http')) return;

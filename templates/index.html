@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}SmartBiz AI — Início{% endblock %}
+{% block title %}SmartDent AI — Início{% endblock %}
 
 {% block content %}
 <main class="main-content">
 
   <header class="top-header">
     <div class="welcome-text">
-      <h1>Olá, João! 👋</h1>
+      <h1>Olá, {{ usuario.nome.split()[1] if ' ' in usuario.nome else usuario.nome }}! 👋</h1>
       <p>Seu assistente virtual já realizou <strong>{{ metricas.total_hoje }} atendimentos</strong> hoje.</p>
     </div>
     <div class="status-badge">
@@ -18,22 +18,22 @@
     <div class="ai-header">
       <div class="ai-title">
         <i data-lucide="sparkles"></i>
-        <h3>Pergunte ou peça algo ao seu Assistente</h3>
+        <h3>Pergunte ou peça algo ao Assistente</h3>
       </div>
-      <span class="tag">Base de dados atualizada</span>
+      <span class="tag">Base odontológica atualizada</span>
     </div>
     <div class="ai-input-group">
-      <input type="text" placeholder="Ex: 'Resuma os principais motivos de reclamação desta semana' ou 'Qual o prazo de entrega para Campinas?'">
+      <input type="text" placeholder="Ex: 'Quais pacientes têm consulta amanhã?' ou 'Resumo dos atendimentos desta semana'">
       <button><i data-lucide="send"></i> Perguntar</button>
     </div>
   </section>
 
   <section class="metrics-grid">
     <div class="card metric">
-      <div class="card-icon blue"><i data-lucide="message-circle"></i></div>
+      <div class="card-icon blue"><i data-lucide="calendar-check"></i></div>
       <div class="metric-info">
         <h3>{{ metricas.atendimentos_semana }}</h3>
-        <p>Dúvidas respondidas (semana)</p>
+        <p>Consultas respondidas (semana)</p>
       </div>
     </div>
     <div class="card metric">
@@ -44,10 +44,10 @@
       </div>
     </div>
     <div class="card metric">
-      <div class="card-icon orange"><i data-lucide="alert-circle"></i></div>
+      <div class="card-icon orange"><i data-lucide="star"></i></div>
       <div class="metric-info">
-        <h3>Prazo de Entrega</h3>
-        <p>Principal dúvida do dia</p>
+        <h3>{{ metricas.satisfacao }}/5</h3>
+        <p>Satisfação dos pacientes</p>
       </div>
     </div>
   </section>
@@ -63,9 +63,14 @@
         <li class="chat-item">
           <div class="chat-info">
             <strong>{{ at.cliente }}: "{{ at.preview }}"</strong>
-            <p><span>IA Respondeu</span> · {{ at.hora }}</p>
+            <p>
+              <span>{% if at.canal == 'ai' %}IA Respondeu{% else %}Atendente Humano{% endif %}</span>
+              · {{ at.hora }}
+            </p>
           </div>
-          <span class="time">{{ at.hora }}</span>
+          <span class="badge badge-{{ at.status }}">
+            {% if at.status == 'resolved' %}Resolvido{% elif at.status == 'pending' %}Pendente{% else %}Escalado{% endif %}
+          </span>
         </li>
         {% endfor %}
       </ul>
@@ -73,22 +78,22 @@
 
     <div class="card dashboard-card">
       <div class="card-header">
-        <h3>💡 Insights & Sugestões da IA</h3>
+        <h3>💡 Insights da Clínica</h3>
       </div>
       <div class="insights-container">
         <div class="insight-item warning">
           <i data-lucide="trending-up"></i>
           <div>
-            <h4>Aumento de dúvidas sobre Frete</h4>
-            <p>3 clientes perguntaram sobre taxas para a região norte. Deseja cadastrar essa tabela na Base de Conhecimento?</p>
+            <h4>Alta demanda por clareamento</h4>
+            <p>5 pacientes perguntaram sobre clareamento dental hoje. Considere atualizar a base com os novos preços de procedimento.</p>
             <button class="btn-action">Atualizar Base</button>
           </div>
         </div>
         <div class="insight-item success">
           <i data-lucide="smile"></i>
           <div>
-            <h4>Satisfação Alta</h4>
-            <p>O tempo médio de resposta caiu para {{ metricas.tempo_resposta }} com a automação.</p>
+            <h4>Satisfação em alta</h4>
+            <p>Tempo médio de resposta de {{ metricas.tempo_resposta }} com a automação. Pacientes aprovam o atendimento rápido.</p>
           </div>
         </div>
       </div>

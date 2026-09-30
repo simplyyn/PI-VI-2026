@@ -1694,3 +1694,24 @@ body {
   text-align: center;
   margin-top: 8px;
 }
+
+/* ========================
+   ESTOQUE
+   ======================== */
+
+.badge-stock-ok       { background: #dcfce7; color: #166534; }
+.badge-stock-baixo    { background: #fef9c3; color: #854d0e; }
+.badge-stock-esgotado { background: #fee2e2; color: #991b1b; }
+
+.dark .badge-stock-ok       { background: #14532d; color: #86efac; }
+.dark .badge-stock-baixo    { background: #713f12; color: #fde047; }
+.dark .badge-stock-esgotado { background: #7f1d1d; color: #fca5a5; }
+
+.stock-qty {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stock-qty.baixo    { color: #d97706; }
+.stock-qty.esgotado { color: #dc2626; }

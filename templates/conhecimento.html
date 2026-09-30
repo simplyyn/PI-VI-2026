@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}SmartBiz AI — Base de Conhecimento{% endblock %}
+{% block title %}SmartDent AI — Base de Conhecimento{% endblock %}
 
 {% block content %}
 <div class="page-container">
@@ -7,7 +7,7 @@
   <div class="page-header">
     <div>
       <h1>Base de Conhecimento</h1>
-      <p class="page-subtitle">{{ artigos | length }} artigos cadastrados · usados pela IA para responder clientes</p>
+      <p class="page-subtitle">{{ artigos | length }} artigos cadastrados · usados pela IA para responder pacientes</p>
     </div>
     <button class="btn-primary">
       <i data-lucide="plus"></i> Novo Artigo
@@ -17,13 +17,14 @@
   <div class="page-body">
 
     <div class="kb-filters">
-      <input type="text" class="search-input kb-search" placeholder="Buscar artigo...">
+      <input type="text" class="search-input kb-search" placeholder="Buscar artigo ou procedimento...">
       <div class="filter-tabs" style="flex-shrink: 0;">
         <button class="filter-tab active">Todos</button>
-        <button class="filter-tab">Logística</button>
+        <button class="filter-tab">Procedimentos</button>
+        <button class="filter-tab">Estética</button>
+        <button class="filter-tab">Cirurgia</button>
+        <button class="filter-tab">Ortodontia</button>
         <button class="filter-tab">Financeiro</button>
-        <button class="filter-tab">Pós-venda</button>
-        <button class="filter-tab">Geral</button>
       </div>
     </div>
 
@@ -32,7 +33,7 @@
         <tr>
           <th>Título</th>
           <th>Categoria</th>
-          <th>Visualizações pela IA</th>
+          <th>Consultas pela IA</th>
           <th>Última atualização</th>
           <th>Status</th>
           <th>Ações</th>

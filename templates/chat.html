@@ -8,7 +8,8 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     (function () {
-      var d = localStorage.getItem('smartbiz-dark');
+      document.documentElement.setAttribute('data-theme', 'hospital');
+      var d = localStorage.getItem('smartdent-dark');
       if (d === '1') document.documentElement.classList.add('dark');
     })();
   </script>
@@ -16,7 +17,6 @@
 <body>
 <div class="chat-fullpage">
 
-  <!-- Header da empresa -->
   <header class="chat-header">
     <div class="chat-header-info">
       <div class="chat-empresa-avatar">
@@ -35,7 +35,7 @@
         {{ usuario.nome }}
       </div>
       <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
-        <i data-lucide="bot"></i>
+        <i data-lucide="moon"></i>
       </button>
       <a href="/logout" class="btn-icon" title="Sair">
         <i data-lucide="log-out"></i>
@@ -43,31 +43,27 @@
     </div>
   </header>
 
-  <!-- Área de mensagens -->
   <div class="chat-messages" id="chat-messages">
 
-    <!-- Mensagem de boas-vindas da IA -->
     <div class="chat-msg-group">
       <div class="chat-msg ai-msg">
         <div class="chat-msg-bubble">
           Olá, <strong>{{ usuario.nome }}</strong>! 👋<br>
-          Sou o assistente virtual da <strong>{{ usuario.empresa_nome }}</strong>. Como posso te ajudar hoje?
+          Sou o assistente virtual da <strong>{{ usuario.empresa_nome }}</strong>. Posso ajudar com agendamentos, informações sobre procedimentos e dúvidas odontológicas. Como posso te ajudar?
         </div>
         <span class="chat-msg-time">agora</span>
       </div>
     </div>
 
-    <!-- Sugestões rápidas -->
     <div class="chat-suggestions">
-      <button class="suggestion-chip" onclick="enviarSugestao(this)">📦 Rastrear meu pedido</button>
-      <button class="suggestion-chip" onclick="enviarSugestao(this)">🕐 Horário de funcionamento</button>
-      <button class="suggestion-chip" onclick="enviarSugestao(this)">💳 Formas de pagamento</button>
-      <button class="suggestion-chip" onclick="enviarSugestao(this)">🚚 Prazo de entrega</button>
+      <button class="suggestion-chip" onclick="enviarSugestao(this)">📅 Agendar consulta</button>
+      <button class="suggestion-chip" onclick="enviarSugestao(this)">🦷 Informações sobre procedimentos</button>
+      <button class="suggestion-chip" onclick="enviarSugestao(this)">💳 Planos de saúde aceitos</button>
+      <button class="suggestion-chip" onclick="enviarSugestao(this)">🕐 Horários de atendimento</button>
     </div>
 
   </div>
 
-  <!-- Barra de input -->
   <div class="chat-input-footer">
     <div class="chat-input-bar">
       <input
@@ -80,7 +76,7 @@
         <i data-lucide="send"></i>
       </button>
     </div>
-    <p class="chat-disclaimer">Assistente com IA · As respostas são geradas automaticamente</p>
+    <p class="chat-disclaimer">Assistente com IA · As respostas são geradas automaticamente · Em caso de dor aguda ligue imediatamente</p>
   </div>
 
 </div>
@@ -91,27 +87,31 @@
   function toggleDark() {
     const isDark = document.documentElement.classList.toggle('dark');
     document.getElementById('btn-dark-toggle').classList.toggle('active', isDark);
-    localStorage.setItem('smartbiz-dark', isDark ? '1' : '');
+    localStorage.setItem('smartdent-dark', isDark ? '1' : '');
   }
 
-  if (localStorage.getItem('smartbiz-dark') === '1') {
+  if (localStorage.getItem('smartdent-dark') === '1') {
     document.getElementById('btn-dark-toggle').classList.add('active');
   }
 
   const respostasIA = {
-    "rastrear": "Para rastrear seu pedido, acesse o link enviado no e-mail de confirmação ou me informe o número do pedido que busco para você!",
-    "horário": "Funcionamos de segunda a sexta das 07h às 19h, sábados das 07h às 15h e domingos das 07h às 13h.",
-    "pagamento": "Aceitamos Pix, cartão de crédito (até 12x) e débito. Para pagamentos via boleto, o prazo é de 2 dias úteis.",
-    "entrega": "O prazo de entrega varia por região: capitais em 2 a 3 dias úteis, interior em 3 a 5 dias. Frete grátis acima de R$ 150,00!",
-    "default": "Entendido! Vou verificar essa informação para você. Aguarde um momento... 😊 Para uma resposta mais rápida, tente reformular sua pergunta.",
+    "agendamento": "Para agendar sua consulta, temos os seguintes horários disponíveis: segunda, quarta e sexta das 08h às 18h, e sábados das 08h às 13h. Qual período prefere?",
+    "procedimento": "Realizamos: Consulta de rotina, Limpeza (profilaxia), Clareamento dental, Aparelho ortodôntico, Implante dentário, Tratamento de canal, Restaurações e Extrações. Sobre qual procedimento gostaria de mais informações?",
+    "plano":  "Aceitamos os seguintes planos: Unimed, Amil Dental, OdontoPrev, Bradesco Saúde, SulAmérica e Porto Seguro Odonto. Também atendemos particular com opção de parcelamento em até 12x.",
+    "horario": "Atendemos de segunda a sexta das 08h às 18h e sábados das 08h às 13h. Domingos e feriados estamos fechados. Para urgências, entre em contato pelo WhatsApp.",
+    "dor": "Sentindo dor? Isso é uma prioridade! Entre em contato diretamente pelo telefone (11) 99999-0001 para atendimento de urgência. Podemos encaixar você hoje se necessário.",
+    "preco": "Os valores variam conforme o procedimento. Consulta inicial: R$ 150. Limpeza: R$ 180. Para procedimentos mais complexos como implante ou canal, realizamos uma avaliação gratuita primeiro. Aceitamos planos dentários e parcelamos em até 12x.",
+    "default": "Entendido! Deixa eu verificar essa informação para você. Para um atendimento mais completo, você também pode ligar para (11) 99999-0001 ou nos enviar uma mensagem no WhatsApp. 😊",
   };
 
   function getRespostaIA(texto) {
     const t = texto.toLowerCase();
-    if (t.includes("rastr") || t.includes("pedido")) return respostasIA.rastrear;
-    if (t.includes("horár") || t.includes("funciona") || t.includes("abre")) return respostasIA.horário;
-    if (t.includes("pagam") || t.includes("pix") || t.includes("cartão") || t.includes("boleto")) return respostasIA.pagamento;
-    if (t.includes("entrega") || t.includes("prazo") || t.includes("frete")) return respostasIA.entrega;
+    if (t.includes("agenda") || t.includes("consult") || t.includes("marcar") || t.includes("horário disponível")) return respostasIA.agendamento;
+    if (t.includes("procediment") || t.includes("trat") || t.includes("implante") || t.includes("canal") || t.includes("clarear") || t.includes("aparelho")) return respostasIA.procedimento;
+    if (t.includes("plano") || t.includes("convenio") || t.includes("unimed") || t.includes("amil") || t.includes("odontoprev")) return respostasIA.plano;
+    if (t.includes("horár") || t.includes("funciona") || t.includes("abre") || t.includes("fecha")) return respostasIA.horario;
+    if (t.includes("dor") || t.includes("dói") || t.includes("urgência") || t.includes("emergência")) return respostasIA.dor;
+    if (t.includes("preço") || t.includes("valor") || t.includes("custa") || t.includes("quanto")) return respostasIA.preco;
     return respostasIA.default;
   }
 
@@ -119,16 +119,13 @@
     const container = document.getElementById('chat-messages');
     const grupo = document.createElement('div');
     grupo.className = 'chat-msg-group';
-
     const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
     grupo.innerHTML = `
       <div class="chat-msg ${tipo}-msg">
         <div class="chat-msg-bubble">${texto}</div>
         <span class="chat-msg-time">${agora}</span>
       </div>
     `;
-
     container.appendChild(grupo);
     container.scrollTop = container.scrollHeight;
   }
@@ -153,14 +150,10 @@
     const input = document.getElementById('chat-input');
     const texto = input.value.trim();
     if (!texto) return;
-
-    // Remove sugestões após primeira mensagem
     const sugestoes = document.querySelector('.chat-suggestions');
     if (sugestoes) sugestoes.remove();
-
     adicionarMensagem(texto, 'user');
     input.value = '';
-
     mostrarDigitando();
     setTimeout(() => {
       document.getElementById('typing-indicator')?.remove();

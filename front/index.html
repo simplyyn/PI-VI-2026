@@ -1,150 +1,149 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="hospital">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartBusiness AI - Seu Assistente Inteligente</title>
+  <title>SmartDent AI — Dashboard</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Ícones via Lucide Icons (CDN leve) -->
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
   <div class="app-container">
-    <!-- Menu Lateral (Sidebar) -->
     <aside class="sidebar">
-      <div class="logo">
-        <div class="logo-brand">
-          <i data-lucide="bot"></i>
-          <h2>Smart<span>Biz</span></h2>
+      <div>
+        <div class="logo">
+          <div class="logo-brand">
+            <i data-lucide="tooth"></i>
+            <h2>Smart<span>Dent</span></h2>
+          </div>
+          <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
+            <i data-lucide="moon"></i>
+          </button>
         </div>
-        <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
-          <i data-lucide="bot"></i>
-        </button>
-      </div>
 
-      <div class="theme-switcher" style="margin-top: 20px;">
-        <button class="theme-btn active" id="btn-negocio" onclick="setTheme('business')">Negócio</button>
-        <button class="theme-btn" id="btn-hospital" onclick="setTheme('hospital')">Hospital</button>
-      </div>
+        <div class="theme-switcher" style="margin-top: 20px;">
+          <button class="theme-btn" id="btn-negocio" onclick="setTheme('business')">Padrão</button>
+          <button class="theme-btn active" id="btn-clinica" onclick="setTheme('hospital')">Clínica</button>
+        </div>
 
-      <nav class="menu">
-        <a href="index.html" class="active"><i data-lucide="layout-dashboard"></i> Início</a>
-        <a href="atendimentos.html"><i data-lucide="message-square"></i> Atendimentos</a>
-        <a href="#"><i data-lucide="database"></i> Base de Conhecimento</a>
-        <a href="#"><i data-lucide="bar-chart-2"></i> Relatórios & IA</a>
-        <a href="#"><i data-lucide="settings"></i> Configurações</a>
-      </nav>
+        <nav class="menu">
+          <a href="index.html" class="active"><i data-lucide="layout-dashboard"></i> Início</a>
+          <a href="atendimentos.html"><i data-lucide="message-square"></i> Atendimentos</a>
+          <a href="estoque.html"><i data-lucide="package"></i> Estoque</a>
+          <a href="#"><i data-lucide="book-open"></i> Base de Conhecimento</a>
+          <a href="#"><i data-lucide="bar-chart-2"></i> Relatórios & IA</a>
+          <a href="#"><i data-lucide="settings"></i> Configurações</a>
+        </nav>
+      </div>
 
       <div class="user-profile">
-        <div class="avatar">Padaria Central</div>
+        <div class="avatar">AP</div>
         <div class="user-info">
-          <h4>Padaria do João</h4>
+          <h4>Clínica Sorriso</h4>
           <span>Plano Pro</span>
         </div>
       </div>
     </aside>
 
-    <!-- Conteúdo Principal -->
     <main class="main-content">
-      <!-- Cabeçalho / Boas-vindas -->
       <header class="top-header">
         <div class="welcome-text">
-          <h1>Olá, João! 👋</h1>
-          <p>Seu assistente virtual já realizou **34 atendimentos** hoje.</p>
+          <h1>Olá, Dra. Ana! 👋</h1>
+          <p>Seu assistente virtual já realizou <strong>12 atendimentos</strong> hoje.</p>
         </div>
         <div class="status-badge">
           <span class="dot"></span> IA Operacional
         </div>
       </header>
 
-      <!-- Chat / Busca Rápida com a IA -->
       <section class="ai-assistant-card">
         <div class="ai-header">
           <div class="ai-title">
             <i data-lucide="sparkles"></i>
-            <h3>Pergunte ou peça algo ao seu Assistente</h3>
+            <h3>Pergunte ou peça algo ao Assistente</h3>
           </div>
-          <span class="tag">Base de dados atualizada</span>
+          <span class="tag">Base odontológica atualizada</span>
         </div>
         <div class="ai-input-group">
-          <input type="text" placeholder="Ex: 'Resuma os principais motivos de reclamação desta semana' ou 'Qual o prazo de entrega para Campinas?'">
+          <input type="text" placeholder="Ex: 'Quais pacientes têm consulta amanhã?' ou 'Resumo dos atendimentos desta semana'">
           <button><i data-lucide="send"></i> Perguntar</button>
         </div>
       </section>
 
-      <!-- Cards de Resumo de Métricas -->
       <section class="metrics-grid">
         <div class="card metric">
-          <div class="card-icon blue"><i data-lucide="message-circle"></i></div>
+          <div class="card-icon blue"><i data-lucide="calendar-check"></i></div>
           <div class="metric-info">
-            <h3>142</h3>
-            <p>Dúvidas respondidas (semana)</p>
+            <h3>87</h3>
+            <p>Consultas respondidas (semana)</p>
           </div>
         </div>
-
         <div class="card metric">
           <div class="card-icon green"><i data-lucide="check-circle"></i></div>
           <div class="metric-info">
-            <h3>94%</h3>
+            <h3>91%</h3>
             <p>Respostas sem intervenção humana</p>
           </div>
         </div>
-
         <div class="card metric">
-          <div class="card-icon orange"><i data-lucide="alert-circle"></i></div>
+          <div class="card-icon orange"><i data-lucide="star"></i></div>
           <div class="metric-info">
-            <h3>Prazo de Entrega</h3>
-            <p>Principal dúvida do dia</p>
+            <h3>4.8/5</h3>
+            <p>Satisfação dos pacientes</p>
           </div>
         </div>
       </section>
 
-      <!-- Seção Principal de Conteúdo Dividido -->
       <section class="dashboard-grid">
-        <!-- Atendimentos Recentes -->
         <div class="card dashboard-card">
           <div class="card-header">
             <h3>Últimas Interações da IA</h3>
-            <a href="#" class="link-more">Ver todos</a>
+            <a href="atendimentos.html" class="link-more">Ver todos</a>
           </div>
           <ul class="recent-list">
             <li class="chat-item">
               <div class="chat-info">
-                <strong>Cliente: "Vocês fazem entrega para Campinas?"</strong>
-                <p><span>IA Respondeu:</span> "Fazemos sim! O prazo é de 1 a 2 dias úteis com taxa fixa de R$ 15,00."</p>
+                <strong>Maria Santos: "Quero agendar uma consulta de rotina"</strong>
+                <p><span>IA Respondeu</span> · 09:15</p>
               </div>
-              <span class="time">há 5 min</span>
+              <span class="badge badge-resolved">Resolvido</span>
             </li>
             <li class="chat-item">
               <div class="chat-info">
-                <strong>Cliente: "Qual o horário de funcionamento no domingo?"</strong>
-                <p><span>IA Respondeu:</span> "Abertos aos domingos das 07h às 13h!"</p>
+                <strong>Carlos Oliveira: "Tenho dor de dente forte desde ontem"</strong>
+                <p><span>Atendente Humano</span> · 09:45</p>
               </div>
-              <span class="time">há 22 min</span>
+              <span class="badge badge-escalated">Escalado</span>
+            </li>
+            <li class="chat-item">
+              <div class="chat-info">
+                <strong>Ana Costa: "Quanto custa um clareamento dental?"</strong>
+                <p><span>IA Respondeu</span> · 10:20</p>
+              </div>
+              <span class="badge badge-resolved">Resolvido</span>
             </li>
           </ul>
         </div>
 
-        <!-- Insights e Ações Recomendadas -->
         <div class="card dashboard-card">
           <div class="card-header">
-            <h3>💡 Insights & Sugestões da IA</h3>
+            <h3>💡 Insights da Clínica</h3>
           </div>
           <div class="insights-container">
             <div class="insight-item warning">
               <i data-lucide="trending-up"></i>
               <div>
-                <h4>Aumento de dúvidas sobre Frete</h4>
-                <p>3 clientes perguntaram sobre taxas para a região norte. Deseja cadastrar essa tabela de preços na Base de Conhecimento?</p>
+                <h4>Alta demanda por clareamento</h4>
+                <p>5 pacientes perguntaram sobre clareamento hoje. Atualize a base com os novos preços.</p>
                 <button class="btn-action">Atualizar Base</button>
               </div>
             </div>
             <div class="insight-item success">
               <i data-lucide="smile"></i>
               <div>
-                <h4>Satisfação Alta</h4>
-                <p>O tempo médio de resposta caiu para 12 segundos com a automação.</p>
+                <h4>Satisfação em alta</h4>
+                <p>Tempo médio de resposta de 18s. Pacientes aprovam o atendimento rápido.</p>
               </div>
             </div>
           </div>
@@ -158,18 +157,17 @@
 
     function setTheme(theme) {
       document.getElementById('btn-negocio').classList.toggle('active', theme === 'business');
-      document.getElementById('btn-hospital').classList.toggle('active', theme === 'hospital');
+      document.getElementById('btn-clinica').classList.toggle('active', theme === 'hospital');
       const html = document.documentElement;
       html.removeAttribute('data-theme');
       if (theme === 'hospital') html.setAttribute('data-theme', 'hospital');
-      localStorage.setItem('smartbiz-theme', theme);
+      localStorage.setItem('smartdent-theme', theme);
     }
 
     function spawnParticles(btn, type) {
       const r = btn.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
-
       if (type === 'spark') {
         const colors = ['#fbbf24','#f97316','#fef08a','#fb923c','#fde047','#ff6b35'];
         for (let i = 0; i < 9; i++) {
@@ -218,26 +216,24 @@
       const isDark = html.classList.toggle('dark');
       const btn = document.getElementById('btn-dark-toggle');
       btn.classList.toggle('active', isDark);
-      localStorage.setItem('smartbiz-dark', isDark ? '1' : '');
+      localStorage.setItem('smartdent-dark', isDark ? '1' : '');
       spawnParticles(btn, isDark ? 'smoke' : 'spark');
     }
 
-    const savedTheme = localStorage.getItem('smartbiz-theme');
-    if (savedTheme) setTheme(savedTheme);
+    const savedTheme = localStorage.getItem('smartdent-theme') || 'hospital';
+    setTheme(savedTheme);
 
-    if (localStorage.getItem('smartbiz-dark') === '1') {
+    if (localStorage.getItem('smartdent-dark') === '1') {
       document.documentElement.classList.add('dark');
       document.getElementById('btn-dark-toggle').classList.add('active');
     }
 
-    // Transição de entrada
     document.addEventListener('DOMContentLoaded', () => {
       const c = document.querySelector('.app-container');
       c.classList.add('page-enter');
       c.addEventListener('animationend', () => c.classList.remove('page-enter'), { once: true });
     });
 
-    // Transição de saída ao navegar
     document.querySelectorAll('a[href]').forEach(link => {
       const href = link.getAttribute('href');
       if (!href || href.startsWith('#') || href.startsWith('http')) return;

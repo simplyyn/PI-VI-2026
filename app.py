@@ -6,54 +6,69 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from auth import autenticar, usuario_logado, redirecionar_por_role
 
-app = FastAPI(title="SmartBiz AI")
-app.add_middleware(SessionMiddleware, secret_key="smartbiz-dev-secret-2026")
+app = FastAPI(title="SmartDent AI")
+app.add_middleware(SessionMiddleware, secret_key="smartdent-dev-secret-2026")
 app.mount("/static", StaticFiles(directory="front"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # ─── Mock Data ────────────────────────────────────────────────────────────────
 
 atendimentos = [
-    {"id": 1, "cliente": "Maria Santos",    "iniciais": "MS", "preview": "Qual o prazo de entrega para o Rio?",  "status": "resolved",  "canal": "ai",    "hora": "14:23", "cor": ""},
-    {"id": 2, "cliente": "Carlos Oliveira", "iniciais": "CO", "preview": "Quero cancelar meu pedido urgente",    "status": "escalated", "canal": "human", "hora": "13:50", "cor": "red"},
-    {"id": 3, "cliente": "Ana Costa",       "iniciais": "AC", "preview": "Vocês aceitam pagamento no Pix?",      "status": "resolved",  "canal": "ai",    "hora": "13:10", "cor": ""},
-    {"id": 4, "cliente": "Pedro Silva",     "iniciais": "PS", "preview": "O produto chegou com defeito...",      "status": "pending",   "canal": "human", "hora": "12:45", "cor": "orange"},
-    {"id": 5, "cliente": "Juliana Ferreira","iniciais": "JF", "preview": "Qual o horário de funcionamento?",     "status": "resolved",  "canal": "ai",    "hora": "11:30", "cor": ""},
-    {"id": 6, "cliente": "Roberto Lima",    "iniciais": "RL", "preview": "Tem promoção para clientes antigos?",  "status": "pending",   "canal": "ai",    "hora": "10:55", "cor": ""},
+    {"id": 1, "cliente": "Maria Santos",    "iniciais": "MS", "preview": "Quero agendar uma consulta de rotina",       "status": "resolved",  "canal": "ai",    "hora": "09:15", "cor": ""},
+    {"id": 2, "cliente": "Carlos Oliveira", "iniciais": "CO", "preview": "Tenho dor de dente forte desde ontem",       "status": "escalated", "canal": "human", "hora": "09:45", "cor": "red"},
+    {"id": 3, "cliente": "Ana Costa",       "iniciais": "AC", "preview": "Quanto custa um clareamento dental?",        "status": "resolved",  "canal": "ai",    "hora": "10:20", "cor": ""},
+    {"id": 4, "cliente": "Pedro Lima",      "iniciais": "PL", "preview": "Preciso remarcar minha consulta de amanhã", "status": "pending",   "canal": "human", "hora": "10:55", "cor": "orange"},
+    {"id": 5, "cliente": "Julia Ferreira",  "iniciais": "JF", "preview": "Vocês atendem pelo plano Unimed?",           "status": "resolved",  "canal": "ai",    "hora": "11:30", "cor": ""},
+    {"id": 6, "cliente": "Roberto Mendes",  "iniciais": "RM", "preview": "Quero informações sobre implantes",          "status": "pending",   "canal": "ai",    "hora": "11:50", "cor": ""},
 ]
 
 metricas = {
-    "atendimentos_semana": 142,
-    "taxa_automatizacao": 94,
-    "total_hoje": 34,
-    "tempo_resposta": "12s",
+    "atendimentos_semana": 87,
+    "taxa_automatizacao": 91,
+    "total_hoje": 12,
+    "tempo_resposta": "18s",
+    "consultas_mes": 214,
+    "satisfacao": 4.8,
 }
 
 artigos_kb = [
-    {"id": 1, "titulo": "Prazo de Entrega por Região",       "categoria": "Logística",  "status": True,  "views": 45,  "atualizado": "20/09/2026"},
-    {"id": 2, "titulo": "Formas de Pagamento Aceitas",       "categoria": "Financeiro", "status": True,  "views": 87,  "atualizado": "18/09/2026"},
-    {"id": 3, "titulo": "Política de Trocas e Devoluções",   "categoria": "Pós-venda",  "status": True,  "views": 33,  "atualizado": "15/09/2026"},
-    {"id": 4, "titulo": "Horários de Funcionamento",         "categoria": "Geral",      "status": True,  "views": 112, "atualizado": "10/09/2026"},
-    {"id": 5, "titulo": "Tabela de Fretes Especiais",        "categoria": "Logística",  "status": False, "views": 12,  "atualizado": "05/09/2026"},
-    {"id": 6, "titulo": "Cupons e Promoções Ativas",         "categoria": "Marketing",  "status": True,  "views": 68,  "atualizado": "22/09/2026"},
-    {"id": 7, "titulo": "Manutenção Preventiva de Produtos", "categoria": "Pós-venda",  "status": True,  "views": 22,  "atualizado": "12/09/2026"},
+    {"id": 1, "titulo": "Consulta de Avaliação Inicial",     "categoria": "Procedimentos", "status": True,  "views": 67,  "atualizado": "22/09/2026"},
+    {"id": 2, "titulo": "Clareamento Dental — Tipos e Preços","categoria": "Estética",     "status": True,  "views": 112, "atualizado": "20/09/2026"},
+    {"id": 3, "titulo": "Implante Dentário — O que esperar", "categoria": "Cirurgia",      "status": True,  "views": 89,  "atualizado": "18/09/2026"},
+    {"id": 4, "titulo": "Planos de Saúde Aceitos",           "categoria": "Financeiro",    "status": True,  "views": 143, "atualizado": "15/09/2026"},
+    {"id": 5, "titulo": "Tratamento de Canal — Sintomas",    "categoria": "Procedimentos", "status": True,  "views": 55,  "atualizado": "12/09/2026"},
+    {"id": 6, "titulo": "Ortodontia — Aparelhos Disponíveis","categoria": "Ortodontia",    "status": True,  "views": 78,  "atualizado": "10/09/2026"},
+    {"id": 7, "titulo": "Cuidados Pós-Procedimento",         "categoria": "Orientações",   "status": True,  "views": 34,  "atualizado": "08/09/2026"},
 ]
 
 dados_grafico = {
     "labels":  ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
-    "ia":      [16, 22, 28, 20, 26, 13, 5],
-    "humano":  [2,  2,  3,  2,  2,  1,  0],
+    "ia":      [12, 15, 19, 14, 18, 8, 0],
+    "humano":  [3,  2,  4,  3,  3,  2,  0],
     "topicos": {
-        "labels":  ["Prazo entrega", "Pagamento", "Troca/Dev.", "Horário", "Frete", "Outros"],
-        "valores": [34, 28, 19, 15, 12, 8],
+        "labels":  ["Agendamento", "Clareamento", "Implante", "Planos de Saúde", "Canal", "Ortodontia"],
+        "valores": [43, 28, 22, 38, 17, 21],
     },
 }
 
-empresas = [
-    {"id": "padaria-do-joao", "nome": "Padaria do João",   "plano": "Pro",        "status": "ativo",   "atendimentos_mes": 342,  "suporte": False, "owner": "joao@padaria.com"},
-    {"id": "hospital-sp",     "nome": "Hospital São Paulo","plano": "Enterprise", "status": "ativo",   "atendimentos_mes": 1840, "suporte": True,  "owner": "hospital@sp.com"},
-    {"id": "auto-center",     "nome": "Auto Center Silva", "plano": "Básico",     "status": "ativo",   "atendimentos_mes": 89,   "suporte": False, "owner": "silva@auto.com"},
-    {"id": "clinica-vital",   "nome": "Clínica Vital",     "plano": "Pro",        "status": "inativo", "atendimentos_mes": 0,    "suporte": False, "owner": "vital@clinica.com"},
+clinicas = [
+    {"id": "clinica-sorriso",  "nome": "Clínica Sorriso",       "plano": "Pro",        "status": "ativo",   "atendimentos_mes": 214,  "suporte": False, "owner": "dra.ana@clinicasorriso.com"},
+    {"id": "odonto-center",    "nome": "OdontoCenter SP",        "plano": "Enterprise", "status": "ativo",   "atendimentos_mes": 892,  "suporte": True,  "owner": "contato@odontocenter.com"},
+    {"id": "sorriso-kids",     "nome": "Sorriso Kids",           "plano": "Básico",     "status": "ativo",   "atendimentos_mes": 67,   "suporte": False, "owner": "contato@sorrisokids.com"},
+    {"id": "clinica-smile",    "nome": "Clínica Smile Premium",  "plano": "Pro",        "status": "inativo", "atendimentos_mes": 0,    "suporte": False, "owner": "smile@premium.com"},
+]
+
+estoque = [
+    {"id": 1,  "nome": "Luvas de Procedimento (M)",    "categoria": "EPI",          "unidade": "Caixa (100 un)", "quantidade": 8,  "minimo": 5,  "status": "ok"},
+    {"id": 2,  "nome": "Anestésico Articaína 4%",      "categoria": "Anestésicos",  "unidade": "Caixa (50 un)",  "quantidade": 2,  "minimo": 3,  "status": "baixo"},
+    {"id": 3,  "nome": "Brocas Diamantadas Esféricas", "categoria": "Instrumental", "unidade": "Kit (10 un)",    "quantidade": 0,  "minimo": 2,  "status": "esgotado"},
+    {"id": 4,  "nome": "Resina Composta A2",           "categoria": "Restauração",  "unidade": "Seringa 4g",     "quantidade": 12, "minimo": 6,  "status": "ok"},
+    {"id": 5,  "nome": "Fio Retrator #000",            "categoria": "Protética",    "unidade": "Rolo",           "quantidade": 3,  "minimo": 2,  "status": "ok"},
+    {"id": 6,  "nome": "Alginato (500g)",              "categoria": "Moldagem",     "unidade": "Pote",           "quantidade": 1,  "minimo": 3,  "status": "baixo"},
+    {"id": 7,  "nome": "Papel Articular 40μm",         "categoria": "Diagnóstico",  "unidade": "Bloco",          "quantidade": 5,  "minimo": 2,  "status": "ok"},
+    {"id": 8,  "nome": "Máscaras Cirúrgicas",          "categoria": "EPI",          "unidade": "Caixa (50 un)",  "quantidade": 15, "minimo": 10, "status": "ok"},
+    {"id": 9,  "nome": "Hipoclorito de Sódio 2,5%",   "categoria": "Endodontia",   "unidade": "Frasco 500ml",   "quantidade": 4,  "minimo": 3,  "status": "ok"},
+    {"id": 10, "nome": "Lima Endodôntica #15",         "categoria": "Endodontia",   "unidade": "Caixa (6 un)",   "quantidade": 1,  "minimo": 4,  "status": "baixo"},
 ]
 
 # ─── Auth Routes ──────────────────────────────────────────────────────────────
@@ -74,15 +89,15 @@ async def login_post(request: Request, email: str = Form(...), senha: str = Form
             "email": email,
         })
     request.session["usuario"] = {
-        "id":          user["id"],
-        "nome":        user["nome"],
-        "iniciais":    user["iniciais"],
-        "role":        user["role"],
-        "email":       email,
-        "empresa":     user.get("empresa", "SmartBiz"),
-        "empresa_id":  user.get("empresa_id", ""),
-        "empresa_nome":user.get("empresa_nome", ""),
-        "plano":       user.get("plano", ""),
+        "id":           user["id"],
+        "nome":         user["nome"],
+        "iniciais":     user["iniciais"],
+        "role":         user["role"],
+        "email":        email,
+        "empresa":      user.get("empresa", "SmartDent"),
+        "empresa_id":   user.get("empresa_id", ""),
+        "empresa_nome": user.get("empresa_nome", ""),
+        "plano":        user.get("plano", ""),
     }
     return redirecionar_por_role(user["role"])
 
@@ -91,10 +106,9 @@ async def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=302)
 
-# ─── Owner Routes (protegidas) ────────────────────────────────────────────────
+# ─── Owner Routes ─────────────────────────────────────────────────────────────
 
 def _owner_ctx(request, extra: dict = {}):
-    """Contexto base para todas as rotas do owner."""
     user = usuario_logado(request)
     if not user or user["role"] != "owner":
         return None
@@ -102,7 +116,7 @@ def _owner_ctx(request, extra: dict = {}):
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    ctx = _owner_ctx(request, {"pagina": "dashboard", "metricas": metricas, "atendimentos": atendimentos[:2]})
+    ctx = _owner_ctx(request, {"pagina": "dashboard", "metricas": metricas, "atendimentos": atendimentos[:3]})
     if ctx is None:
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("index.html", ctx)
@@ -135,6 +149,22 @@ async def pagina_configuracoes(request: Request):
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("configuracoes.html", ctx)
 
+@app.get("/estoque", response_class=HTMLResponse)
+async def pagina_estoque(request: Request):
+    total     = len(estoque)
+    baixo     = sum(1 for i in estoque if i["status"] == "baixo")
+    esgotado  = sum(1 for i in estoque if i["status"] == "esgotado")
+    ctx = _owner_ctx(request, {
+        "pagina": "estoque",
+        "estoque": estoque,
+        "total": total,
+        "baixo": baixo,
+        "esgotado": esgotado,
+    })
+    if ctx is None:
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse("estoque.html", ctx)
+
 # ─── Admin Routes ─────────────────────────────────────────────────────────────
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -143,7 +173,7 @@ async def admin_painel(request: Request):
     if not user or user["role"] != "admin":
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("admin.html", {
-        "request": request, "usuario": user, "empresas": empresas,
+        "request": request, "usuario": user, "clinicas": clinicas,
     })
 
 # ─── Customer Routes ──────────────────────────────────────────────────────────
@@ -174,3 +204,7 @@ async def api_conhecimento():
 @app.get("/api/relatorios/grafico")
 async def api_grafico():
     return dados_grafico
+
+@app.get("/api/estoque")
+async def api_estoque():
+    return estoque

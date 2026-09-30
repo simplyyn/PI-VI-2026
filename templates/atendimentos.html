@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}SmartBiz AI — Atendimentos{% endblock %}
+{% block title %}SmartDent AI — Atendimentos{% endblock %}
 
 {% block content %}
 <div class="atend-container">
@@ -13,7 +13,7 @@
           <span class="count-badge">{{ atendimentos | length }}</span>
         </div>
       </div>
-      <input type="text" class="search-input" placeholder="Buscar conversa ou cliente...">
+      <input type="text" class="search-input" placeholder="Buscar paciente ou assunto...">
       <div class="filter-tabs">
         <button class="filter-tab active">Todos</button>
         <button class="filter-tab">Pendentes</button>
@@ -55,7 +55,7 @@
           <div class="conv-detail-name">Maria Santos</div>
           <div class="conv-detail-sub">
             <span class="badge badge-resolved">Resolvido</span>
-            <span>14:20 — 14:23 · 4 mensagens · respondido pela IA</span>
+            <span>09:12 — 09:15 · 4 mensagens · respondido pela IA</span>
           </div>
         </div>
       </div>
@@ -71,8 +71,9 @@
         Resumo gerado pela IA
       </div>
       <p class="ai-summary-text">
-        Cliente consultou sobre <strong>prazo de entrega para o Rio de Janeiro</strong> e possibilidade de <strong>frete grátis</strong>.
-        A IA respondeu com as informações da base de conhecimento: prazo de 3 a 5 dias úteis e frete gratuito para compras acima de R$ 150,00.
+        Paciente solicitou <strong>agendamento de consulta de rotina</strong> e informações sobre <strong>limpeza dental</strong>.
+        A IA forneceu os horários disponíveis e explicou o procedimento de profilaxia.
+        Consulta agendada para quinta-feira às 10h com a Dra. Ana Paula.
         Conversa encerrada com sucesso — nenhuma intervenção humana necessária.
       </p>
     </div>
@@ -81,29 +82,29 @@
       <div class="message-row client">
         <div class="msg-badge client-badge">MS</div>
         <div class="message-content">
-          <div class="message-bubble">Oi! Qual o prazo de entrega para o Rio de Janeiro?</div>
-          <span class="msg-time">14:20</span>
+          <div class="message-bubble">Olá! Gostaria de agendar uma consulta de rotina. Quais horários estão disponíveis?</div>
+          <span class="msg-time">09:12</span>
         </div>
       </div>
       <div class="message-row ai">
         <div class="msg-badge">IA</div>
         <div class="message-content">
-          <div class="message-bubble">Olá, Maria! Para o Rio de Janeiro, o prazo é de <strong>3 a 5 dias úteis</strong> após a confirmação do pagamento. O frete tem custo de R$ 18,90, mas é <strong>gratuito para compras acima de R$ 150,00</strong>.</div>
-          <span class="msg-time">14:20</span>
+          <div class="message-bubble">Olá, Maria! Temos os seguintes horários disponíveis essa semana: <strong>Quinta-feira às 10h ou 14h</strong>, e <strong>Sexta-feira às 09h</strong>. Todos com a Dra. Ana Paula. Qual prefere?</div>
+          <span class="msg-time">09:12</span>
         </div>
       </div>
       <div class="message-row client">
         <div class="msg-badge client-badge">MS</div>
         <div class="message-content">
-          <div class="message-bubble">Ótimo! E como faço para rastrear o pedido depois que fizer a compra?</div>
-          <span class="msg-time">14:22</span>
+          <div class="message-bubble">Quinta às 10h fica ótimo! Vocês fazem limpeza na mesma consulta?</div>
+          <span class="msg-time">09:14</span>
         </div>
       </div>
       <div class="message-row ai">
         <div class="msg-badge">IA</div>
         <div class="message-content">
-          <div class="message-bubble">Assim que o pedido for despachado, você receberá um <strong>e-mail com o código de rastreamento</strong>. Se precisar de ajuda, é só me chamar com o número do pedido!</div>
-          <span class="msg-time">14:23</span>
+          <div class="message-bubble">Sim! Na consulta de rotina já incluímos a <strong>profilaxia (limpeza dental)</strong>. Consulta agendada para <strong>quinta-feira às 10h</strong>. Você receberá uma confirmação por WhatsApp. Até lá!</div>
+          <span class="msg-time">09:15</span>
         </div>
       </div>
     </div>

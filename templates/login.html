@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartBiz AI — Entrar</title>
+  <title>SmartDent AI — Entrar</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     (function () {
-      var d = localStorage.getItem('smartbiz-dark');
+      document.documentElement.setAttribute('data-theme', 'hospital');
+      var d = localStorage.getItem('smartdent-dark');
       if (d === '1') document.documentElement.classList.add('dark');
     })();
   </script>
@@ -18,11 +19,11 @@
   <div class="login-card">
 
     <div class="login-logo">
-      <i data-lucide="bot"></i>
-      <h1>Smart<span>Biz</span></h1>
+      <i data-lucide="tooth"></i>
+      <h1>Smart<span>Dent</span></h1>
     </div>
 
-    <p class="login-subtitle">Entre na sua conta para continuar</p>
+    <p class="login-subtitle">Plataforma de atendimento inteligente para clínicas odontológicas</p>
 
     {% if erro %}
     <div class="login-erro">
@@ -69,9 +70,9 @@
 
     <div class="login-hint">
       <strong>Contas de demonstração:</strong><br>
-      Admin — admin@smartbiz.com / admin123<br>
-      Dono — joao@padaria.com / dono123<br>
-      Cliente — maria@cliente.com / cliente123
+      Admin — admin@smartdent.com / admin123<br>
+      Dentista — dra.ana@clinicasorriso.com / clinica123<br>
+      Paciente — joao@paciente.com / paciente123
     </div>
 
   </div>
