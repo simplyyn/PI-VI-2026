@@ -51,6 +51,32 @@ dados_grafico = {
     },
 }
 
+pacientes = [
+    {"id": 1,  "nome": "Maria Santos",    "iniciais": "MS", "cor": "#0284c7", "telefone": "(11) 98765-4321", "email": "maria@email.com",    "ultima_consulta": "22/09/2026", "proxima_consulta": "15/10/2026", "status": "ativo",   "plano": "Unimed",       "procedimentos": 8},
+    {"id": 2,  "nome": "Carlos Oliveira", "iniciais": "CO", "cor": "#059669", "telefone": "(11) 97654-3210", "email": "carlos@email.com",   "ultima_consulta": "10/09/2026", "proxima_consulta": "08/10/2026", "status": "ativo",   "plano": "Bradesco",     "procedimentos": 3},
+    {"id": 3,  "nome": "Ana Costa",       "iniciais": "AC", "cor": "#7c3aed", "telefone": "(11) 96543-2109", "email": "ana@email.com",      "ultima_consulta": "05/10/2026", "proxima_consulta": "19/10/2026", "status": "novo",    "plano": "Particular",   "procedimentos": 1},
+    {"id": 4,  "nome": "Pedro Lima",      "iniciais": "PL", "cor": "#d97706", "telefone": "(11) 95432-1098", "email": "pedro@email.com",    "ultima_consulta": "18/08/2026", "proxima_consulta": None,          "status": "inativo", "plano": "SulAmérica",   "procedimentos": 12},
+    {"id": 5,  "nome": "Julia Ferreira",  "iniciais": "JF", "cor": "#0284c7", "telefone": "(11) 94321-0987", "email": "julia@email.com",    "ultima_consulta": "01/10/2026", "proxima_consulta": "20/10/2026", "status": "ativo",   "plano": "Unimed",       "procedimentos": 5},
+    {"id": 6,  "nome": "Roberto Mendes",  "iniciais": "RM", "cor": "#dc2626", "telefone": "(11) 93210-9876", "email": "roberto@email.com",  "ultima_consulta": "29/09/2026", "proxima_consulta": "06/10/2026", "status": "ativo",   "plano": "Amil",         "procedimentos": 6},
+    {"id": 7,  "nome": "Fernanda Rocha",  "iniciais": "FR", "cor": "#059669", "telefone": "(11) 92109-8765", "email": "fernanda@email.com", "ultima_consulta": "03/10/2026", "proxima_consulta": "10/10/2026", "status": "novo",    "plano": "Particular",   "procedimentos": 2},
+    {"id": 8,  "nome": "Diego Alves",     "iniciais": "DA", "cor": "#7c3aed", "telefone": "(11) 91098-7654", "email": "diego@email.com",    "ultima_consulta": "12/09/2026", "proxima_consulta": "14/10/2026", "status": "ativo",   "plano": "Bradesco",     "procedimentos": 9},
+    {"id": 9,  "nome": "Camila Torres",   "iniciais": "CT", "cor": "#0284c7", "telefone": "(11) 90987-6543", "email": "camila@email.com",   "ultima_consulta": "20/07/2026", "proxima_consulta": None,          "status": "inativo", "plano": "Unimed",       "procedimentos": 4},
+    {"id": 10, "nome": "Lucas Barbosa",   "iniciais": "LB", "cor": "#d97706", "telefone": "(11) 89876-5432", "email": "lucas@email.com",    "ultima_consulta": "04/10/2026", "proxima_consulta": "21/10/2026", "status": "novo",    "plano": "Particular",   "procedimentos": 1},
+]
+
+agendamentos = [
+    {"id": 1,  "paciente": "Maria Santos",    "horario": "08:30", "duracao": 60,  "procedimento": "Consulta de Rotina + Profilaxia",   "dentista": "Dra. Ana Paula",  "status": "confirmado", "dia": "hoje",   "cor": "#0284c7"},
+    {"id": 2,  "paciente": "Carlos Oliveira", "horario": "09:30", "duracao": 90,  "procedimento": "Tratamento de Canal",               "dentista": "Dr. Carlos Melo", "status": "confirmado", "dia": "hoje",   "cor": "#059669"},
+    {"id": 3,  "paciente": "Ana Costa",       "horario": "10:30", "duracao": 45,  "procedimento": "Avaliação Inicial",                 "dentista": "Dra. Ana Paula",  "status": "confirmado", "dia": "hoje",   "cor": "#7c3aed"},
+    {"id": 4,  "paciente": "Pedro Lima",      "horario": "11:30", "duracao": 60,  "procedimento": "Clareamento Dental",                "dentista": "Dra. Patrícia",   "status": "pendente",   "dia": "hoje",   "cor": "#d97706"},
+    {"id": 5,  "paciente": "Julia Ferreira",  "horario": "13:00", "duracao": 30,  "procedimento": "Retorno — Ortodontia",              "dentista": "Dra. Ana Paula",  "status": "confirmado", "dia": "hoje",   "cor": "#0284c7"},
+    {"id": 6,  "paciente": "Roberto Mendes",  "horario": "14:00", "duracao": 120, "procedimento": "Implante Dentário — 1ª etapa",      "dentista": "Dr. Carlos Melo", "status": "confirmado", "dia": "hoje",   "cor": "#dc2626"},
+    {"id": 7,  "paciente": "Fernanda Rocha",  "horario": "15:30", "duracao": 45,  "procedimento": "Consulta de Avaliação",             "dentista": "Dra. Ana Paula",  "status": "pendente",   "dia": "hoje",   "cor": "#059669"},
+    {"id": 8,  "paciente": "Diego Alves",     "horario": "09:00", "duracao": 60,  "procedimento": "Restauração — Resina Composta",     "dentista": "Dra. Patrícia",   "status": "confirmado", "dia": "amanha", "cor": "#7c3aed"},
+    {"id": 9,  "paciente": "Lucas Barbosa",   "horario": "10:00", "duracao": 60,  "procedimento": "Consulta de Rotina",                "dentista": "Dra. Ana Paula",  "status": "pendente",   "dia": "amanha", "cor": "#d97706"},
+    {"id": 10, "paciente": "Maria Santos",    "horario": "14:00", "duracao": 45,  "procedimento": "Retorno — Clareamento",             "dentista": "Dra. Patrícia",   "status": "confirmado", "dia": "amanha", "cor": "#0284c7"},
+]
+
 clinicas = [
     {"id": "clinica-sorriso",  "nome": "Clínica Sorriso",       "plano": "Pro",        "status": "ativo",   "atendimentos_mes": 214,  "suporte": False, "owner": "dra.ana@clinicasorriso.com"},
     {"id": "odonto-center",    "nome": "OdontoCenter SP",        "plano": "Enterprise", "status": "ativo",   "atendimentos_mes": 892,  "suporte": True,  "owner": "contato@odontocenter.com"},
@@ -148,6 +174,21 @@ async def pagina_configuracoes(request: Request):
     if ctx is None:
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("configuracoes.html", ctx)
+
+@app.get("/pacientes", response_class=HTMLResponse)
+async def pagina_pacientes(request: Request):
+    ctx = _owner_ctx(request, {"pagina": "pacientes", "pacientes": pacientes})
+    if ctx is None:
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse("pacientes.html", ctx)
+
+@app.get("/agendamentos", response_class=HTMLResponse)
+async def pagina_agendamentos(request: Request):
+    total = len(agendamentos)
+    ctx = _owner_ctx(request, {"pagina": "agendamentos", "agendamentos": agendamentos, "total": total})
+    if ctx is None:
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse("agendamentos.html", ctx)
 
 @app.get("/estoque", response_class=HTMLResponse)
 async def pagina_estoque(request: Request):

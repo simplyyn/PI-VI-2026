@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}SmartDent AI — Agendamentos{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h1>Agendamentos</h1>
+      <p class="page-subtitle">Outubro 2026 · {{ agendamentos | length }} consultas agendadas</p>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-primary" style="background:var(--bg-color);color:var(--text-primary);border:1px solid var(--border-color);">
+        <i data-lucide="filter"></i> Filtrar
+      </button>
+      <button class="btn-primary">
+        <i data-lucide="calendar-plus"></i> Novo Agendamento
+      </button>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <section class="metrics-grid" style="margin-bottom:24px;">
+      <div class="card metric">
+        <div class="card-icon blue"><i data-lucide="calendar-check"></i></div>
+        <div class="metric-info">
+          <h3>{{ agendamentos | selectattr('status','eq','confirmado') | list | length }}</h3>
+          <p>Confirmadas hoje</p>
+        </div>
+      </div>
+      <div class="card metric">
+        <div class="card-icon orange"><i data-lucide="clock"></i></div>
+        <div class="metric-info">
+          <h3>{{ agendamentos | selectattr('status','eq','pendente') | list | length }}</h3>
+          <p>Aguardando confirmação</p>
+        </div>
+      </div>
+      <div class="card metric">
+        <div class="card-icon green"><i data-lucide="calendar"></i></div>
+        <div class="metric-info">
+          <h3>{{ agendamentos | length }}</h3>
+          <p>Total no dia</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="agenda-layout">
+
+      <!-- Mini-calendário -->
+      <div class="agenda-calendar-panel">
+        <div class="cal-header">
+          <button class="cal-nav-btn">‹</button>
+          <h4>Outubro 2026</h4>
+          <button class="cal-nav-btn">›</button>
+        </div>
+        <div class="cal-weekdays">
+          <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+        </div>
+        <div class="cal-days" id="calDays"></div>
+
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-color);">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary);margin-bottom:8px;">Dentistas</div>
+          {% for dentista, cor in [('Dra. Ana Paula','#0284c7'),('Dr. Carlos Melo','#059669'),('Dra. Patrícia','#7c3aed')] %}
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px;">
+            <span style="width:10px;height:10px;border-radius:50%;background:{{ cor }};flex-shrink:0;"></span>
+            {{ dentista }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Lista de agendamentos -->
+      <div class="agenda-list-panel">
+
+        <!-- Hoje -->
+        <div class="agenda-day-group">
+          <div class="agenda-day-label">Hoje — 05 de outubro</div>
+          {% for appt in agendamentos if appt.dia == 'hoje' %}
+          <div class="appt-card" style="border-left: 3px solid {{ appt.cor }};">
+            <div class="appt-time">
+              {{ appt.horario }}
+              <small>{{ appt.duracao }}min</small>
+            </div>
+            <div class="appt-divider"></div>
+            <div class="appt-info">
+              <div class="appt-patient">{{ appt.paciente }}</div>
+              <div class="appt-proc">{{ appt.procedimento }}</div>
+            </div>
+            <div class="appt-meta">
+              <span class="badge-appt-{{ appt.status }}">
+                {{ appt.status | capitalize }}
+              </span>
+              <span class="appt-dentista">{{ appt.dentista }}</span>
+            </div>
+            <div class="kb-actions">
+              <button class="btn-icon" title="Confirmar"><i data-lucide="check"></i></button>
+              <button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button>
+              <button class="btn-icon danger" title="Cancelar"><i data-lucide="x"></i></button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Amanhã -->
+        <div class="agenda-day-group">
+          <div class="agenda-day-label">Amanhã — 06 de outubro</div>
+          {% for appt in agendamentos if appt.dia == 'amanha' %}
+          <div class="appt-card" style="border-left: 3px solid {{ appt.cor }};">
+            <div class="appt-time">
+              {{ appt.horario }}
+              <small>{{ appt.duracao }}min</small>
+            </div>
+            <div class="appt-divider"></div>
+            <div class="appt-info">
+              <div class="appt-patient">{{ appt.paciente }}</div>
+              <div class="appt-proc">{{ appt.procedimento }}</div>
+            </div>
+            <div class="appt-meta">
+              <span class="badge-appt-{{ appt.status }}">
+                {{ appt.status | capitalize }}
+              </span>
+              <span class="appt-dentista">{{ appt.dentista }}</span>
+            </div>
+            <div class="kb-actions">
+              <button class="btn-icon" title="Confirmar"><i data-lucide="check"></i></button>
+              <button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button>
+              <button class="btn-icon danger" title="Cancelar"><i data-lucide="x"></i></button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Gera o mini-calendário de outubro 2026
+  const days = document.getElementById('calDays');
+  // Outubro 2026: começa na quinta (4), tem 31 dias
+  const startDay = 4; // 0=dom
+  const totalDays = 31;
+  const today = 5;
+  const hasApt = [2, 5, 7, 9, 12, 14, 16, 19, 21, 23, 26, 28];
+
+  for (let i = 0; i < startDay; i++) {
+    const d = document.createElement('div');
+    d.className = 'cal-day other-month';
+    days.appendChild(d);
+  }
+  for (let d = 1; d <= totalDays; d++) {
+    const el = document.createElement('div');
+    let cls = 'cal-day';
+    if (d === today) cls += ' today';
+    if (hasApt.includes(d)) cls += ' has-apt';
+    el.className = cls;
+    el.textContent = d;
+    days.appendChild(el);
+  }
+</script>
+{% endblock %}

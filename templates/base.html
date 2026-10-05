@@ -43,6 +43,12 @@
           <a href="/atendimentos" class="{% if pagina == 'atendimentos' %}active{% endif %}">
             <i data-lucide="message-square"></i> Atendimentos
           </a>
+          <a href="/pacientes" class="{% if pagina == 'pacientes' %}active{% endif %}">
+            <i data-lucide="users"></i> Pacientes
+          </a>
+          <a href="/agendamentos" class="{% if pagina == 'agendamentos' %}active{% endif %}">
+            <i data-lucide="calendar"></i> Agendamentos
+          </a>
           <a href="/estoque" class="{% if pagina == 'estoque' %}active{% endif %}">
             <i data-lucide="package"></i> Estoque
           </a>
@@ -169,5 +175,112 @@
   </script>
 
   {% block extra_scripts %}{% endblock %}
+
+  <!-- ── CHAT WIDGET FLUTUANTE ── -->
+  <button class="chat-widget-btn" id="cwpBtn" onclick="toggleChatWidget()" style="position:fixed;">
+    <i data-lucide="sparkles"></i>
+    Assistente IA
+    <div class="chat-widget-badge" id="cwpBadge">1</div>
+  </button>
+
+  <div class="chat-widget-panel" id="cwpPanel">
+    <div class="cwp-header">
+      <div class="cwp-header-info">
+        <div class="cwp-avatar"><i data-lucide="sparkles"></i></div>
+        <div>
+          <strong>Assistente SmartDent</strong>
+          <small>IA treinada para sua clínica</small>
+        </div>
+      </div>
+      <button class="cwp-close" onclick="toggleChatWidget()"><i data-lucide="x"></i></button>
+    </div>
+
+    <div class="cwp-messages" id="cwpMessages">
+      <div class="cwp-msg cwp-msg-ai">
+        <p>Olá! Posso ajudar com atendimentos, estoque ou relatórios da clínica. O que você precisa? 😊</p>
+        <span class="cwp-time">agora</span>
+      </div>
+    </div>
+
+    <div class="cwp-suggestions" id="cwpSuggestions">
+      <button onclick="cwpSend('Quantos atendimentos tivemos hoje?')">Atendimentos hoje</button>
+      <button onclick="cwpSend('Quais itens do estoque estão baixos?')">Estoque baixo</button>
+      <button onclick="cwpSend('Resumo da semana')">Resumo da semana</button>
+    </div>
+
+    <div class="cwp-input-bar">
+      <input type="text" id="cwpInput" placeholder="Pergunte ao assistente..." onkeydown="if(event.key==='Enter')cwpSend()">
+      <button onclick="cwpSend()"><i data-lucide="send"></i></button>
+    </div>
+  </div>
+
+  <script>
+    const cwpResponses = {
+      'hoje':       'Hoje foram realizados <strong>12 atendimentos</strong>: 11 pela IA e 1 escalonado para humano. Taxa de resolução: 91%.',
+      'estoque':    '<strong>3 itens</strong> precisam de atenção: Anestésico Articaína (baixo), Brocas Diamantadas (esgotado) e Lima Endodôntica (baixo). Acesse Estoque para detalhes.',
+      'semana':     'Esta semana: <strong>87 atendimentos</strong>, tempo médio de resposta de 18s, satisfação média 4.8★. Pico na quarta com 19 atendimentos.',
+      'agend':      'Você tem <strong>8 consultas agendadas</strong> para hoje. Próxima: Maria Santos às 14h (Clareamento).',
+      'paciente':   'Há <strong>142 pacientes</strong> cadastrados. 3 novos esta semana. 2 com retorno atrasado.',
+      'relatorio':  'O último relatório indica 91% de automação. Os tópicos mais consultados são: Clareamento (28), Planos de Saúde (38) e Agendamento (43).',
+    };
+
+    function cwpGetReply(msg) {
+      const m = msg.toLowerCase();
+      if (m.includes('hoje') || m.includes('atendimento')) return cwpResponses['hoje'];
+      if (m.includes('estoque') || m.includes('insumo') || m.includes('baixo')) return cwpResponses['estoque'];
+      if (m.includes('semana') || m.includes('resumo')) return cwpResponses['semana'];
+      if (m.includes('agend') || m.includes('consult')) return cwpResponses['agend'];
+      if (m.includes('paciente')) return cwpResponses['paciente'];
+      if (m.includes('relat') || m.includes('metric')) return cwpResponses['relatorio'];
+      return 'Entendido! Para informações mais detalhadas, acesse a seção correspondente no menu lateral. Posso ajudar com atendimentos, estoque, agendamentos ou relatórios.';
+    }
+
+    function cwpAddMsg(text, isUser) {
+      const box = document.getElementById('cwpMessages');
+      const div = document.createElement('div');
+      div.className = 'cwp-msg ' + (isUser ? 'cwp-msg-usr' : 'cwp-msg-ai');
+      const now = new Date();
+      const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+      div.innerHTML = `<p>${text}</p><span class="cwp-time">${time}</span>`;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function cwpTyping() {
+      const box = document.getElementById('cwpMessages');
+      const div = document.createElement('div');
+      div.className = 'cwp-msg cwp-msg-ai';
+      div.id = 'cwpTyping';
+      div.innerHTML = '<p style="display:flex;gap:4px;align-items:center"><span style="width:6px;height:6px;background:var(--text-secondary);border-radius:50%;animation:typingDot 1.2s infinite ease-in-out;display:inline-block"></span><span style="width:6px;height:6px;background:var(--text-secondary);border-radius:50%;animation:typingDot 1.2s 0.2s infinite ease-in-out;display:inline-block"></span><span style="width:6px;height:6px;background:var(--text-secondary);border-radius:50%;animation:typingDot 1.2s 0.4s infinite ease-in-out;display:inline-block"></span></p>';
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function cwpSend(text) {
+      const input = document.getElementById('cwpInput');
+      const msg = text || input.value.trim();
+      if (!msg) return;
+      input.value = '';
+      document.getElementById('cwpSuggestions').style.display = 'none';
+      cwpAddMsg(msg, true);
+      cwpTyping();
+      setTimeout(() => {
+        const typing = document.getElementById('cwpTyping');
+        if (typing) typing.remove();
+        cwpAddMsg(cwpGetReply(msg), false);
+      }, 900 + Math.random() * 400);
+    }
+
+    function toggleChatWidget() {
+      const panel = document.getElementById('cwpPanel');
+      const badge = document.getElementById('cwpBadge');
+      panel.classList.toggle('open');
+      if (panel.classList.contains('open')) {
+        badge.style.display = 'none';
+        lucide.createIcons({ nodes: [panel] });
+        document.getElementById('cwpInput').focus();
+      }
+    }
+  </script>
 </body>
 </html>

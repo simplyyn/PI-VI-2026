@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}SmartDent AI — Pacientes{% endblock %}
+
+{% block content %}
+<div class="page-container">
+
+  <div class="page-header">
+    <div>
+      <h1>Pacientes</h1>
+      <p class="page-subtitle">{{ pacientes | length }} pacientes cadastrados · 3 novos esta semana</p>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-primary" style="background:var(--bg-color);color:var(--text-primary);border:1px solid var(--border-color);">
+        <i data-lucide="download"></i> Exportar
+      </button>
+      <button class="btn-primary">
+        <i data-lucide="user-plus"></i> Novo Paciente
+      </button>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <section class="metrics-grid" style="margin-bottom:24px;">
+      <div class="card metric">
+        <div class="card-icon blue"><i data-lucide="users"></i></div>
+        <div class="metric-info">
+          <h3>{{ pacientes | length }}</h3>
+          <p>Total de pacientes</p>
+        </div>
+      </div>
+      <div class="card metric">
+        <div class="card-icon green"><i data-lucide="user-check"></i></div>
+        <div class="metric-info">
+          <h3>{{ pacientes | selectattr('status','eq','ativo') | list | length }}</h3>
+          <p>Pacientes ativos</p>
+        </div>
+      </div>
+      <div class="card metric">
+        <div class="card-icon orange"><i data-lucide="user-plus"></i></div>
+        <div class="metric-info">
+          <h3>3</h3>
+          <p>Novos esta semana</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="kb-filters">
+      <input type="text" class="search-input kb-search" id="searchPacientes" placeholder="Buscar por nome ou telefone..." oninput="filtrarPacientes()">
+      <div class="filter-tabs" style="flex-shrink:0;">
+        <button class="filter-tab active" onclick="setFilterPac('todos', this)">Todos</button>
+        <button class="filter-tab" onclick="setFilterPac('ativo', this)">Ativos</button>
+        <button class="filter-tab" onclick="setFilterPac('novo', this)">Novos</button>
+        <button class="filter-tab" onclick="setFilterPac('inativo', this)">Inativos</button>
+      </div>
+    </div>
+
+    <div class="patients-grid" id="patientGrid">
+      {% for p in pacientes %}
+      <div class="patient-card" data-status="{{ p.status }}" data-nome="{{ p.nome | lower }}">
+        <div class="patient-card-top">
+          <div class="patient-avatar" style="background: {{ p.cor }};">{{ p.iniciais }}</div>
+          <div>
+            <div class="patient-name">{{ p.nome }}</div>
+            <div class="patient-phone">{{ p.telefone }}</div>
+          </div>
+          <span class="badge-status-{{ p.status }}" style="margin-left:auto;">
+            {{ p.status | capitalize }}
+          </span>
+        </div>
+        <div class="patient-card-body">
+          <div class="patient-row">
+            <span>Última consulta</span>
+            <span>{{ p.ultima_consulta }}</span>
+          </div>
+          <div class="patient-row">
+            <span>Próxima consulta</span>
+            <span>{{ p.proxima_consulta if p.proxima_consulta else '—' }}</span>
+          </div>
+          <div class="patient-row">
+            <span>Plano / Convênio</span>
+            <span>{{ p.plano }}</span>
+          </div>
+          <div class="patient-row">
+            <span>Procedimentos</span>
+            <span>{{ p.procedimentos }}</span>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;">
+          <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" title="Ver histórico">
+            <i data-lucide="clock"></i> Histórico
+          </button>
+          <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" title="Agendar consulta">
+            <i data-lucide="calendar-plus"></i> Agendar
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  let filtroStatus = 'todos';
+
+  function setFilterPac(status, btn) {
+    filtroStatus = status;
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filtrarPacientes();
+  }
+
+  function filtrarPacientes() {
+    const busca = document.getElementById('searchPacientes').value.toLowerCase();
+    document.querySelectorAll('.patient-card').forEach(card => {
+      const nome = card.dataset.nome;
+      const status = card.dataset.status;
+      const matchBusca = nome.includes(busca);
+      const matchStatus = filtroStatus === 'todos' || status === filtroStatus;
+      card.style.display = (matchBusca && matchStatus) ? '' : 'none';
+    });
+  }
+</script>
+{% endblock %}
