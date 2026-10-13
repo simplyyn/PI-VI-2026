@@ -1,120 +1,27 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}SmartDent AI — Atendimentos{% endblock %}
-
 {% block content %}
 <div class="atend-container">
-
-  <!-- Painel esquerdo: lista de conversas -->
   <div class="conv-list-panel">
-    <div class="conv-list-header">
-      <div class="conv-list-top">
-        <div class="conv-list-title">
-          <h2>Atendimentos</h2>
-          <span class="count-badge">{{ atendimentos | length }}</span>
-        </div>
-      </div>
-      <input type="text" class="search-input" placeholder="Buscar paciente ou assunto...">
-      <div class="filter-tabs">
-        <button class="filter-tab active">Todos</button>
-        <button class="filter-tab">Pendentes</button>
-        <button class="filter-tab">Resolvidos</button>
-        <button class="filter-tab">Escalados</button>
-      </div>
-    </div>
-
+    <div class="conv-list-header"><div class="conv-list-top"><h2>Atendimentos <span class="count-badge">{{ atendimentos | length }}</span></h2><button class="btn-primary" data-action="create">Novo</button></div><input class="search-input" id="records-search" placeholder="Buscar paciente ou assunto"><div class="filter-tabs"><button class="filter-tab active" data-filter="todos">Todos</button><button class="filter-tab" data-filter="pending">Pendentes</button><button class="filter-tab" data-filter="resolved">Resolvidos</button><button class="filter-tab" data-filter="escalated">Escalados</button></div></div>
     <div class="conv-list">
-      {% for at in atendimentos %}
-      <div class="conv-item {% if loop.first %}active{% endif %}">
-        <div class="conv-avatar {% if at.cor %}{{ at.cor }}{% endif %}">{{ at.iniciais }}</div>
-        <div class="conv-body">
-          <div class="conv-row">
-            <span class="conv-name">{{ at.cliente }}</span>
-            <span class="conv-time">{{ at.hora }}</span>
-          </div>
-          <p class="conv-preview">{{ at.preview }}</p>
-          <div class="conv-tags">
-            <span class="badge badge-{{ at.status }}">
-              {% if at.status == 'resolved' %}Resolvido{% elif at.status == 'pending' %}Pendente{% else %}Escalado{% endif %}
-            </span>
-            <span class="badge badge-{{ at.canal }}">
-              {% if at.canal == 'ai' %}IA{% else %}Humano{% endif %}
-            </span>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
+    {% for at in atendimentos %}
+      <button type="button" class="conv-item" data-id="{{ at.id }}" data-action="select" style="width:100%;text-align:left;color:inherit;background:inherit;border:0">
+        <div class="conv-avatar">{{ at.iniciais }}</div><div class="conv-body"><div class="conv-row"><span class="conv-name">{{ at.cliente }}</span><span class="conv-time">{{ at.hora }}</span></div><p class="conv-preview">{{ at.preview }}</p><div class="conv-tags"><span class="badge badge-{{ at.status }}">{{ {'resolved':'Resolvido','pending':'Pendente','escalated':'Escalado'}[at.status] }}</span><span class="badge badge-{{ at.canal }}">{{ 'IA' if at.canal == 'ai' else 'Humano' }}</span></div></div>
+      </button>
+    {% else %}<p>Nenhum atendimento cadastrado.</p>{% endfor %}
     </div>
   </div>
-
-  <!-- Painel direito: detalhe da conversa -->
-  <div class="conv-detail-panel">
-    <div class="conv-detail-header">
-      <div class="conv-detail-info">
-        <div class="conv-detail-avatar">MS</div>
-        <div>
-          <div class="conv-detail-name">Maria Santos</div>
-          <div class="conv-detail-sub">
-            <span class="badge badge-resolved">Resolvido</span>
-            <span>09:12 — 09:15 · 4 mensagens · respondido pela IA</span>
-          </div>
-        </div>
-      </div>
-      <div class="conv-detail-actions">
-        <button class="btn-summary"><i data-lucide="sparkles"></i> Resumo da IA</button>
-        <button class="btn-escalate">Escalar</button>
-      </div>
-    </div>
-
-    <div class="ai-summary-card">
-      <div class="ai-summary-header">
-        <i data-lucide="sparkles"></i>
-        Resumo gerado pela IA
-      </div>
-      <p class="ai-summary-text">
-        Paciente solicitou <strong>agendamento de consulta de rotina</strong> e informações sobre <strong>limpeza dental</strong>.
-        A IA forneceu os horários disponíveis e explicou o procedimento de profilaxia.
-        Consulta agendada para quinta-feira às 10h com a Dra. Ana Paula.
-        Conversa encerrada com sucesso — nenhuma intervenção humana necessária.
-      </p>
-    </div>
-
-    <div class="messages-area">
-      <div class="message-row client">
-        <div class="msg-badge client-badge">MS</div>
-        <div class="message-content">
-          <div class="message-bubble">Olá! Gostaria de agendar uma consulta de rotina. Quais horários estão disponíveis?</div>
-          <span class="msg-time">09:12</span>
-        </div>
-      </div>
-      <div class="message-row ai">
-        <div class="msg-badge">IA</div>
-        <div class="message-content">
-          <div class="message-bubble">Olá, Maria! Temos os seguintes horários disponíveis essa semana: <strong>Quinta-feira às 10h ou 14h</strong>, e <strong>Sexta-feira às 09h</strong>. Todos com a Dra. Ana Paula. Qual prefere?</div>
-          <span class="msg-time">09:12</span>
-        </div>
-      </div>
-      <div class="message-row client">
-        <div class="msg-badge client-badge">MS</div>
-        <div class="message-content">
-          <div class="message-bubble">Quinta às 10h fica ótimo! Vocês fazem limpeza na mesma consulta?</div>
-          <span class="msg-time">09:14</span>
-        </div>
-      </div>
-      <div class="message-row ai">
-        <div class="msg-badge">IA</div>
-        <div class="message-content">
-          <div class="message-bubble">Sim! Na consulta de rotina já incluímos a <strong>profilaxia (limpeza dental)</strong>. Consulta agendada para <strong>quinta-feira às 10h</strong>. Você receberá uma confirmação por WhatsApp. Até lá!</div>
-          <span class="msg-time">09:15</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="chat-input-bar">
-      <input type="text" placeholder="Responder como atendente humano...">
-      <button class="btn-suggest"><i data-lucide="sparkles"></i> Sugestão IA</button>
-      <button class="btn-send"><i data-lucide="send"></i> Enviar</button>
-    </div>
+  <div class="conv-detail-panel" id="attendance-detail" hidden>
+    <div class="conv-detail-header"><div class="conv-detail-info"><div><h3 id="attendance-name"></h3><p id="attendance-subject"></p></div></div><div class="kb-actions"><button class="btn-summary" data-action="ai-info">Resumo da IA</button><button class="btn-escalate" data-action="escalate">Escalar</button><button class="btn-icon" data-action="resolve">Resolver</button><button class="btn-icon" data-action="edit" title="Editar">✎</button><button class="btn-icon danger" data-action="delete" title="Excluir">×</button></div></div>
+    <div class="messages-area" id="attendance-messages"></div>
+    <form class="chat-input-bar" id="human-message-form"><input name="texto" required maxlength="4000" placeholder="Registrar mensagem do atendente humano..." aria-label="Mensagem humana"><button type="button" class="btn-suggest" data-action="ai-info">Sugestão IA</button><button type="submit" class="btn-send">Enviar</button></form>
+    <p>A mensagem fica registrada neste sistema. Não é enviada por WhatsApp ou e-mail.</p>
   </div>
-
 </div>
+{% endblock %}
+{% block extra_scripts %}
+<script id="records-data" type="application/json">{{ atendimentos | tojson }}</script>
+<div id="records-root" data-resource="atendimentos"></div>
+{% include "records_scripts.html" %}
 {% endblock %}

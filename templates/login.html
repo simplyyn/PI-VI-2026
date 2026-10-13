@@ -33,6 +33,7 @@
     {% endif %}
 
     <form method="POST" action="/login" class="login-form">
+      <input type="hidden" name="csrf_token" value="{{ request.session.get('csrf', '') }}">
 
       <div class="login-field">
         <label>E-mail</label>
@@ -68,12 +69,7 @@
 
     </form>
 
-    <div class="login-hint">
-      <strong>Contas de demonstração:</strong><br>
-      Admin — admin@smartdent.com / admin123<br>
-      Dentista — dra.ana@clinicasorriso.com / clinica123<br>
-      Paciente — joao@paciente.com / paciente123
-    </div>
+    <div class="login-hint">Use uma conta cadastrada pelo administrador.</div>
 
   </div>
 

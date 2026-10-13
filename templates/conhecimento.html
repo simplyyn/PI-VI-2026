@@ -9,7 +9,7 @@
       <h1>Base de Conhecimento</h1>
       <p class="page-subtitle">{{ artigos | length }} artigos cadastrados · usados pela IA para responder pacientes</p>
     </div>
-    <button class="btn-primary">
+    <button class="btn-primary" data-action="create">
       <i data-lucide="plus"></i> Novo Artigo
     </button>
   </div>
@@ -41,7 +41,7 @@
       </thead>
       <tbody>
         {% for artigo in artigos %}
-        <tr>
+        <tr data-id="{{ artigo.id }}">
           <td>
             <div class="kb-title-cell">
               <i data-lucide="file-text"></i>
@@ -57,14 +57,14 @@
           <td style="color: var(--text-secondary); font-size: 12px;">{{ artigo.atualizado }}</td>
           <td>
             <label class="toggle">
-              <input type="checkbox" {% if artigo.status %}checked{% endif %}>
+              <input type="checkbox" data-action="status" aria-label="Ativar artigo {{ artigo.titulo }}" {% if artigo.status %}checked{% endif %}>
               <span class="toggle-slider"></span>
             </label>
           </td>
           <td>
             <div class="kb-actions">
-              <button class="btn-icon" title="Editar"><i data-lucide="pencil"></i></button>
-              <button class="btn-icon danger" title="Excluir"><i data-lucide="trash-2"></i></button>
+              <button class="btn-icon" data-action="edit" title="Editar"><i data-lucide="pencil"></i></button>
+              <button class="btn-icon danger" data-action="delete" title="Excluir"><i data-lucide="trash-2"></i></button>
             </div>
           </td>
         </tr>
@@ -74,4 +74,12 @@
 
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script id="crud-records" type="application/json">{{ artigos | tojson }}</script>
+<div id="crud-root" data-resource="base-conhecimento"></div>
+{% include "crud_dialog.html" %}
+<link rel="stylesheet" href="/static/crud.css">
+<script src="/static/crud.js"></script>
 {% endblock %}

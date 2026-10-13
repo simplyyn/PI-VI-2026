@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form
+﻿from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -6,8 +6,14 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from auth import autenticar, usuario_logado, redirecionar_por_role
 
-app = FastAPI(title="SmartDent AI")
-app.add_middleware(SessionMiddleware, secret_key="smartdent-dev-secret-2026")
+from security import lifespan, session_secret, require_user, csrf_check
+from services import ClinicService, Article, Stock, Movement, ClinicRecords, Patient, Appointment, Attendance, HumanMessage
+import os
+import secrets
+from datetime import datetime, timezone
+
+app = FastAPI(title="SmartDent AI", lifespan=lifespan)
+app.add_middleware(SessionMiddleware, secret_key=session_secret(), same_site="strict", https_only=os.getenv("SMARTDENT_ENV") == "production", max_age=28800)
 app.mount("/static", StaticFiles(directory="front"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -103,32 +109,29 @@ estoque = [
 async def login_get(request: Request):
     if usuario_logado(request):
         return redirecionar_por_role(usuario_logado(request)["role"])
+    request.session.setdefault("csrf", secrets.token_urlsafe(32))
     return templates.TemplateResponse("login.html", {"request": request, "erro": None})
 
 @app.post("/login")
-async def login_post(request: Request, email: str = Form(...), senha: str = Form(...)):
-    user = autenticar(email, senha)
+async def login_post(request: Request, email: str = Form(...), senha: str = Form(...), csrf_token: str = Form(...)):
+    expected = request.session.get("csrf", "")
+    if not expected or not secrets.compare_digest(expected, csrf_token):
+        raise HTTPException(403, "Token CSRF inválido")
+    user = autenticar(email, senha, request.app.state.repository)
     if not user:
         return templates.TemplateResponse("login.html", {
             "request": request,
             "erro": "E-mail ou senha incorretos.",
             "email": email,
         })
-    request.session["usuario"] = {
-        "id":           user["id"],
-        "nome":         user["nome"],
-        "iniciais":     user["iniciais"],
-        "role":         user["role"],
-        "email":        email,
-        "empresa":      user.get("empresa", "SmartDent"),
-        "empresa_id":   user.get("empresa_id", ""),
-        "empresa_nome": user.get("empresa_nome", ""),
-        "plano":        user.get("plano", ""),
-    }
+    request.session.clear()
+    request.session["user_id"] = user["id"]
+    request.session["csrf"] = secrets.token_urlsafe(32)
     return redirecionar_por_role(user["role"])
 
-@app.get("/logout")
+@app.post("/logout")
 async def logout(request: Request):
+    csrf_check(request)
     request.session.clear()
     return RedirectResponse("/login", status_code=302)
 
@@ -149,14 +152,14 @@ async def dashboard(request: Request):
 
 @app.get("/atendimentos", response_class=HTMLResponse)
 async def pagina_atendimentos(request: Request):
-    ctx = _owner_ctx(request, {"pagina": "atendimentos", "atendimentos": atendimentos})
+    ctx = _owner_ctx(request, {"pagina": "atendimentos", "atendimentos": records_service(request).list("attendance")})
     if ctx is None:
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("atendimentos.html", ctx)
 
 @app.get("/base-conhecimento", response_class=HTMLResponse)
 async def pagina_conhecimento(request: Request):
-    ctx = _owner_ctx(request, {"pagina": "conhecimento", "artigos": artigos_kb})
+    ctx = _owner_ctx(request, {"pagina": "conhecimento", "artigos": ClinicService(request.app.state.repository, require_user(request, {"owner"})["empresa_id"]).articles()})
     if ctx is None:
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("conhecimento.html", ctx)
@@ -177,13 +180,14 @@ async def pagina_configuracoes(request: Request):
 
 @app.get("/pacientes", response_class=HTMLResponse)
 async def pagina_pacientes(request: Request):
-    ctx = _owner_ctx(request, {"pagina": "pacientes", "pacientes": pacientes})
+    ctx = _owner_ctx(request, {"pagina": "pacientes", "pacientes": records_service(request).list("patients")})
     if ctx is None:
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("pacientes.html", ctx)
 
 @app.get("/agendamentos", response_class=HTMLResponse)
 async def pagina_agendamentos(request: Request):
+    agendamentos = records_service(request).list("appointments")
     total = len(agendamentos)
     ctx = _owner_ctx(request, {"pagina": "agendamentos", "agendamentos": agendamentos, "total": total})
     if ctx is None:
@@ -192,6 +196,7 @@ async def pagina_agendamentos(request: Request):
 
 @app.get("/estoque", response_class=HTMLResponse)
 async def pagina_estoque(request: Request):
+    estoque = ClinicService(request.app.state.repository, require_user(request, {"owner"})["empresa_id"]).stocks()
     total     = len(estoque)
     baixo     = sum(1 for i in estoque if i["status"] == "baixo")
     esgotado  = sum(1 for i in estoque if i["status"] == "esgotado")
@@ -231,21 +236,169 @@ async def chat_cliente(request: Request):
 # ─── API Routes ───────────────────────────────────────────────────────────────
 
 @app.get("/api/atendimentos")
-async def api_atendimentos():
-    return atendimentos
+async def api_atendimentos(request: Request):
+    require_user(request, {"owner"})
+    return records_service(request).list("attendance")
 
 @app.get("/api/metricas")
-async def api_metricas():
+async def api_metricas(request: Request):
+    require_user(request, {"owner"})
     return metricas
 
 @app.get("/api/base-conhecimento")
-async def api_conhecimento():
-    return artigos_kb
+async def api_conhecimento(request: Request):
+    return clinic_service(request).articles()
 
 @app.get("/api/relatorios/grafico")
-async def api_grafico():
+async def api_grafico(request: Request):
+    require_user(request, {"owner"})
     return dados_grafico
 
 @app.get("/api/estoque")
-async def api_estoque():
-    return estoque
+async def api_estoque(request: Request):
+    return clinic_service(request).stocks()
+
+
+def clinic_service(request):
+    user = require_user(request, {'owner'})
+    return ClinicService(request.app.state.repository, user['empresa_id'])
+
+@app.get('/api/session')
+def api_session(request: Request):
+    user = require_user(request, {'admin','owner','customer'})
+    return {'usuario':user,'csrf_token':request.session['csrf']}
+
+@app.post('/api/base-conhecimento', status_code=201)
+def create_article(request: Request, article: Article):
+    csrf_check(request)
+    return clinic_service(request).save_article(article)
+
+@app.put('/api/base-conhecimento/{identifier}')
+def update_article(identifier: int, request: Request, article: Article):
+    csrf_check(request)
+    return clinic_service(request).save_article(article,identifier)
+
+@app.delete('/api/base-conhecimento/{identifier}', status_code=204)
+def delete_article(identifier: int, request: Request):
+    csrf_check(request)
+    service = clinic_service(request)
+    service.repository.delete('kb',service.clinic,identifier)
+
+@app.post('/api/estoque', status_code=201)
+def create_stock(request: Request, stock: Stock):
+    csrf_check(request)
+    return clinic_service(request).save_stock(stock)
+
+@app.put('/api/estoque/{identifier}')
+def update_stock(identifier: int, request: Request, stock: Stock):
+    csrf_check(request)
+    return clinic_service(request).save_stock(stock,identifier)
+
+@app.delete('/api/estoque/{identifier}', status_code=204)
+def delete_stock(identifier: int, request: Request):
+    csrf_check(request)
+    service = clinic_service(request)
+    service.repository.delete('stock',service.clinic,identifier)
+
+@app.post('/api/estoque/{identifier}/movimentacoes')
+def move_stock(identifier: int, request: Request, movement: Movement):
+    csrf_check(request)
+    return clinic_service(request).move(identifier,movement.delta)
+
+@app.exception_handler(LookupError)
+async def missing_record(request, exc):
+    from fastapi.responses import JSONResponse
+    return JSONResponse({'detail':'Registro não encontrado'},status_code=404)
+
+@app.exception_handler(ValueError)
+async def invalid_value(request, exc):
+    from fastapi.responses import JSONResponse
+    return JSONResponse({'detail':'Operação inválida'},status_code=400)
+
+
+from pydantic import BaseModel, Field, ConfigDict
+from llm import GroqClient, LLMUnavailable
+from rag import AttendanceAgent, LocalKeywordRetriever, PendingSemanticRetriever, RetrievalUnavailable
+
+class ChatQuestion(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    pergunta: str = Field(min_length=1,max_length=2000)
+
+@app.post('/api/chat')
+def api_chat(request: Request, question: ChatQuestion):
+    user = require_user(request, {'owner','customer'})
+    csrf_check(request)
+    if not question.pergunta.strip():
+        raise HTTPException(422,'Pergunta vazia')
+    retriever = LocalKeywordRetriever(request.app.state.repository) if os.getenv('SMARTDENT_RETRIEVAL')=='local_keyword' else PendingSemanticRetriever()
+    try:
+        return AttendanceAgent(retriever,GroqClient()).answer(user['empresa_id'],question.pergunta)
+    except (LLMUnavailable,RetrievalUnavailable) as exc:
+        raise HTTPException(503,str(exc)) from None
+
+
+def records_service(request):
+    user = require_user(request, {'owner'})
+    return ClinicRecords(request.app.state.repository,user['empresa_id'])
+
+@app.get('/api/pacientes')
+def list_patients(request: Request):
+    return records_service(request).list('patients')
+
+@app.post('/api/pacientes',status_code=201)
+def create_patient(request: Request, data: Patient):
+    csrf_check(request)
+    return records_service(request).save('patients',data)
+
+@app.put('/api/pacientes/{identifier}')
+def update_patient(identifier: int,request: Request,data: Patient):
+    csrf_check(request)
+    return records_service(request).save('patients',data,identifier)
+
+@app.delete('/api/pacientes/{identifier}',status_code=204)
+def delete_patient(identifier: int,request: Request):
+    csrf_check(request)
+    try:
+        records_service(request).delete('patients',identifier)
+    except ValueError:
+        raise HTTPException(409,'Paciente possui agendamentos. Exclua-os primeiro ou marque o paciente como inativo.') from None
+
+@app.get('/api/agendamentos')
+def list_appointments(request: Request):
+    return records_service(request).list('appointments')
+
+@app.post('/api/agendamentos',status_code=201)
+def create_appointment(request: Request,data: Appointment):
+    csrf_check(request)
+    return records_service(request).save('appointments',data)
+
+@app.put('/api/agendamentos/{identifier}')
+def update_appointment(identifier: int,request: Request,data: Appointment):
+    csrf_check(request)
+    return records_service(request).save('appointments',data,identifier)
+
+@app.delete('/api/agendamentos/{identifier}',status_code=204)
+def delete_appointment(identifier: int,request: Request):
+    csrf_check(request)
+    records_service(request).delete('appointments',identifier)
+
+@app.post('/api/atendimentos',status_code=201)
+def create_attendance(request: Request,data: Attendance):
+    csrf_check(request)
+    return records_service(request).save('attendance',data)
+
+@app.put('/api/atendimentos/{identifier}')
+def update_attendance(identifier: int,request: Request,data: Attendance):
+    csrf_check(request)
+    return records_service(request).save('attendance',data,identifier)
+
+@app.delete('/api/atendimentos/{identifier}',status_code=204)
+def delete_attendance(identifier: int,request: Request):
+    csrf_check(request)
+    records_service(request).delete('attendance',identifier)
+
+@app.post('/api/atendimentos/{identifier}/mensagens',status_code=201)
+def send_human_message(identifier: int,request: Request,data: HumanMessage):
+    user = require_user(request, {'owner'})
+    csrf_check(request)
+    return request.app.state.repository.append_message(user['empresa_id'],identifier,dict(texto=data.texto,autor='human',criado_em=datetime.now(timezone.utc).isoformat()))

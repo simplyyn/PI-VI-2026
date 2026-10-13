@@ -7,13 +7,13 @@
   <div class="page-header">
     <div>
       <h1>Pacientes</h1>
-      <p class="page-subtitle">{{ pacientes | length }} pacientes cadastrados · 3 novos esta semana</p>
+      <p class="page-subtitle">{{ pacientes | length }} pacientes cadastrados</p>
     </div>
     <div style="display:flex;gap:10px;">
-      <button class="btn-primary" style="background:var(--bg-color);color:var(--text-primary);border:1px solid var(--border-color);">
+      <button class="btn-primary" data-action="export" style="background:var(--bg-color);color:var(--text-primary);border:1px solid var(--border-color);">
         <i data-lucide="download"></i> Exportar
       </button>
-      <button class="btn-primary">
+      <button class="btn-primary" data-action="create">
         <i data-lucide="user-plus"></i> Novo Paciente
       </button>
     </div>
@@ -39,25 +39,25 @@
       <div class="card metric">
         <div class="card-icon orange"><i data-lucide="user-plus"></i></div>
         <div class="metric-info">
-          <h3>3</h3>
-          <p>Novos esta semana</p>
+          <h3>{{ pacientes | selectattr('status','eq','novo') | list | length }}</h3>
+          <p>Com status novo</p>
         </div>
       </div>
     </section>
 
     <div class="kb-filters">
-      <input type="text" class="search-input kb-search" id="searchPacientes" placeholder="Buscar por nome ou telefone..." oninput="filtrarPacientes()">
+      <input type="text" class="search-input kb-search" id="searchPacientes" placeholder="Buscar por nome ou telefone..." >
       <div class="filter-tabs" style="flex-shrink:0;">
-        <button class="filter-tab active" onclick="setFilterPac('todos', this)">Todos</button>
-        <button class="filter-tab" onclick="setFilterPac('ativo', this)">Ativos</button>
-        <button class="filter-tab" onclick="setFilterPac('novo', this)">Novos</button>
-        <button class="filter-tab" onclick="setFilterPac('inativo', this)">Inativos</button>
+        <button class="filter-tab active" data-filter="todos">Todos</button>
+        <button class="filter-tab" data-filter="ativo">Ativos</button>
+        <button class="filter-tab" data-filter="novo">Novos</button>
+        <button class="filter-tab" data-filter="inativo">Inativos</button>
       </div>
     </div>
 
     <div class="patients-grid" id="patientGrid">
       {% for p in pacientes %}
-      <div class="patient-card" data-status="{{ p.status }}" data-nome="{{ p.nome | lower }}">
+      <div class="patient-card" data-id="{{ p.id }}" data-status="{{ p.status }}" data-nome="{{ p.nome | lower }}">
         <div class="patient-card-top">
           <div class="patient-avatar" style="background: {{ p.cor }};">{{ p.iniciais }}</div>
           <div>
@@ -87,12 +87,13 @@
           </div>
         </div>
         <div style="margin-top:14px;display:flex;gap:8px;">
-          <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" title="Ver histórico">
+          <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" data-action="history" title="Ver histórico">
             <i data-lucide="clock"></i> Histórico
           </button>
-          <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" title="Agendar consulta">
+          <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" data-action="schedule" title="Agendar consulta">
             <i data-lucide="calendar-plus"></i> Agendar
           </button>
+<button class="btn-icon" data-action="edit" title="Editar">✎</button><button class="btn-icon danger" data-action="delete" title="Excluir">×</button>
         </div>
       </div>
       {% endfor %}
@@ -103,25 +104,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script>
-  let filtroStatus = 'todos';
-
-  function setFilterPac(status, btn) {
-    filtroStatus = status;
-    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    filtrarPacientes();
-  }
-
-  function filtrarPacientes() {
-    const busca = document.getElementById('searchPacientes').value.toLowerCase();
-    document.querySelectorAll('.patient-card').forEach(card => {
-      const nome = card.dataset.nome;
-      const status = card.dataset.status;
-      const matchBusca = nome.includes(busca);
-      const matchStatus = filtroStatus === 'todos' || status === filtroStatus;
-      card.style.display = (matchBusca && matchStatus) ? '' : 'none';
-    });
-  }
-</script>
+<script id="records-data" type="application/json">{{ pacientes | tojson }}</script>
+<div id="records-root" data-resource="pacientes"></div>
+{% include "records_scripts.html" %}
 {% endblock %}
