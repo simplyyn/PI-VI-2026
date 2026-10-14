@@ -1,6 +1,12 @@
-"""Contrato interno; não pressupõe contrato HTTP do endpoint de Guilherme."""
+"""Recuperação de contexto (RAG) e Agente de Atendimento.
+
+SMARTDENT_RETRIEVAL escolhe o Retriever: pgvector (padrão com PostgreSQL), local_keyword ou pending
+(padrão com SQLite). O mesmo Retriever atende o agente e GET /api/base-conhecimento/busca.
+"""
+import os
 import re
 from typing import Protocol
+from embeddings import EmbeddingUnavailable
 
 class Retriever(Protocol):
     def retrieve(self, clinic: str, question: str, limit: int = 4) -> list[dict]: ...
@@ -10,7 +16,29 @@ class RetrievalUnavailable(RuntimeError):
 
 class PendingSemanticRetriever:
     def retrieve(self, clinic, question, limit=4):
-        raise RetrievalUnavailable('Busca semântica pendente de integração com Guilherme')
+        raise RetrievalUnavailable('Busca semântica desativada (SMARTDENT_RETRIEVAL=pending)')
+
+class PgVectorRetriever:
+    """Busca híbrida no PostgreSQL (pgvector + texto completo); SQL em postgres.py."""
+    def __init__(self, repository):
+        self.repository = repository
+
+    def retrieve(self, clinic, question, limit=4):
+        if not getattr(self.repository, 'supports_semantic_search', False):
+            raise RetrievalUnavailable('Busca semântica requer PostgreSQL/pgvector (SMARTDENT_DATABASE_URL)')
+        try:
+            return self.repository.search_knowledge(clinic, question, limit)
+        except EmbeddingUnavailable as exc:
+            raise RetrievalUnavailable(f'Busca semântica indisponível: {exc}') from None
+
+def create_retriever(repository):
+    default = 'pgvector' if getattr(repository, 'supports_semantic_search', False) else 'pending'
+    mode = os.getenv('SMARTDENT_RETRIEVAL') or default
+    if mode == 'pgvector':
+        return PgVectorRetriever(repository)
+    if mode == 'local_keyword':
+        return LocalKeywordRetriever(repository)
+    return PendingSemanticRetriever()
 
 class LocalKeywordRetriever:
     """Busca lexical real nos artigos persistidos; não é busca semântica."""

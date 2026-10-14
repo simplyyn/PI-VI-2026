@@ -6,7 +6,9 @@ from unittest.mock import patch
 from auth import hash_password, verify_password, autenticar
 from persistence import SQLiteRepository
 from llm import GroqClient, LLMUnavailable
-from rag import AttendanceAgent, LocalKeywordRetriever, PendingSemanticRetriever, RetrievalUnavailable
+from rag import AttendanceAgent, LocalKeywordRetriever, PendingSemanticRetriever, PgVectorRetriever, RetrievalUnavailable, create_retriever
+from embeddings import EmbeddingUnavailable, chunk_text
+from analysis import ComplaintClassifier, parse_verdict
 
 class CoreTests(unittest.TestCase):
     def setUp(self):
@@ -73,5 +75,46 @@ class CoreTests(unittest.TestCase):
             with self.assertRaises(LLMUnavailable): GroqClient(lambda *a,**k:Response(b'{}')).generate([])
             client = GroqClient(lambda *a,**k:Response(json.dumps({'choices':[{'message':{'content':'simulado'}}]}).encode()))
             self.assertEqual(client.generate([]),'simulado')
+
+    def test_chunking_preserves_text_in_bounded_pieces(self):
+        self.assertEqual(chunk_text('  curto\n texto '),['curto texto'])
+        self.assertEqual(chunk_text('   '),[])
+        text = ' '.join(f'Frase {i} sobre cuidados após o procedimento.' for i in range(60))+' '+'x'*1200
+        chunks = chunk_text(text)
+        self.assertGreater(len(chunks),3)
+        self.assertTrue(all(len(c)<=600 for c in chunks))
+        for i in (0,30,59):
+            self.assertTrue(any(f'Frase {i} ' in c for c in chunks))
+
+    def test_complaint_verdict_parsing(self):
+        verdict = parse_verdict('Resultado:\n```json\n{"reclamacao": true, "categoria": "convenio", "motivo": "'+'m'*400+'"}\n```')
+        self.assertEqual((verdict.reclamacao,verdict.categoria,len(verdict.motivo)),(True,'convenio',300))
+        self.assertIsNone(parse_verdict('{"reclamacao": false, "categoria": "outros"}').categoria)
+        for invalid in ['sem json','{"reclamacao": true}','{"reclamacao": true, "categoria": "inexistente"}','[1, 2]']:
+            with self.assertRaises(LLMUnavailable): parse_verdict(invalid)
+        class FakeModel:
+            def generate(self,messages):
+                self.messages = messages
+                return '{"reclamacao": true, "categoria": "tempo_espera", "motivo": "Atraso"}'
+        model = FakeModel()
+        attendance = dict(cliente='Nome Sensível',preview='Esperei muito',mensagens=[dict(autor='human',texto='Lamentamos')])
+        self.assertEqual(ComplaintClassifier(model).classify(attendance).categoria,'tempo_espera')
+        self.assertNotIn('Nome Sensível',str(model.messages))
+        self.assertIn('Lamentamos',str(model.messages))
+
+    def test_retriever_selection(self):
+        with patch.dict(os.environ,{'SMARTDENT_RETRIEVAL':''}):
+            self.assertIsInstance(create_retriever(self.repo),PendingSemanticRetriever)
+        with patch.dict(os.environ,{'SMARTDENT_RETRIEVAL':'local_keyword'}):
+            self.assertIsInstance(create_retriever(self.repo),LocalKeywordRetriever)
+        with patch.dict(os.environ,{'SMARTDENT_RETRIEVAL':'pgvector'}):
+            with self.assertRaises(RetrievalUnavailable): create_retriever(self.repo).retrieve('a','teste')
+        class SemanticRepository:
+            supports_semantic_search = True
+            def search_knowledge(self,clinic,question,limit): raise EmbeddingUnavailable('sem modelo')
+        with patch.dict(os.environ,{'SMARTDENT_RETRIEVAL':''}):
+            retriever = create_retriever(SemanticRepository())
+            self.assertIsInstance(retriever,PgVectorRetriever)
+            with self.assertRaises(RetrievalUnavailable): retriever.retrieve('a','teste')
 
 if __name__ == '__main__': unittest.main()

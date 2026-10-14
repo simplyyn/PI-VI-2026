@@ -1,0 +1,22 @@
+# PostgreSQL 17 + pgvector para desenvolvimento local. Só escuta em 127.0.0.1.
+# Uso (PowerShell): $env:SMARTDENT_DB_PASSWORD = '<senha forte>'; docker compose up -d
+# O esquema é criado pela aplicação (migrations/) na inicialização ou com manage.py migrate.
+services:
+  db:
+    image: pgvector/pgvector:0.8.0-pg17
+    environment:
+      POSTGRES_DB: smartdent
+      POSTGRES_USER: smartdent
+      POSTGRES_PASSWORD: ${SMARTDENT_DB_PASSWORD:?Defina SMARTDENT_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - smartdent-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartdent -d smartdent"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  smartdent-pg:

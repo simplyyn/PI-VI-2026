@@ -1,6 +1,7 @@
 """Regras independentes do adaptador de banco."""
-from datetime import datetime, timezone
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
+from collections import Counter
+from datetime import datetime, timedelta, timezone
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
 
 class Article(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -152,3 +153,97 @@ class ClinicRecords:
         if kind == 'patients' and any(a['paciente_id']==identifier for a in self.list('appointments')):
             raise ValueError('Paciente possui agendamentos; remova-os primeiro ou marque o paciente como inativo')
         self.repository.delete(kind,self.clinic,identifier)
+
+# ─── RF005: motivos de reclamação ─────────────────────────────────────────────
+
+ComplaintCategory = Literal['agendamento','tempo_espera','atendimento','preco_pagamento','convenio','procedimento','infraestrutura','outros']
+COMPLAINT_CATEGORIES = {
+    'agendamento':'Agendamento e remarcação',
+    'tempo_espera':'Atrasos e tempo de espera',
+    'atendimento':'Atendimento e comunicação da equipe',
+    'preco_pagamento':'Preços, cobrança e pagamento',
+    'convenio':'Convênios e planos',
+    'procedimento':'Procedimento, dor ou resultado do tratamento',
+    'infraestrutura':'Instalações, limpeza e acesso',
+    'outros':'Outros',
+}
+
+class ComplaintVerdict(BaseModel):
+    """Classificação de um atendimento, vinda do Agente de Análise ou do responsável (manual)."""
+    model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
+    reclamacao: bool
+    categoria: ComplaintCategory | None = None
+    motivo: str = Field(default='',max_length=300)
+
+    @model_validator(mode='after')
+    def consistent(self):
+        if self.reclamacao and self.categoria is None:
+            raise ValueError('Informe a categoria da reclamação')
+        if not self.reclamacao:
+            self.categoria = None
+        return self
+
+class ComplaintService:
+    """Classificação, listagem e relatório de reclamações por clínica."""
+    def __init__(self,repository,clinic):
+        self.repository,self.clinic = repository,clinic
+
+    def _attendances(self):
+        return {a['id']:a for a in self.repository.list('attendance',self.clinic)}
+
+    def _attendance(self,attendance_id):
+        attendance = self._attendances().get(attendance_id)
+        if attendance is None:
+            raise LookupError('Registro não encontrado')
+        return attendance
+
+    def _store(self,attendance,verdict,origem,modelo=''):
+        data = dict(verdict.model_dump(),origem=origem,modelo=modelo,classificado_em=datetime.now(timezone.utc).isoformat())
+        return self._view(self.repository.set_complaint(self.clinic,attendance['id'],data),attendance)
+
+    @staticmethod
+    def _view(complaint,attendance):
+        return dict(complaint,rotulo=COMPLAINT_CATEGORIES.get(complaint['categoria'] or '',''),
+                    cliente=attendance.get('cliente',''),assunto=attendance.get('preview',''))
+
+    def categories(self):
+        return [dict(categoria=key,rotulo=label) for key,label in COMPLAINT_CATEGORIES.items()]
+
+    def list(self):
+        attendances = self._attendances()
+        return [self._view(c,attendances[c['attendance_id']]) for c in self.repository.list('complaints',self.clinic) if c['attendance_id'] in attendances]
+
+    def classify(self,attendance_id,classifier):
+        attendance = self._attendance(attendance_id)
+        return self._store(attendance,classifier.classify(attendance),'ia',classifier.model)
+
+    def classify_pending(self,classifier,limit=10):
+        """Analisa atendimentos ainda sem classificação; cada resultado é salvo assim que obtido."""
+        done = {c['attendance_id'] for c in self.repository.list('complaints',self.clinic)}
+        pending = [a for a in self._attendances().values() if a['id'] not in done]
+        results = [self._store(a,classifier.classify(a),'ia',classifier.model) for a in pending[:limit]]
+        return dict(classificados=results,restantes=max(len(pending)-limit,0))
+
+    def set_manual(self,attendance_id,verdict):
+        return self._store(self._attendance(attendance_id),verdict,'manual')
+
+    def delete(self,attendance_id):
+        self.repository.delete_complaint(self.clinic,attendance_id)
+
+    def report(self,dias=None):
+        """Indicadores para Relatórios/Dashboard (RF006): reclamações por categoria no período."""
+        attendances = self._attendances()
+        if dias:
+            since = datetime.now(timezone.utc)-timedelta(days=dias)
+            attendances = {k:a for k,a in attendances.items() if datetime.fromisoformat(a['criado_em'])>=since}
+        classified = [c for c in self.repository.list('complaints',self.clinic) if c['attendance_id'] in attendances]
+        complaints = sorted((c for c in classified if c['reclamacao']),key=lambda c:c['classificado_em'],reverse=True)
+        counts = Counter(c['categoria'] for c in complaints)
+        order = list(COMPLAINT_CATEGORIES)
+        categorias = [dict(categoria=key,rotulo=COMPLAINT_CATEGORIES[key],total=total,
+                           percentual=round(100*total/len(complaints),1),
+                           exemplos=[c['motivo'] for c in complaints if c['categoria']==key and c['motivo']][:3])
+                      for key,total in sorted(counts.items(),key=lambda item:(-item[1],order.index(item[0])))]
+        return dict(periodo_dias=dias,atendimentos=len(attendances),analisados=len(classified),
+                    pendentes=len(attendances)-len(classified),reclamacoes=len(complaints),categorias=categorias,
+                    labels=[c['rotulo'] for c in categorias],valores=[c['total'] for c in categorias])

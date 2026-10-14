@@ -1,4 +1,7 @@
-"""SQLite provisório; substitua este adaptador após alinhamento com Guilherme."""
+"""Contrato do repositório e adaptador SQLite provisório (fallback de desenvolvimento).
+
+O adaptador definitivo é postgres.PostgresRepository, usado quando SMARTDENT_DATABASE_URL está definido.
+"""
 import json
 import os
 import sqlite3
@@ -15,8 +18,12 @@ class Repository(Protocol):
     def delete(self, kind, clinic, identifier): ...
     def move(self, clinic, identifier, delta): ...
     def append_message(self, clinic, identifier, message): ...
+    def set_complaint(self, clinic, attendance_id, data): ...
+    def delete_complaint(self, clinic, attendance_id): ...
 
 class SQLiteRepository:
+    supports_semantic_search = False
+
     def __init__(self, path):
         self.path = str(path)
         Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -46,8 +53,11 @@ class SQLiteRepository:
 
     def add_user(self, data):
         data = dict(data, email=data['email'].strip().lower())
-        with self.connect() as db:
-            cursor = db.execute('INSERT INTO users(email,data) VALUES (?,?)', (data['email'], json.dumps(data)))
+        try:
+            with self.connect() as db:
+                cursor = db.execute('INSERT INTO users(email,data) VALUES (?,?)', (data['email'], json.dumps(data)))
+        except sqlite3.IntegrityError:
+            raise ValueError('E-mail já cadastrado') from None
         return dict(data, id=cursor.lastrowid)
 
     def list(self, kind, clinic):
@@ -72,6 +82,27 @@ class SQLiteRepository:
     def delete(self, kind, clinic, identifier):
         with self.connect() as db:
             if not db.execute('DELETE FROM records WHERE id=? AND kind=? AND clinic=?', (identifier,kind,clinic)).rowcount:
+                raise LookupError('Registro não encontrado')
+            if kind == 'attendance':
+                db.execute("DELETE FROM records WHERE kind='complaints' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,identifier))
+
+    def set_complaint(self, clinic, attendance_id, data):
+        data = dict(data, attendance_id=attendance_id)
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if not db.execute('SELECT 1 FROM records WHERE id=? AND kind=? AND clinic=?',(attendance_id,'attendance',clinic)).fetchone():
+                raise LookupError('Registro não encontrado')
+            row = db.execute("SELECT id FROM records WHERE kind='complaints' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,attendance_id)).fetchone()
+            if row:
+                identifier = row[0]
+                db.execute('UPDATE records SET data=? WHERE id=?',(json.dumps(data),identifier))
+            else:
+                identifier = db.execute('INSERT INTO records(kind,clinic,data) VALUES (?,?,?)',('complaints',clinic,json.dumps(data))).lastrowid
+        return dict(data,id=identifier)
+
+    def delete_complaint(self, clinic, attendance_id):
+        with self.connect() as db:
+            if not db.execute("DELETE FROM records WHERE kind='complaints' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,attendance_id)).rowcount:
                 raise LookupError('Registro não encontrado')
 
     def append_message(self, clinic, identifier, message):
@@ -100,4 +131,13 @@ class SQLiteRepository:
         return dict(data, id=identifier)
 
 def create_repository() -> Repository:
+    url = os.getenv('SMARTDENT_DATABASE_URL')
+    if url:
+        from embeddings import create_embedder
+        from postgres import PostgresRepository
+        return PostgresRepository(url, embedder=create_embedder(),
+                                  max_distance=float(os.getenv('SMARTDENT_RETRIEVAL_MAX_DISTANCE', '0.7')),
+                                  pool_size=int(os.getenv('SMARTDENT_DB_POOL_SIZE', '10')))
+    if os.getenv('SMARTDENT_ENV') == 'production':
+        raise RuntimeError('Configure SMARTDENT_DATABASE_URL (PostgreSQL) em produção; SQLite é só para desenvolvimento')
     return SQLiteRepository(os.getenv('SMARTDENT_DB_PATH', 'data/smartdent.sqlite3'))

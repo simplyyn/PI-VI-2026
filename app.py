@@ -317,8 +317,9 @@ async def invalid_value(request, exc):
 
 
 from pydantic import BaseModel, Field, ConfigDict
+from fastapi import Query
 from llm import GroqClient, LLMUnavailable
-from rag import AttendanceAgent, LocalKeywordRetriever, PendingSemanticRetriever, RetrievalUnavailable
+from rag import AttendanceAgent, RetrievalUnavailable, create_retriever
 
 class ChatQuestion(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -330,11 +331,24 @@ def api_chat(request: Request, question: ChatQuestion):
     csrf_check(request)
     if not question.pergunta.strip():
         raise HTTPException(422,'Pergunta vazia')
-    retriever = LocalKeywordRetriever(request.app.state.repository) if os.getenv('SMARTDENT_RETRIEVAL')=='local_keyword' else PendingSemanticRetriever()
+    retriever = create_retriever(request.app.state.repository)
     try:
         return AttendanceAgent(retriever,GroqClient()).answer(user['empresa_id'],question.pergunta)
     except (LLMUnavailable,RetrievalUnavailable) as exc:
         raise HTTPException(503,str(exc)) from None
+
+@app.get('/api/base-conhecimento/busca')
+def search_knowledge(request: Request, q: str = Query(min_length=1,max_length=500), limite: int = Query(5,ge=1,le=20)):
+    """Busca semântica (pgvector) na base da clínica: o mesmo Retriever usado pelo Agente de Atendimento (RF007)."""
+    user = require_user(request, {'owner'})
+    if not q.strip():
+        raise HTTPException(422,'Busca vazia')
+    try:
+        documents = create_retriever(request.app.state.repository).retrieve(user['empresa_id'],q,limite)
+    except RetrievalUnavailable as exc:
+        raise HTTPException(503,str(exc)) from None
+    return [{'id':d['id'],'titulo':d['titulo'],'categoria':d.get('categoria',''),'trecho':d.get('trecho',d['conteudo'][:500]),
+             'score':d.get('score'),'distancia':d.get('distancia')} for d in documents]
 
 
 def records_service(request):
@@ -402,3 +416,52 @@ def send_human_message(identifier: int,request: Request,data: HumanMessage):
     user = require_user(request, {'owner'})
     csrf_check(request)
     return request.app.state.repository.append_message(user['empresa_id'],identifier,dict(texto=data.texto,autor='human',criado_em=datetime.now(timezone.utc).isoformat()))
+
+# ─── RF005: reclamações (Agente de Análise) ──────────────────────────────────
+
+from analysis import ComplaintClassifier
+from services import ComplaintService, ComplaintVerdict
+
+def complaint_service(request):
+    user = require_user(request, {'owner'})
+    return ComplaintService(request.app.state.repository,user['empresa_id'])
+
+@app.get('/api/reclamacoes/categorias')
+def complaint_categories(request: Request):
+    return complaint_service(request).categories()
+
+@app.get('/api/reclamacoes')
+def list_complaints(request: Request):
+    return complaint_service(request).list()
+
+@app.get('/api/relatorios/reclamacoes')
+def complaint_report(request: Request, dias: int | None = Query(None,ge=1,le=3650)):
+    return complaint_service(request).report(dias)
+
+@app.post('/api/reclamacoes/classificar')
+def classify_pending_complaints(request: Request, limite: int = Query(10,ge=1,le=20)):
+    csrf_check(request)
+    service = complaint_service(request)
+    try:
+        return service.classify_pending(ComplaintClassifier(GroqClient()),limite)
+    except LLMUnavailable as exc:
+        raise HTTPException(503,str(exc)) from None
+
+@app.post('/api/atendimentos/{identifier}/reclamacao/classificar')
+def classify_complaint(identifier: int, request: Request):
+    csrf_check(request)
+    service = complaint_service(request)
+    try:
+        return service.classify(identifier,ComplaintClassifier(GroqClient()))
+    except LLMUnavailable as exc:
+        raise HTTPException(503,str(exc)) from None
+
+@app.put('/api/atendimentos/{identifier}/reclamacao')
+def set_complaint(identifier: int, request: Request, data: ComplaintVerdict):
+    csrf_check(request)
+    return complaint_service(request).set_manual(identifier,data)
+
+@app.delete('/api/atendimentos/{identifier}/reclamacao',status_code=204)
+def delete_complaint(identifier: int, request: Request):
+    csrf_check(request)
+    complaint_service(request).delete(identifier)

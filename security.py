@@ -8,7 +8,11 @@ from persistence import create_repository
 @asynccontextmanager
 async def lifespan(app):
     app.state.repository = create_repository()
-    yield
+    try:
+        yield
+    finally:
+        if hasattr(app.state.repository, 'close'):
+            app.state.repository.close()
 
 def session_secret():
     value = os.getenv('SMARTDENT_SESSION_SECRET')

@@ -8,9 +8,13 @@ from app import app
 from auth import hash_password
 
 class APITests(unittest.TestCase):
+    def environment(self):
+        """Banco da suíte; test_postgres.PostgresAPITests troca por um PostgreSQL descartável."""
+        return {'SMARTDENT_DB_PATH':self.tmp.name+'/db.sqlite3','SMARTDENT_DATABASE_URL':'','SMARTDENT_ENV':'development','SMARTDENT_RETRIEVAL':'local_keyword','SMARTDENT_LLM_ENABLED':'false'}
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.env = patch.dict(os.environ,{'SMARTDENT_DB_PATH':self.tmp.name+'/db.sqlite3','SMARTDENT_ENV':'development','SMARTDENT_RETRIEVAL':'local_keyword','SMARTDENT_LLM_ENABLED':'false'})
+        self.env = patch.dict(os.environ,self.environment())
         self.env.start()
         self.client = TestClient(app)
         self.client.__enter__()
@@ -167,5 +171,63 @@ class APITests(unittest.TestCase):
             self.assertNotIn('</script><script>alert(1)</script>',response.text)
         self.assertEqual(self.client.get('/static/crud.js').status_code,200)
         self.assertEqual(self.client.get('/static/crud.css').status_code,200)
+
+    def test_knowledge_search_endpoint(self):
+        headers = self.login()
+        data = dict(titulo='Planos aceitos',categoria='Financeiro',conteudo='Aceitamos convênio Unimed fictício',status=True)
+        self.assertEqual(self.client.post('/api/base-conhecimento',json=data,headers=headers).status_code,201)
+        results = self.client.get('/api/base-conhecimento/busca',params={'q':'convênio Unimed'}).json()
+        self.assertEqual([(r['titulo'],r['categoria']) for r in results],[(data['titulo'],data['categoria'])])
+        self.assertIn('Unimed',results[0]['trecho'])
+        self.assertEqual(self.client.get('/api/base-conhecimento/busca',params={'q':' '}).status_code,422)
+        with patch.dict(os.environ,{'SMARTDENT_RETRIEVAL':'pending'}):
+            self.assertEqual(self.client.get('/api/base-conhecimento/busca',params={'q':'convênio'}).status_code,503)
+        self.login('b@example.test')
+        self.assertEqual(self.client.get('/api/base-conhecimento/busca',params={'q':'convênio Unimed'}).json(),[])
+        self.login('c@example.test')
+        self.assertEqual(self.client.get('/api/base-conhecimento/busca',params={'q':'convênio'}).status_code,403)
+
+    def test_complaints_classification_report_and_isolation(self):
+        headers = self.login()
+        ids = [self.client.post('/api/atendimentos',json=dict(cliente=f'Cliente {i}',preview=preview,status='pending',canal='human'),headers=headers).json()['id']
+               for i,preview in enumerate(['Esperei uma hora para ser atendido','Cobraram valor diferente do combinado','Quero agendar uma limpeza'])]
+        self.assertIn('tempo_espera',[c['categoria'] for c in self.client.get('/api/reclamacoes/categorias').json()])
+        route = f'/api/atendimentos/{ids[0]}/reclamacao'
+        self.assertEqual(self.client.put(route,json=dict(reclamacao=True,categoria='tempo_espera')).status_code,403)
+        self.assertEqual(self.client.put(route,json=dict(reclamacao=True),headers=headers).status_code,422)
+        self.assertEqual(self.client.put(route,json=dict(reclamacao=True,categoria='inexistente'),headers=headers).status_code,422)
+        response = self.client.put(route,json=dict(reclamacao=True,categoria='tempo_espera',motivo='Atraso de uma hora'),headers=headers)
+        self.assertEqual(response.status_code,200)
+        self.assertEqual((response.json()['origem'],response.json()['rotulo'],response.json()['cliente']),('manual','Atrasos e tempo de espera','Cliente 0'))
+        self.assertEqual(self.client.post(f'/api/atendimentos/{ids[1]}/reclamacao/classificar',headers=headers).status_code,503)
+        with patch('app.GroqClient') as model:
+            model.return_value.generate.side_effect = ['{"reclamacao": true, "categoria": "preco_pagamento", "motivo": "Cobrança divergente"}',
+                                                       '```json\n{"reclamacao": false, "categoria": null, "motivo": ""}\n```']
+            body = self.client.post('/api/reclamacoes/classificar',headers=headers).json()
+            self.assertEqual([c['attendance_id'] for c in body['classificados']],ids[1:])
+            self.assertEqual([c['reclamacao'] for c in body['classificados']],[True,False])
+            self.assertEqual(body['restantes'],0)
+            self.assertNotIn('Cliente 1',str(model.return_value.generate.call_args_list))
+            model.return_value.generate.side_effect = None
+            model.return_value.generate.return_value = 'não é JSON'
+            self.assertEqual(self.client.post(f'/api/atendimentos/{ids[2]}/reclamacao/classificar',headers=headers).status_code,503)
+        report = self.client.get('/api/relatorios/reclamacoes',params={'dias':30}).json()
+        self.assertEqual((report['atendimentos'],report['analisados'],report['pendentes'],report['reclamacoes']),(3,3,0,2))
+        self.assertEqual((report['labels'],report['valores']),(['Atrasos e tempo de espera','Preços, cobrança e pagamento'],[1,1]))
+        self.assertEqual(report['categorias'][0]['exemplos'],['Atraso de uma hora'])
+        self.assertEqual(len(self.client.get('/api/reclamacoes').json()),3)
+        headers_b = self.login('b@example.test')
+        self.assertEqual(self.client.get('/api/reclamacoes').json(),[])
+        self.assertEqual(self.client.get('/api/relatorios/reclamacoes').json()['reclamacoes'],0)
+        self.assertEqual(self.client.put(route,json=dict(reclamacao=False),headers=headers_b).status_code,404)
+        self.assertEqual(self.client.delete(route,headers=headers_b).status_code,404)
+        self.assertEqual(self.client.post(f'/api/atendimentos/{ids[0]}/reclamacao/classificar',headers=headers_b).status_code,404)
+        self.login('c@example.test')
+        self.assertEqual(self.client.get('/api/relatorios/reclamacoes').status_code,403)
+        headers = self.login()
+        self.assertEqual(self.client.delete(route,headers=headers).status_code,204)
+        self.assertEqual(self.client.delete(route,headers=headers).status_code,404)
+        self.assertEqual(self.client.delete(f'/api/atendimentos/{ids[1]}',headers=headers).status_code,204)
+        self.assertEqual(self.client.get('/api/relatorios/reclamacoes').json()['reclamacoes'],0)
 
 if __name__ == '__main__': unittest.main()
