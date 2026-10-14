@@ -8,6 +8,8 @@ O banco definitivo é PostgreSQL com pgvector (`postgres.py` + `migrations/`), u
 
 ### Executar (Python 3.12)
 
+Atalho (Node 18+, sem dependências npm): com o venv criado e as dependências instaladas, `npm run dev` sobe o servidor com reload automático em http://127.0.0.1:8000, `npm test` roda a suíte, e `npm run manage -- <comando>` executa o manage.py no mesmo banco (ex.: `npm run manage -- create-user --email ...`; rodar `python manage.py` direto ignora o `.env`). O `scripts/dev.mjs` procura o Python em `SMARTDENT_PYTHON`, `.venv` ou `~/.venvs/smartdent`, lê um `.env` local (copie de `.env.example`; variáveis do terminal têm prioridade) e usa `SMARTDENT_ENV=development`. Ele também gera um segredo de sessão fixo durante a execução, para o login não cair a cada reload. Sem `SMARTDENT_DATABASE_URL` no `.env`, usa o SQLite. Passo a passo manual:
+
 ```powershell
 uv venv --python 3.12 .venv
 uv pip install --python .venv/Scripts/python.exe -r requirements-dev.txt
@@ -26,7 +28,7 @@ $env:SMARTDENT_SESSION_SECRET = (& .venv/Scripts/python.exe -c "import secrets; 
 
 A senha é solicitada no terminal, nunca como argumento. Para paciente, crie outro usuário com role customer e a mesma clinic; para administrador, role admin. Não há contas padrão. No PostgreSQL, `--clinic-nome 'Clínica Teste'` define o nome exibido ao criar a clínica. O banco é criado de forma aditiva na inicialização/provisionamento (as migrações pendentes rodam ao iniciar), sem importar usuários ou dados fictícios antigos. O SQLite provisório usa usuários e registros JSON particionados por tipo e clínica; dados de um SQLite antigo não são migrados para o PostgreSQL.
 
-`.env.example` documenta variáveis; a aplicação NÃO carrega `.env` automaticamente. Configure as variáveis no processo PowerShell. Em produção, `SMARTDENT_ENV=production`, segredo obrigatório com ao menos 32 caracteres e HTTPS; o cookie será Secure, HttpOnly e SameSite Strict. No desenvolvimento, sem segredo configurado, um valor aleatório é gerado por processo e sessões expiram após reinício; use um único worker ou configure um segredo estável.
+`.env.example` documenta variáveis. A aplicação NÃO carrega `.env` automaticamente; só os atalhos `npm run dev`/`npm test` o leem, para desenvolvimento. Fora deles, configure as variáveis no processo PowerShell. Em produção, `SMARTDENT_ENV=production`, segredo obrigatório com ao menos 32 caracteres e HTTPS; o cookie será Secure, HttpOnly e SameSite Strict. No desenvolvimento, sem segredo configurado, um valor aleatório é gerado por processo e sessões expiram após reinício; use um único worker ou configure um segredo estável.
 
 ### APIs para Caio
 
@@ -50,7 +52,7 @@ As páginas de conhecimento/estoque leem dados persistidos. Os botões estão co
 
 ### PostgreSQL/pgvector — modelo de dados (Sprint 2)
 
-`migrations/001_schema.sql` define o MER. Cada arquivo de `migrations/` roda uma única vez, em transação, registrado em `schema_migrations` e protegido por advisory lock (vários workers podem iniciar juntos). Requer PostgreSQL 14+ com pgvector 0.5+ (`docker-compose.yml` usa a imagem `pgvector/pgvector:0.8.0-pg17`, só em 127.0.0.1). A extensão `vector` é criada pela migração, então o usuário precisa de permissão para isso (dono do banco nos serviços gerenciados comuns).
+`migrations/001_schema.sql` define o MER. Cada arquivo de `migrations/` roda uma única vez, em transação, registrado em `schema_migrations` e protegido por advisory lock (vários workers podem iniciar juntos). Requer PostgreSQL 14+ com pgvector 0.5+ (`docker-compose.yml` usa a imagem `pgvector/pgvector:0.8.0-pg17`, só em 127.0.0.1). O pgvector não é uma extensão "trusted": se o usuário da aplicação não for superusuário, crie-a antes como superusuário em cada banco (`CREATE EXTENSION vector;`), e a migração apenas a encontra. No Windows com o instalador oficial, o pgvector não vem incluído: compile com Visual Studio Build Tools (C++) e `nmake /F Makefile.win` seguindo o README do pgvector.
 
 | Entidade (PDF) | Tabela | Observações |
 |---|---|---|
@@ -105,7 +107,7 @@ Testes usam banco temporário, usuários fictícios e transporte LLM simulado. C
 
 Windows com Controle Inteligente de Aplicativos: se `import psycopg` falhar com "Uma política de Controle de Aplicativo bloqueou este arquivo", a DLL do `psycopg[binary]` foi bloqueada. O psycopg passa a usar a implementação Python pura se encontrar a `libpq.dll` no PATH (por exemplo, a pasta `bin` de uma instalação do PostgreSQL); defina `PSYCOPG_IMPL=python` para usá-la diretamente.
 
-Validação PostgreSQL/pgvector em 14/10/2026: PostgreSQL 16.2 + pgvector 0.6.2 locais (pacote `pgserver`, fora do projeto), Python 3.12. `unittest discover`: 37 testes aprovados com o PostgreSQL (incluindo a suíte HTTP completa repetida sobre ele, o contrato do repositório nos dois bancos, 40 movimentações de estoque concorrentes sem perda, migração idempotente, isolamento da busca, reindexação e falha do modelo). Sem a URL: 37 executados, 18 ignorados e o restante aprovado. Ponta a ponta com o modelo real (fastembed 0.9.0): API → indexação → `/api/base-conhecimento/busca` e `manage.py migrate`/`reindex` funcionaram. `docker-compose.yml` não foi executado (Docker indisponível na máquina de validação); pgvector 0.8 (busca iterativa, ativada automaticamente) não foi testado.
+Validação PostgreSQL/pgvector em 14/10/2026: PostgreSQL 16.2 + pgvector 0.6.2 locais (pacote `pgserver`, fora do projeto), Python 3.12. `unittest discover`: 37 testes aprovados com o PostgreSQL (incluindo a suíte HTTP completa repetida sobre ele, o contrato do repositório nos dois bancos, 40 movimentações de estoque concorrentes sem perda, migração idempotente, isolamento da busca, reindexação e falha do modelo). Sem a URL: 37 executados, 18 ignorados e o restante aprovado. Ponta a ponta com o modelo real (fastembed 0.9.0): API → indexação → `/api/base-conhecimento/busca` e `manage.py migrate`/`reindex` funcionaram. `docker-compose.yml` não foi executado (Docker indisponível na máquina de validação). Depois, no mesmo dia, com PostgreSQL 17.11 (instalador oficial, serviço do Windows) e pgvector 0.8.7 compilado com MSVC: 37 testes aprovados, com a busca iterativa do pgvector 0.8 ativa e a mesma calibração com o modelo real.
 
 Limitações: sem gerenciamento de usuários pela interface, recuperação de senha, limitação de tentativas de login ou revogação individual de cookies copiados antes de logout (logout limpa o cookie do navegador; prazo máximo 8h). Essas melhorias são necessárias antes de uso público em produção.
 

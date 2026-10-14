@@ -3,10 +3,12 @@
 Nenhum texto sai do servidor. O modelo é baixado do Hugging Face na primeira utilização
 (~220 MB) para FASTEMBED_CACHE_PATH (padrão: pasta temporária do sistema).
 """
+import logging
 import os
 import re
 import threading
 
+log = logging.getLogger('smartdent.embeddings')
 DEFAULT_MODEL = 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
 # Deve coincidir com a coluna kb_chunks.embedding vector(384) em migrations/001_schema.sql.
 EMBEDDING_DIMENSION = 384
@@ -33,6 +35,14 @@ class FastEmbedEmbedder:
                 except Exception:
                     raise EmbeddingUnavailable('Modelo de embeddings indisponível') from None
         return self._engine
+
+    def warm_up(self):
+        """Carrega (e, na primeira vez, baixa) o modelo antes do primeiro salvamento ou busca."""
+        try:
+            self._load()
+            log.info('Modelo de embeddings pronto: %s', self.model)
+        except EmbeddingUnavailable as exc:
+            log.warning('Modelo de embeddings indisponível na inicialização: %s', exc)
 
     def _vectors(self, generator):
         try:

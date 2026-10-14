@@ -1,0 +1,13 @@
+{
+  "name": "smartdent-ai",
+  "private": true,
+  "description": "Atalhos de desenvolvimento do backend Python (FastAPI). Sem dependências npm.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "test": "node scripts/dev.mjs test",
+    "manage": "node scripts/dev.mjs manage"
+  }
+}

@@ -80,13 +80,13 @@
       if (input.required && typeof payload[input.name] === 'string' && !payload[input.name]) { error.textContent = 'Preencha todos os campos.'; return; }
     }
     if (action === 'move' && !payload.delta) { error.textContent = 'Informe uma movimentação diferente de zero.'; return; }
-    busy = true; save.disabled = true; error.textContent = '';
+    busy = true; save.disabled = true; save.textContent = 'Salvando…'; error.textContent = '';
     try {
       const url = action === 'create' ? endpoint : endpoint + '/' + identifier + (action === 'move' ? '/movimentacoes' : '');
       await request(url, action === 'edit' ? 'PUT' : 'POST', payload);
       window.location.reload();
     } catch (exception) { error.textContent = exception.message; }
-    finally { busy = false; save.disabled = false; }
+    finally { busy = false; save.disabled = false; save.textContent = 'Salvar'; }
   });
 
   document.addEventListener('click', async event => {

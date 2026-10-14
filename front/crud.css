@@ -1,4 +1,4 @@
-#crud-dialog { width: min(520px, calc(100vw - 32px)); max-height: 90vh; overflow: auto; border: 1px solid var(--border-color, #cbd5e1); border-radius: 14px; padding: 24px; background: var(--bg-card, white); color: var(--text-primary, #0f172a); }
+#crud-dialog { margin: auto; width: min(520px, calc(100vw - 32px)); max-height: 90vh; overflow: auto; border: 1px solid var(--border-color, #cbd5e1); border-radius: 14px; padding: 24px; background: var(--bg-card, white); color: var(--text-primary, #0f172a); }
 #crud-dialog::backdrop { background: rgba(15, 23, 42, .55); }
 #crud-fields label { display: grid; gap: 6px; margin: 16px 0; }
 #crud-fields input:not([type=checkbox]), #crud-fields textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #94a3b8; border-radius: 6px; background: inherit; color: inherit; font: inherit; }

@@ -1,5 +1,6 @@
 import os
 import secrets
+import threading
 from contextlib import asynccontextmanager
 from fastapi import HTTPException
 from auth import usuario_logado
@@ -8,6 +9,10 @@ from persistence import create_repository
 @asynccontextmanager
 async def lifespan(app):
     app.state.repository = create_repository()
+    embedder = getattr(app.state.repository, 'embedder', None)
+    if hasattr(embedder, 'warm_up'):
+        # Em segundo plano: o servidor aceita requisições enquanto o modelo carrega.
+        threading.Thread(target=embedder.warm_up, name='embeddings-warm-up', daemon=True).start()
     try:
         yield
     finally:
