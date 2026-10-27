@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, Query
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -145,9 +145,10 @@ def _owner_ctx(request, extra: dict = {}):
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    ctx = _owner_ctx(request, {"pagina": "dashboard", "metricas": metricas, "atendimentos": atendimentos[:3]})
+    ctx = _owner_ctx(request, {"pagina": "dashboard"})
     if ctx is None:
         return RedirectResponse("/login", status_code=302)
+    ctx.update(management_report(request).build(7))
     return templates.TemplateResponse("index.html", ctx)
 
 @app.get("/atendimentos", response_class=HTMLResponse)
@@ -165,10 +166,11 @@ async def pagina_conhecimento(request: Request):
     return templates.TemplateResponse("conhecimento.html", ctx)
 
 @app.get("/relatorios", response_class=HTMLResponse)
-async def pagina_relatorios(request: Request):
-    ctx = _owner_ctx(request, {"pagina": "relatorios", "metricas": metricas, "grafico": dados_grafico})
+async def pagina_relatorios(request: Request, dias: int = Query(7,ge=1,le=90)):
+    ctx = _owner_ctx(request, {"pagina": "relatorios"})
     if ctx is None:
         return RedirectResponse("/login", status_code=302)
+    ctx.update(management_report(request).build(dias))
     return templates.TemplateResponse("relatorios.html", ctx)
 
 @app.get("/configuracoes", response_class=HTMLResponse)
@@ -243,7 +245,7 @@ async def api_atendimentos(request: Request):
 @app.get("/api/metricas")
 async def api_metricas(request: Request):
     require_user(request, {"owner"})
-    return metricas
+    return management_report(request).build(7)["metricas"]
 
 @app.get("/api/base-conhecimento")
 async def api_conhecimento(request: Request):
@@ -252,7 +254,7 @@ async def api_conhecimento(request: Request):
 @app.get("/api/relatorios/grafico")
 async def api_grafico(request: Request):
     require_user(request, {"owner"})
-    return dados_grafico
+    return management_report(request).build(7)["grafico"]
 
 @app.get("/api/estoque")
 async def api_estoque(request: Request):
@@ -318,7 +320,7 @@ async def invalid_value(request, exc):
 
 from pydantic import BaseModel, Field, ConfigDict
 from fastapi import Query
-from llm import GroqClient, LLMUnavailable
+from llm import create_llm, LLMUnavailable
 from rag import AttendanceAgent, RetrievalUnavailable, create_retriever
 
 class ChatQuestion(BaseModel):
@@ -333,9 +335,42 @@ def api_chat(request: Request, question: ChatQuestion):
         raise HTTPException(422,'Pergunta vazia')
     retriever = create_retriever(request.app.state.repository)
     try:
-        return AttendanceAgent(retriever,GroqClient()).answer(user['empresa_id'],question.pergunta)
+        return AttendanceAgent(retriever,create_llm()).answer(user['empresa_id'],question.pergunta)
     except (LLMUnavailable,RetrievalUnavailable) as exc:
         raise HTTPException(503,str(exc)) from None
+
+@app.post('/api/atendimentos/{identifier}/sugestao')
+def attendance_reply_suggestion(identifier: int,request: Request):
+    user=require_user(request,{'owner'})
+    csrf_check(request)
+    attendance=ClinicRecords(request.app.state.repository,user['empresa_id']).get('attendance',identifier)
+    history=attendance.get('mensagens',[])
+    latest_client=next((m['texto'].strip() for m in reversed(history) if m.get('autor')=='client' and m.get('texto','').strip()),'')
+    question=latest_client or attendance['preview']
+    if not latest_client and question=='Conversa do paciente':
+        return dict(resposta='Ainda não há mensagem do cliente para preparar uma resposta. Registre o relato ou a pergunta primeiro.',fontes=[],gerado_por_llm=False,tipo='sem_contexto')
+    try:
+        return AttendanceAgent(create_retriever(request.app.state.repository),create_llm()).answer(user['empresa_id'],question,history)
+    except (LLMUnavailable,RetrievalUnavailable) as exc:
+        raise HTTPException(503,str(exc)) from None
+
+from typing import Literal
+
+class AssistantQuestion(ChatQuestion):
+    contexto: Literal['agenda','pacientes','estoque','gestao','clinica','atendimentos'] | None = None
+
+@app.post('/api/assistente')
+def clinic_assistant(request: Request,question: AssistantQuestion):
+    user=require_user(request,{'owner'})
+    csrf_check(request)
+    if not question.pergunta.strip():raise HTTPException(422,'Pergunta vazia')
+    from assistant import ClinicAssistant
+    response=ClinicAssistant(request.app.state.repository,user['empresa_id']).reply(question.pergunta,question.contexto)
+    if response is not None:return response
+    response=api_chat(request,question)
+    response['origem']='llm' if response['gerado_por_llm'] else 'orientacao' if response.get('tipo') else 'base'
+    response['acoes']=[dict(rotulo='Consultar base de conhecimento',url='/base-conhecimento')]
+    return response
 
 @app.get('/api/base-conhecimento/busca')
 def search_knowledge(request: Request, q: str = Query(min_length=1,max_length=500), limite: int = Query(5,ge=1,le=20)):
@@ -358,6 +393,17 @@ def records_service(request):
 @app.get('/api/pacientes')
 def list_patients(request: Request):
     return records_service(request).list('patients')
+
+@app.get('/api/procedimentos')
+def procedure_options(request: Request):
+    require_user(request,{'owner'})
+    from catalog import PROCEDURE_OPTIONS
+    return list(PROCEDURE_OPTIONS)
+
+@app.post('/api/pacientes/{identifier}/atendimento')
+def patient_conversation(identifier: int,request: Request):
+    csrf_check(request)
+    return records_service(request).patient_attendance(identifier)
 
 @app.post('/api/pacientes',status_code=201)
 def create_patient(request: Request, data: Patient):
@@ -404,7 +450,17 @@ def create_attendance(request: Request,data: Attendance):
 @app.put('/api/atendimentos/{identifier}')
 def update_attendance(identifier: int,request: Request,data: Attendance):
     csrf_check(request)
-    return records_service(request).save('attendance',data,identifier)
+    result = records_service(request).save('attendance',data,identifier)
+    if data.status == 'resolved':
+        result['resumo_status'] = 'desativado'
+    if data.status == 'resolved' and os.getenv('SMARTDENT_LLM_ENABLED','false').lower() == 'true':
+        try:
+            summary_service(request).generate(identifier,AttendanceSummarizer(create_llm()))
+            result['resumo_status'] = 'gerado'
+        except LLMUnavailable as exc:
+            result['resumo_status'] = 'indisponivel'
+            result['resumo_erro'] = str(exc)
+    return result
 
 @app.delete('/api/atendimentos/{identifier}',status_code=204)
 def delete_attendance(identifier: int,request: Request):
@@ -443,7 +499,7 @@ def classify_pending_complaints(request: Request, limite: int = Query(10,ge=1,le
     csrf_check(request)
     service = complaint_service(request)
     try:
-        return service.classify_pending(ComplaintClassifier(GroqClient()),limite)
+        return service.classify_pending(ComplaintClassifier(create_llm()),limite)
     except LLMUnavailable as exc:
         raise HTTPException(503,str(exc)) from None
 
@@ -452,7 +508,7 @@ def classify_complaint(identifier: int, request: Request):
     csrf_check(request)
     service = complaint_service(request)
     try:
-        return service.classify(identifier,ComplaintClassifier(GroqClient()))
+        return service.classify(identifier,ComplaintClassifier(create_llm()))
     except LLMUnavailable as exc:
         raise HTTPException(503,str(exc)) from None
 
@@ -465,3 +521,31 @@ def set_complaint(identifier: int, request: Request, data: ComplaintVerdict):
 def delete_complaint(identifier: int, request: Request):
     csrf_check(request)
     complaint_service(request).delete(identifier)
+
+
+from management import SummaryService, ManagementReport
+from analysis import AttendanceSummarizer
+
+def summary_service(request):
+    user=require_user(request,{'owner'})
+    return SummaryService(request.app.state.repository,user['empresa_id'])
+
+def management_report(request):
+    user=require_user(request,{'owner'})
+    return ManagementReport(request.app.state.repository,user['empresa_id'])
+
+@app.get('/api/atendimentos/{identifier}/resumo')
+def attendance_summary(identifier: int,request: Request):
+    return {'resumo':summary_service(request).get(identifier)}
+
+@app.post('/api/atendimentos/{identifier}/resumo')
+def generate_attendance_summary(identifier: int,request: Request):
+    csrf_check(request)
+    try:
+        return summary_service(request).generate(identifier,AttendanceSummarizer(create_llm()))
+    except LLMUnavailable as exc:
+        raise HTTPException(503,str(exc)) from None
+
+@app.get('/api/gestao')
+def management_data(request: Request,dias: int = Query(7,ge=1,le=90)):
+    return management_report(request).build(dias)

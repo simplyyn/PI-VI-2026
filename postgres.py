@@ -37,6 +37,7 @@ STAMP = (_parse(datetime.fromisoformat), _format(lambda value: value.astimezone(
 BR_DATE = (_parse(lambda value: datetime.strptime(value, '%d/%m/%Y').date()), _format(lambda value: value.strftime('%d/%m/%Y')))
 
 TABLES = {
+    'summaries': ('attendance_summaries',dict(attendance_id=PLAIN,resumo=PLAIN,modelo=PLAIN,gerado_em=STAMP,versao=PLAIN)),
     'kb': ('kb_articles', dict(titulo=PLAIN, categoria=PLAIN, conteudo=PLAIN, status=PLAIN, views=PLAIN, atualizado=BR_DATE)),
     'stock': ('stock_items', dict(nome=PLAIN, categoria=PLAIN, unidade=PLAIN, quantidade=PLAIN, minimo=PLAIN)),
     'patients': ('patients', dict(nome=PLAIN, telefone=PLAIN, email=PLAIN, status=PLAIN, plano=PLAIN, ultima_consulta=DATE,
@@ -257,6 +258,41 @@ class PostgresRepository:
             except psycopg.errors.ForeignKeyViolation:
                 raise LookupError('Registro não encontrado') from None
         return self._row('complaints', row)
+
+    def ensure_patient_attendance(self, clinic, patient_id, data, existing_id=None):
+        with self._transaction() as conn:
+            if not conn.execute('SELECT id FROM patients WHERE clinic_id=%s AND id=%s FOR UPDATE',(clinic,patient_id)).fetchone():
+                raise LookupError('Paciente não encontrado')
+            link=conn.execute('SELECT attendance_id FROM patient_attendance_links WHERE clinic_id=%s AND patient_id=%s',(clinic,patient_id)).fetchone()
+            if link:
+                attendance_id=link['attendance_id']
+            else:
+                row=conn.execute('SELECT id FROM attendances WHERE clinic_id=%s AND id=%s',(clinic,existing_id)).fetchone() if existing_id is not None else None
+                if row:
+                    attendance_id=row['id']
+                else:
+                    columns=TABLES['attendance'][1]
+                    values={name:columns[name][0](data[name]) for name in columns if name in data}
+                    query=sql.SQL('INSERT INTO attendances ({}) VALUES ({}) RETURNING id').format(_names(['clinic_id',*values]),sql.SQL(', ').join([sql.Placeholder()]*(len(values)+1)))
+                    attendance_id=conn.execute(query,[clinic,*values.values()]).fetchone()['id']
+                conn.execute('INSERT INTO patient_attendance_links(clinic_id,patient_id,attendance_id) VALUES (%s,%s,%s)',(clinic,patient_id,attendance_id))
+            query=sql.SQL('UPDATE attendances SET cliente=%s,iniciais=%s WHERE clinic_id=%s AND id=%s RETURNING id, {}').format(_names(TABLES['attendance'][1]))
+            row=conn.execute(query,(data['cliente'],data['iniciais'],clinic,attendance_id)).fetchone()
+            messages=self._messages(conn,clinic,attendance_id).get(attendance_id)
+        return self._row('attendance',row,messages)
+
+    def set_summary(self, clinic, attendance_id, data):
+        with self._transaction() as conn:
+            try:
+                row = conn.execute('''INSERT INTO attendance_summaries
+                    (clinic_id,attendance_id,resumo,modelo,gerado_em,versao) VALUES (%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (clinic_id,attendance_id) DO UPDATE SET resumo=EXCLUDED.resumo,
+                    modelo=EXCLUDED.modelo,gerado_em=EXCLUDED.gerado_em,versao=EXCLUDED.versao
+                    RETURNING id,attendance_id,resumo,modelo,gerado_em,versao''',
+                    (clinic,attendance_id,data['resumo'],data['modelo'],STAMP[0](data['gerado_em']),data['versao'])).fetchone()
+            except psycopg.errors.ForeignKeyViolation:
+                raise LookupError('Registro não encontrado') from None
+        return self._row('summaries',row)
 
     def delete_complaint(self, clinic, attendance_id):
         with self._transaction() as conn:

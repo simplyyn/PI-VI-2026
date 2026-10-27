@@ -27,7 +27,7 @@ class PostgresTests(unittest.TestCase):
         from postgres import migrate
         self.assertEqual(migrate(self.url),[])
         with self.repo._transaction() as conn:
-            self.assertEqual([r['versao'] for r in conn.execute('SELECT versao FROM schema_migrations')],['001_schema'])
+            self.assertEqual(sorted(r['versao'] for r in conn.execute('SELECT versao FROM schema_migrations')),['001_schema','002_attendance_summaries','003_patient_attendance_links'])
             tables = {r['table_name'] for r in conn.execute('SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema()')}
         self.assertLessEqual({'clinics','users','kb_articles','kb_chunks','stock_items','stock_movements','patients','appointments',
                               'attendances','attendance_messages','complaint_classifications'},tables)
@@ -103,7 +103,7 @@ class PostgresAPITests(test_api.APITests):
             results = self.client.get('/api/base-conhecimento/busca',params={'q':'quanto custa clareamento'}).json()
             self.assertEqual(results[0]['titulo'],data['titulo'])
             self.assertIsNotNone(results[0]['distancia'])
-            with patch('app.GroqClient') as model:
+            with patch('app.create_llm') as model:
                 model.return_value.generate.return_value = 'Resposta simulada'
                 body = self.client.post('/api/chat',json={'pergunta':'quanto custa clareamento'},headers=headers).json()
             self.assertTrue(body['gerado_por_llm'])

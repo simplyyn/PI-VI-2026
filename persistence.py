@@ -20,6 +20,8 @@ class Repository(Protocol):
     def append_message(self, clinic, identifier, message): ...
     def set_complaint(self, clinic, attendance_id, data): ...
     def delete_complaint(self, clinic, attendance_id): ...
+    def set_summary(self, clinic, attendance_id, data): ...
+    def ensure_patient_attendance(self, clinic, patient_id, data, existing_id=None): ...
 
 class SQLiteRepository:
     supports_semantic_search = False
@@ -79,12 +81,49 @@ class SQLiteRepository:
                 db.execute('UPDATE records SET data=? WHERE id=? AND kind=? AND clinic=?', (json.dumps(data),identifier,kind,clinic))
         return dict(data, id=identifier)
 
+    def ensure_patient_attendance(self, clinic, patient_id, data, existing_id=None):
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if not db.execute("SELECT 1 FROM records WHERE kind='patients' AND clinic=? AND id=?",(clinic,patient_id)).fetchone():
+                raise LookupError('Paciente não encontrado')
+            row=db.execute("SELECT data FROM records WHERE kind='patient_links' AND clinic=? AND json_extract(data,'$.patient_id')=?",(clinic,patient_id)).fetchone()
+            attendance_id=json.loads(row[0])['attendance_id'] if row else None
+            if attendance_id is None:
+                if existing_id is not None and db.execute("SELECT 1 FROM records WHERE kind='attendance' AND clinic=? AND id=?",(clinic,existing_id)).fetchone():
+                    attendance_id=existing_id
+                else:
+                    attendance_id=db.execute('INSERT INTO records(kind,clinic,data) VALUES (?,?,?)',('attendance',clinic,json.dumps(data))).lastrowid
+                db.execute('INSERT INTO records(kind,clinic,data) VALUES (?,?,?)',('patient_links',clinic,json.dumps(dict(patient_id=patient_id,attendance_id=attendance_id))))
+            row=db.execute("SELECT data FROM records WHERE kind='attendance' AND clinic=? AND id=?",(clinic,attendance_id)).fetchone()
+            current=json.loads(row[0])
+            current.update(cliente=data['cliente'],iniciais=data['iniciais'])
+            db.execute("UPDATE records SET data=? WHERE clinic=? AND id=? AND kind='attendance'",(json.dumps(current),clinic,attendance_id))
+        return dict(current,id=attendance_id)
+
     def delete(self, kind, clinic, identifier):
         with self.connect() as db:
             if not db.execute('DELETE FROM records WHERE id=? AND kind=? AND clinic=?', (identifier,kind,clinic)).rowcount:
                 raise LookupError('Registro não encontrado')
             if kind == 'attendance':
+                db.execute("DELETE FROM records WHERE kind='patient_links' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,identifier))
                 db.execute("DELETE FROM records WHERE kind='complaints' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,identifier))
+                db.execute("DELETE FROM records WHERE kind='summaries' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,identifier))
+            if kind == 'patients':
+                db.execute("DELETE FROM records WHERE kind='patient_links' AND clinic=? AND json_extract(data,'$.patient_id')=?",(clinic,identifier))
+
+    def set_summary(self, clinic, attendance_id, data):
+        data = dict(data,attendance_id=attendance_id)
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if not db.execute('SELECT 1 FROM records WHERE id=? AND kind=? AND clinic=?',(attendance_id,'attendance',clinic)).fetchone():
+                raise LookupError('Registro não encontrado')
+            row = db.execute("SELECT id FROM records WHERE kind='summaries' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,attendance_id)).fetchone()
+            if row:
+                identifier = row[0]
+                db.execute('UPDATE records SET data=? WHERE id=?',(json.dumps(data),identifier))
+            else:
+                identifier = db.execute('INSERT INTO records(kind,clinic,data) VALUES (?,?,?)',('summaries',clinic,json.dumps(data))).lastrowid
+        return dict(data,id=identifier)
 
     def set_complaint(self, clinic, attendance_id, data):
         data = dict(data, attendance_id=attendance_id)

@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}SmartDent AI — Atendimentos{% endblock %}
 {% block content %}
 <div class="atend-container">
@@ -13,9 +13,25 @@
     </div>
   </div>
   <div class="conv-detail-panel" id="attendance-detail" hidden>
-    <div class="conv-detail-header"><div class="conv-detail-info"><div><h3 id="attendance-name"></h3><p id="attendance-subject"></p></div></div><div class="kb-actions"><button class="btn-summary" data-action="ai-info">Resumo da IA</button><button class="btn-escalate" data-action="escalate">Escalar</button><button class="btn-icon" data-action="resolve">Resolver</button><button class="btn-icon" data-action="edit" title="Editar">✎</button><button class="btn-icon danger" data-action="delete" title="Excluir">×</button></div></div>
-    <div class="messages-area" id="attendance-messages"></div>
-    <form class="chat-input-bar" id="human-message-form"><input name="texto" required maxlength="4000" placeholder="Registrar mensagem do atendente humano..." aria-label="Mensagem humana"><button type="button" class="btn-suggest" data-action="ai-info">Sugestão IA</button><button type="submit" class="btn-send">Enviar</button></form>
+    <div class="conv-detail-header"><div class="conv-detail-info"><div><h3 id="attendance-name"></h3><p id="attendance-subject"></p></div></div><div class="kb-actions"><button class="btn-summary" data-action="summary">Resumo da IA</button><button class="btn-escalate" data-action="escalate">Escalar</button><button class="btn-icon" data-action="resolve">Resolver</button><button class="btn-icon" data-action="edit" title="Editar">✎</button><button class="btn-icon danger" data-action="delete" title="Excluir">×</button></div></div>
+    <section class="ai-summary-card"><h3>Resumo do atendimento</h3><p id="attendance-summary" role="status">Selecione um atendimento.</p><small id="summary-meta"></small></section>
+<section class="analysis-card" aria-labelledby="complaint-heading">
+  <header class="analysis-card-header"><div><span class="analysis-eyebrow">Qualidade do atendimento</span><h3 id="complaint-heading">Reclamações e oportunidades de melhoria</h3></div><button type="button" class="btn-primary" data-action="classify">Analisar com IA</button></header>
+  <p class="analysis-description">Identifica insatisfação com a clínica, como atraso, cobrança ou atendimento. Relatar dor, por si só, não significa uma reclamação.</p>
+  <p id="complaint-status" role="status" class="analysis-result"></p>
+  <details class="analysis-review"><summary>Revisar classificação manualmente</summary>
+    <form id="complaint-form" class="complaint-form">
+      <label class="complaint-toggle"><input type="checkbox" name="reclamacao"><span><strong>Há uma reclamação sobre a clínica</strong><small>Marque apenas quando houver insatisfação registrada.</small></span></label>
+      <label class="analysis-field">Categoria<select name="categoria" aria-label="Categoria de reclamação"></select></label>
+      <label class="analysis-field">Motivo<textarea name="motivo" maxlength="300" rows="3" aria-label="Motivo da reclamação" placeholder="Descreva brevemente a insatisfação registrada"></textarea></label>
+      <div class="analysis-form-actions"><span>A classificação alimenta os relatórios da clínica.</span><button class="btn-primary" type="submit">Salvar revisão</button></div>
+    </form>
+  </details>
+</section>
+<section class="analysis-card"><header class="analysis-card-header"><div><span class="analysis-eyebrow">Acolhimento</span><h3>Orientação inicial</h3></div><button class="btn-summary" type="button" data-action="guidance">Orientar sobre avaliação</button></header><p class="analysis-description">Sugere o próximo passo a partir do relato. A escolha de tratamento depende de avaliação pelo dentista.</p><p id="attendance-guidance" role="status"></p></section>
+<div class="messages-area" id="attendance-messages"></div>
+    <form class="chat-input-bar" id="human-message-form"><label class="attendance-draft">Mensagem para revisar e enviar<textarea name="texto" required maxlength="4000" rows="5" placeholder="Escreva uma mensagem ou solicite uma sugestão da IA..." aria-label="Mensagem para revisar antes de enviar"></textarea></label><button type="button" class="btn-suggest" data-action="suggest-ai">Sugestão IA</button><button type="submit" class="btn-send">Enviar</button></form>
+    <p id="suggestion-feedback" class="suggestion-feedback" role="status" aria-live="polite"></p>
     <p>A mensagem fica registrada neste sistema. Não é enviada por WhatsApp ou e-mail.</p>
   </div>
 </div>
@@ -24,4 +40,6 @@
 <script id="records-data" type="application/json">{{ atendimentos | tojson }}</script>
 <div id="records-root" data-resource="atendimentos"></div>
 {% include "records_scripts.html" %}
+<link rel="stylesheet" href="/static/attendance-analysis.css">
+<script src="/static/attendance-analysis.js"></script>
 {% endblock %}

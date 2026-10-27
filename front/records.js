@@ -5,6 +5,7 @@ const records=JSON.parse(document.getElementById('records-data').textContent);
 const map=new Map(records.map(r=>[String(r.id),r]));
 const dialog=document.getElementById('crud-dialog'), form=document.getElementById('crud-form'), fields=document.getElementById('crud-fields'), error=document.getElementById('crud-error'), feedback=document.getElementById('crud-feedback');
 let mode, id, selected, busy=false, statusFilter='todos';
+const notice=sessionStorage.getItem('smartdent-summary-notice');if(notice){feedback.textContent=notice;sessionStorage.removeItem('smartdent-summary-notice');}
 const definitions={
  pacientes:[['nome','Nome','text',true,200],['telefone','Telefone','text',false,40],['email','E-mail','email',false,254],['status','Status',['novo','ativo','inativo']],['plano','Plano / Convênio','text',false,100],['ultima_consulta','Última consulta','date'],['proxima_consulta','Próxima consulta','date'],['procedimentos','Quantidade de procedimentos','number',true,1000000000]],
  agendamentos:[['paciente_id','Paciente','patient',true],['data','Data','date',true],['horario','Horário','time',true],['duracao','Duração em minutos','number',true,1440],['procedimento','Procedimento','text',true,200],['dentista','Dentista','text',true,200],['status','Status',['pendente','confirmado','cancelado']]],
@@ -32,6 +33,11 @@ async function open(action,identifier,patientId) {
   if(record[key]!=null)input.value=record[key];else if(key==='paciente_id'&&patientId)input.value=patientId;else if(key==='procedimentos')input.value=0;else if(key==='duracao')input.value=30;
   wrapper.append(input);fields.append(wrapper);
  }
+ if(resource==='agendamentos'){
+  const options=await api('/api/procedimentos');const list=document.createElement('datalist');list.id='procedure-options';
+  for(const name of options){const option=document.createElement('option');option.value=name;list.append(option);}
+  fields.append(list);fields.querySelector('[name=procedimento]').setAttribute('list',list.id);
+ }
  dialog.showModal();fields.querySelector('input,select,textarea').focus();
 }
 form.addEventListener('submit',async event=>{
@@ -43,9 +49,11 @@ form.addEventListener('submit',async event=>{
 document.getElementById('crud-cancel').onclick=()=>{if(!busy)dialog.close();};dialog.addEventListener('cancel',e=>{if(busy)e.preventDefault();});
 function selectAttendance(identifier){
  selected=identifier;const r=map.get(identifier);if(!r)return;
+ document.getElementById("attendance-detail").dataset.id=identifier;
+ document.dispatchEvent(new CustomEvent("attendance-selected",{detail:{id:identifier}}));
  document.getElementById('attendance-detail').hidden=false;document.getElementById('attendance-name').textContent=r.cliente;document.getElementById('attendance-subject').textContent=r.preview;
  const area=document.getElementById('attendance-messages');area.replaceChildren();
- for(const m of r.mensagens||[]){const row=document.createElement('div');row.className='message-row';const text=document.createElement('p');text.className='message-bubble';text.textContent=m.texto;const when=document.createElement('small');when.textContent='Atendente humano · '+new Date(m.criado_em).toLocaleString('pt-BR');row.append(text,when);area.append(row);}
+ for(const m of r.mensagens||[]){const row=document.createElement('div');row.className='message-row';const text=document.createElement('p');text.className='message-bubble';text.textContent=m.texto;const when=document.createElement('small');when.textContent=({human:'Atendente humano',client:'Paciente',ai:'Assistente IA'}[m.autor]||'Sistema')+' · '+new Date(m.criado_em).toLocaleString('pt-BR');row.append(text,when);area.append(row);}
  if(!r.mensagens?.length)area.textContent='Nenhuma mensagem registrada.';
  document.querySelectorAll('.conv-item').forEach(el=>el.classList.toggle('active',el.dataset.id===identifier));
 }
@@ -54,6 +62,7 @@ document.addEventListener('click',async event=>{
  try{
   if(action==='create'||action==='edit'){await open(action,identifier);return;}
   if(action==='select'){selectAttendance(identifier);return;}
+  if(action==='conversation'){const conversation=await api('/api/pacientes/'+identifier+'/atendimento','POST');location.href='/atendimentos?atendimento_id='+encodeURIComponent(conversation.id);return;}
   if(action==='schedule'){location.href='/agendamentos?paciente_id='+encodeURIComponent(identifier);return;}
   if(action==='ai-info'){feedback.textContent='Resumo e sugestão por IA dependem da integração com um modelo real. Essa função ainda não está disponível.';return;}
   if(action==='filter'){const search=document.getElementById('records-search');search.scrollIntoView({behavior:'smooth',block:'center'});search.focus({preventScroll:true});return;}
@@ -63,7 +72,7 @@ document.addEventListener('click',async event=>{
   if(action==='export'){const data=JSON.stringify(records,null,2);const url=URL.createObjectURL(new Blob([data],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='pacientes.json';link.click();URL.revokeObjectURL(url);return;}
   if(action==='delete'){if(!confirm('Excluir este registro definitivamente?'))return;button.disabled=true;await api('/api/'+resource+'/'+identifier,'DELETE');location.reload();return;}
   const record=map.get(identifier);if(!record)return;
-  if(['confirm','cancel','escalate','resolve'].includes(action)){if(action==='cancel'&&!confirm('Cancelar esta consulta?'))return;button.disabled=true;const data=payload(record);data.status={confirm:'confirmado',cancel:'cancelado',escalate:'escalated',resolve:'resolved'}[action];if(action==='escalate')data.canal='human';await api('/api/'+resource+'/'+identifier,'PUT',data);location.reload();}
+  if(['confirm','cancel','escalate','resolve'].includes(action)){if(action==='cancel'&&!confirm('Cancelar esta consulta?'))return;button.disabled=true;const data=payload(record);data.status={confirm:'confirmado',cancel:'cancelado',escalate:'escalated',resolve:'resolved'}[action];if(action==='escalate')data.canal='human';const result=await api('/api/'+resource+'/'+identifier,'PUT',data);if(result.resumo_status)sessionStorage.setItem('smartdent-summary-notice',result.resumo_status==='gerado'?'Resumo gerado automaticamente.':result.resumo_status==='desativado'?'Atendimento salvo. Resumo automático desativado: configure o LLM para gerar.':result.resumo_erro||'Atendimento salvo; resumo indisponível.');location.reload();}
  }catch(e){feedback.textContent=e.message;button.disabled=false;}
 });
 const messageForm=document.getElementById('human-message-form');
@@ -80,6 +89,6 @@ function calendar(){const area=document.getElementById('calDays');if(!area)retur
  // Clicar no dia já selecionado remove o filtro de data.
  button.onclick=()=>{input.value=input.value===date?'':date;filter();calendar();};area.append(button);}}
 calendar();
-if(resource==='atendimentos'&&records.length)selectAttendance(String(records[0].id));
+if(resource==='atendimentos'&&records.length){const requested=new URLSearchParams(location.search).get('atendimento_id');selectAttendance(map.has(requested)?requested:String(records[0].id));}
 if(resource==='agendamentos'){const patientId=new URLSearchParams(location.search).get('paciente_id');if(patientId)open('create',undefined,patientId).catch(e=>feedback.textContent=e.message);}
 })();

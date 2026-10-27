@@ -1,0 +1,10 @@
+﻿.cwp-tools { display:flex; gap:6px; padding:10px 14px 4px; border-top:1px solid var(--border-color); background:var(--card-bg); flex-shrink:0; }
+.cwp-tool, .cwp-reset { border:0; border-radius:8px; padding:6px 10px; font:inherit; font-size:11px; cursor:pointer; background:var(--bg-color); color:var(--text-secondary); }
+.cwp-tool.active { background:var(--primary-light); color:var(--primary-color); font-weight:700; }.cwp-reset { margin-left:auto; }
+#cwpSuggestions { max-height:88px; overflow:auto; padding:8px 14px 12px; border-top:0; flex-shrink:0; }
+#cwpMessages .cwp-msg { max-width:96%; line-height:1.65; }#cwpMessages p { line-height:1.7; }
+.cwp-origin { display:block; font-size:9px; font-weight:700; color:var(--primary-color); margin-bottom:5px; }
+.cwp-action { display:inline-block; border:1px solid var(--border-color); border-radius:8px; padding:5px 9px; margin:8px 6px 4px 0; color:var(--primary-color); background:var(--card-bg); text-decoration:none; font-size:11px; font-weight:600; }
+.cwp-input-bar input { min-width:0; }#cwpSendButton:disabled, #cwpSuggestions button:disabled { opacity:.55; cursor:wait; }
+.cwp-tool:focus-visible, .cwp-action:focus-visible, .cwp-reset:focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
+[data-cwp-topic][hidden], .chat-widget-badge[hidden] { display:none !important; }

@@ -133,6 +133,13 @@ class ClinicRecords:
         if record is None: raise LookupError('Registro não encontrado')
         return record
 
+    def patient_attendance(self,patient_id,existing_id=None):
+        patient=self.get('patients',patient_id)
+        now=datetime.now(timezone.utc)
+        data=dict(cliente=patient['nome'],preview='Conversa do paciente',status='pending',canal='human',
+                  iniciais=patient['iniciais'],cor='',hora=now.strftime('%H:%M'),criado_em=now.isoformat(),mensagens=[])
+        return self.repository.ensure_patient_attendance(self.clinic,patient_id,data,existing_id)
+
     def save(self,kind,model,identifier=None):
         existing = self.get(kind,identifier) if identifier is not None else {}
         data = model.model_dump(mode='json')
@@ -146,7 +153,10 @@ class ClinicRecords:
                         hora=existing.get('hora',datetime.now().strftime('%H:%M')),
                         mensagens=existing.get('mensagens',[]))
         data['criado_em'] = existing.get('criado_em',datetime.now(timezone.utc).isoformat())
-        return self.repository.save(kind,self.clinic,data,identifier)
+        result=self.repository.save(kind,self.clinic,data,identifier)
+        if kind=='patients':
+            self.patient_attendance(result['id'])
+        return result
 
     def delete(self,kind,identifier):
         self.get(kind,identifier)

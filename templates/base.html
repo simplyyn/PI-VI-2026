@@ -180,7 +180,7 @@
   <button class="chat-widget-btn" id="cwpBtn" onclick="toggleChatWidget()" style="position:fixed;">
     <i data-lucide="sparkles"></i>
     Assistente IA
-    <div class="chat-widget-badge" id="cwpBadge">1</div>
+    <div class="chat-widget-badge" id="cwpBadge" hidden></div>
   </button>
 
   <div class="chat-widget-panel" id="cwpPanel">
@@ -192,63 +192,54 @@
         <div class="cwp-avatar"><i data-lucide="sparkles"></i></div>
         <div>
           <strong>Assistente SmartDent</strong>
-          <small>IA treinada para sua clínica</small>
+          <small>Dados reais e conhecimento da clínica</small>
         </div>
       </div>
       <button class="cwp-close" onclick="toggleChatWidget()"><i data-lucide="x"></i></button>
     </div>
 
-    <div class="cwp-messages" id="cwpMessages">
+    <div class="cwp-messages" id="cwpMessages" role="log" aria-live="polite" aria-label="Conversa com o assistente">
       <div class="cwp-msg cwp-msg-ai">
-        <p>Olá! Posso ajudar com atendimentos, estoque ou relatórios da clínica. O que você precisa? 😊</p>
+        <p>Olá! Posso consultar agenda, pacientes, estoque e reclamações, além de explicar preços e políticas cadastrados. Escolha um atalho abaixo ou escreva sua pergunta.</p>
         <span class="cwp-time">agora</span>
       </div>
     </div>
 
+    <div class="cwp-tools"><button type="button" class="cwp-tool active" data-cwp-group="rotina" aria-pressed="true">Rotina</button><button type="button" class="cwp-tool" data-cwp-group="gestao" aria-pressed="false">Gestão</button><button type="button" class="cwp-tool" data-cwp-group="clinica" aria-pressed="false">Clínica</button><button type="button" class="cwp-reset" onclick="cwpClear()" aria-label="Limpar conversa local">Limpar</button></div>
     <div class="cwp-suggestions" id="cwpSuggestions">
-      <button onclick="cwpSend('Quantos atendimentos tivemos hoje?')">Atendimentos hoje</button>
-      <button onclick="cwpSend('Quais itens do estoque estão baixos?')">Estoque baixo</button>
-      <button onclick="cwpSend('Resumo da semana')">Resumo da semana</button>
+      <button data-cwp-topic="rotina" onclick="cwpSend('Quais são os agendamentos de hoje?')">Agenda de hoje</button>
+      <button data-cwp-topic="rotina" onclick="cwpSend('Quais são os agendamentos de amanhã?')">Agenda de amanhã</button>
+      <button data-cwp-topic="rotina" onclick="cwpSend('Quais são os próximos agendamentos?')">Próximas consultas</button>
+      <button data-cwp-topic="rotina" onclick="cwpSend('Quantos pacientes estão cadastrados?')">Pacientes</button>
+      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais itens do estoque precisam de reposição?')">Reposição</button>
+      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais atendimentos estão pendentes?')">Atendimentos pendentes</button>
+      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais reclamações foram identificadas?')">Reclamações</button>
+      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais resumos estão pendentes?')">Resumos pendentes</button>
+      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Resumo da semana')">Resumo da semana</button>
+      <button data-cwp-topic="clinica" hidden onclick="cwpSend('Quais são os preços dos procedimentos?')">Preços</button>
+      <button data-cwp-topic="clinica" hidden onclick="cwpSend('Quais os horários de funcionamento?')">Funcionamento</button>
+      <button data-cwp-topic="clinica" hidden onclick="cwpSend('Qual a política de cancelamento?')">Cancelamentos</button>
+      <button data-cwp-topic="clinica" hidden onclick="cwpSend('O que fazer quando o dente está doendo?')">Orientação inicial</button>
     </div>
-
     <div class="cwp-input-bar">
-      <input type="text" id="cwpInput" placeholder="Pergunte ao assistente..." onkeydown="if(event.key==='Enter')cwpSend()">
-      <button onclick="cwpSend()"><i data-lucide="send"></i></button>
+      <input type="text" id="cwpInput" placeholder="Ex.: agenda de amanhã ou preço da limpeza" maxlength="2000" aria-label="Pergunta para o assistente" onkeydown="if(event.key==='Enter')cwpSend()">
+      <button id="cwpSendButton" aria-label="Enviar pergunta" onclick="cwpSend()"><i data-lucide="send"></i></button>
     </div>
   </div>
 
   <script>
-    const cwpResponses = {
-      'hoje':       'Hoje foram realizados <strong>12 atendimentos</strong>: 11 pela IA e 1 escalonado para humano. Taxa de resolução: 91%.',
-      'estoque':    '<strong>3 itens</strong> precisam de atenção: Anestésico Articaína (baixo), Brocas Diamantadas (esgotado) e Lima Endodôntica (baixo). Acesse Estoque para detalhes.',
-      'semana':     'Esta semana: <strong>87 atendimentos</strong>, tempo médio de resposta de 18s, satisfação média 4.8★. Pico na quarta com 19 atendimentos.',
-      'agend':      'Você tem <strong>8 consultas agendadas</strong> para hoje. Próxima: Maria Santos às 14h (Clareamento).',
-      'paciente':   'Há <strong>142 pacientes</strong> cadastrados. 3 novos esta semana. 2 com retorno atrasado.',
-      'relatorio':  'O último relatório indica 91% de automação. Os tópicos mais consultados são: Clareamento (28), Planos de Saúde (38) e Agendamento (43).',
-    };
-
-    function cwpGetReply(msg) {
-      const m = msg.toLowerCase();
-      if (m.includes('hoje') || m.includes('atendimento')) return cwpResponses['hoje'];
-      if (m.includes('estoque') || m.includes('insumo') || m.includes('baixo')) return cwpResponses['estoque'];
-      if (m.includes('semana') || m.includes('resumo')) return cwpResponses['semana'];
-      if (m.includes('agend') || m.includes('consult')) return cwpResponses['agend'];
-      if (m.includes('paciente')) return cwpResponses['paciente'];
-      if (m.includes('relat') || m.includes('metric')) return cwpResponses['relatorio'];
-      return 'Entendido! Para informações mais detalhadas, acesse a seção correspondente no menu lateral. Posso ajudar com atendimentos, estoque, agendamentos ou relatórios.';
+    let cwpBusy=false, cwpContext=null;
+    async function cwpGetReply(msg) { return window.smartdentAskOwner(msg,cwpContext); }
+    function cwpAddMsg(text,isUser,actions=[],origin='') {
+      const box=document.getElementById('cwpMessages');const div=document.createElement('div');div.className='cwp-msg '+(isUser?'cwp-msg-usr':'cwp-msg-ai');
+      if(origin){const badge=document.createElement('small');badge.className='cwp-origin';badge.textContent=({registros:'Consulta aos registros',llm:'IA com contexto da clínica',orientacao:'Orientação inicial',base:'Base de conhecimento'}[origin]||'Assistente');div.append(badge);}
+      const p=document.createElement('p');p.textContent=text;p.style.whiteSpace='pre-wrap';div.append(p);
+      const allowed=['/agendamentos','/atendimentos','/pacientes','/estoque','/relatorios','/base-conhecimento'];
+      for(const action of actions){const path=action.url?.split('?')[0];if(!allowed.includes(path))continue;const a=document.createElement('a');a.className='cwp-action';a.href=action.url;a.textContent=action.rotulo;div.append(a);}
+      const stamp=document.createElement('span');stamp.className='cwp-time';stamp.textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});div.append(stamp);box.append(div);box.scrollTop=box.scrollHeight;
     }
-
-    function cwpAddMsg(text, isUser) {
-      const box = document.getElementById('cwpMessages');
-      const div = document.createElement('div');
-      div.className = 'cwp-msg ' + (isUser ? 'cwp-msg-usr' : 'cwp-msg-ai');
-      const now = new Date();
-      const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-      div.innerHTML = `<p>${text}</p><span class="cwp-time">${time}</span>`;
-      box.appendChild(div);
-      box.scrollTop = box.scrollHeight;
-    }
-
+    function cwpClear(){if(cwpBusy)return;cwpContext=null;document.getElementById('cwpMessages').replaceChildren();cwpAddMsg('Vamos começar de novo. Escolha um atalho ou pergunte sobre os registros da clínica.',false);}
+    document.querySelectorAll('[data-cwp-group]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-cwp-group]').forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});document.querySelectorAll('[data-cwp-topic]').forEach(b=>b.hidden=b.dataset.cwpTopic!==button.dataset.cwpGroup);}));
     function cwpTyping() {
       const box = document.getElementById('cwpMessages');
       const div = document.createElement('div');
@@ -259,28 +250,22 @@
       box.scrollTop = box.scrollHeight;
     }
 
-    function cwpSend(text) {
-      const input = document.getElementById('cwpInput');
-      const msg = text || input.value.trim();
-      if (!msg) return;
-      input.value = '';
-      document.getElementById('cwpSuggestions').style.display = 'none';
-      cwpAddMsg(msg, true);
-      cwpTyping();
-      setTimeout(() => {
-        const typing = document.getElementById('cwpTyping');
-        if (typing) typing.remove();
-        cwpAddMsg(cwpGetReply(msg), false);
-      }, 900 + Math.random() * 400);
+    async function cwpSend(text) {
+      const input=document.getElementById('cwpInput');const msg=(text||input.value).trim();if(!msg||cwpBusy)return;
+      if(msg.length>2000){cwpAddMsg('Sua mensagem está muito longa. Use até 2000 caracteres para eu consultar.',false);return;}
+      cwpBusy=true;input.value='';input.disabled=true;document.getElementById('cwpSendButton').disabled=true;document.getElementById('cwpMessages').setAttribute('aria-busy','true');
+      document.querySelectorAll('[data-cwp-topic]').forEach(b=>b.disabled=true);cwpAddMsg(msg,true);cwpTyping();
+      try{const reply=await cwpGetReply(msg);cwpContext=({"/agendamentos":"agenda","/pacientes":"pacientes","/estoque":"estoque","/atendimentos":"atendimentos","/relatorios":"gestao","/base-conhecimento":"clinica"}[reply.acoes?.[0]?.url]||null);cwpAddMsg(reply.resposta,false,reply.acoes||[],reply.origem);}
+      catch(error){cwpAddMsg(error.message+' Você pode tentar novamente ou abrir a seção pelo menu.',false);}
+      finally{document.getElementById('cwpTyping')?.remove();cwpBusy=false;input.disabled=false;document.getElementById('cwpSendButton').disabled=false;document.querySelectorAll('[data-cwp-topic]').forEach(b=>b.disabled=false);document.getElementById('cwpMessages').setAttribute('aria-busy','false');if(document.getElementById('cwpPanel').classList.contains('open'))input.focus();}
     }
-
     function toggleChatWidget() {
       const panel = document.getElementById('cwpPanel');
       const badge = document.getElementById('cwpBadge');
       panel.classList.toggle('open');
       if (panel.classList.contains('open')) {
         badge.style.display = 'none';
-        lucide.createIcons({ nodes: [panel] });
+        window.lucide?.createIcons({ nodes: [panel] });
         document.getElementById('cwpInput').focus();
       }
     }
@@ -356,6 +341,8 @@
       });
     })();
   </script>
+<link rel="stylesheet" href="/static/widget.css">
+<script src="/static/ai-client.js"></script>
 <script src="/static/session.js"></script>
 </body>
 </html>

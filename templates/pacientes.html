@@ -86,14 +86,14 @@
             <span>{{ p.procedimentos }}</span>
           </div>
         </div>
-        <div style="margin-top:14px;display:flex;gap:8px;">
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" data-action="history" title="Ver histórico">
             <i data-lucide="clock"></i> Histórico
           </button>
           <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" data-action="schedule" title="Agendar consulta">
             <i data-lucide="calendar-plus"></i> Agendar
           </button>
-<button class="btn-icon" data-action="edit" title="Editar">✎</button><button class="btn-icon danger" data-action="delete" title="Excluir">×</button>
+<button class="btn-icon" data-action="conversation" style="width:auto;padding:0 10px;font-size:12px" title="Abrir conversa">Conversa</button><button class="btn-icon" data-action="edit" title="Editar">✎</button><button class="btn-icon danger" data-action="delete" title="Excluir">×</button>
         </div>
       </div>
       {% endfor %}

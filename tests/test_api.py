@@ -10,7 +10,7 @@ from auth import hash_password
 class APITests(unittest.TestCase):
     def environment(self):
         """Banco da suíte; test_postgres.PostgresAPITests troca por um PostgreSQL descartável."""
-        return {'SMARTDENT_DB_PATH':self.tmp.name+'/db.sqlite3','SMARTDENT_DATABASE_URL':'','SMARTDENT_ENV':'development','SMARTDENT_RETRIEVAL':'local_keyword','SMARTDENT_LLM_ENABLED':'false'}
+        return {'SMARTDENT_DB_PATH':self.tmp.name+'/db.sqlite3','SMARTDENT_DATABASE_URL':'','SMARTDENT_ENV':'development','SMARTDENT_RETRIEVAL':'local_keyword','SMARTDENT_LLM_ENABLED':'false','SMARTDENT_LLM_PROVIDER':'groq'}
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -35,6 +35,10 @@ class APITests(unittest.TestCase):
         return {'X-CSRF-Token':self.client.get('/api/session').json()['csrf_token']}
 
     def test_auth_logout_permissions(self):
+        for page in ['/', '/relatorios']:
+            response=self.client.get(page,follow_redirects=False)
+            self.assertEqual(response.status_code,302)
+            self.assertEqual(response.headers['location'],'/login')
         self.assertEqual(self.client.get('/api/estoque').status_code,401)
         page = self.client.get('/login').text
         token = re.search(r'name="csrf_token" value="([^"]+)"',page).group(1)
@@ -96,7 +100,7 @@ class APITests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/base-conhecimento',json=data,headers=headers).status_code,201)
         response = self.client.post('/api/chat',json={'pergunta':'Protocolo alfa'},headers=headers)
         self.assertEqual(response.status_code,503)
-        with patch('app.GroqClient') as model:
+        with patch('app.create_llm') as model:
             model.return_value.generate.return_value = 'Resposta simulada baseada no documento'
             response = self.client.post('/api/chat',json={'pergunta':'Protocolo alfa'},headers=headers)
             self.assertEqual(response.status_code,200)
@@ -104,7 +108,7 @@ class APITests(unittest.TestCase):
             self.assertEqual(response.json()['fontes'][0]['titulo'],data['titulo'])
             model.return_value.generate.assert_called_once()
         headers = self.login('b@example.test')
-        with patch('app.GroqClient') as model:
+        with patch('app.create_llm') as model:
             response = self.client.post('/api/chat',json={'pergunta':'Protocolo alfa'},headers=headers)
             self.assertFalse(response.json()['gerado_por_llm'])
             model.return_value.generate.assert_not_called()
@@ -135,7 +139,7 @@ class APITests(unittest.TestCase):
             self.assertIn('data-action="delete"',response.text)
         for route,data,identifier in [('pacientes',patient,patient_id),('agendamentos',appointment,appointment_id),('atendimentos',attendance,attendance_id)]:
             self.assertEqual(self.client.put(f'/api/{route}/{identifier}',json=data,headers=headers).status_code,200)
-        self.assertEqual(len(self.client.get('/api/atendimentos').json()[0]['mensagens']),1)
+        self.assertEqual(len(next(a for a in self.client.get('/api/atendimentos').json() if a['id']==attendance_id)['mensagens']),1)
         self.assertEqual(self.client.delete(f'/api/pacientes/{patient_id}',headers=headers).status_code,409)
         self.assertEqual(self.client.post('/api/agendamentos',json=dict(appointment,data='data inválida'),headers=headers).status_code,422)
         self.assertEqual(self.client.post('/api/agendamentos',json=dict(appointment,duracao=0),headers=headers).status_code,422)
@@ -154,6 +158,187 @@ class APITests(unittest.TestCase):
         self.login('c@example.test')
         for route in ['pacientes','agendamentos','atendimentos']:
             self.assertEqual(self.client.get('/api/'+route).status_code,403)
+
+    def test_suggestion_answers_latest_client_question_not_generic_subject(self):
+        from seed_demo import seed
+        headers=self.login()
+        seed(app.state.repository,'a')
+        attendance=app.state.repository.list('attendance','a')[0]
+        identifier=attendance['id']
+        question='Boa tarde! Quais são os horários de funcionamento e a política para remarcar uma consulta?'
+        app.state.repository.append_message('a',identifier,dict(autor='client',texto=question,criado_em='2026-10-27T12:00:00+00:00'))
+        app.state.repository.append_message('a',identifier,dict(autor='human',texto='Vou consultar essas informações.',criado_em='2026-10-27T12:01:00+00:00'))
+        route=f'/api/atendimentos/{identifier}/sugestao'
+        self.assertEqual(self.client.post(route).status_code,403)
+        with patch('app.create_llm') as model:
+            model.return_value.generate.return_value='Funcionamos de segunda a sexta, das 08h às 18h, e aos sábados das 08h às 12h. Para remarcar, avise com 24 horas de antecedência. São dados fictícios de demonstração.'
+            response=self.client.post(route,headers=headers)
+            self.assertEqual(response.status_code,200)
+            self.assertTrue(response.json()['gerado_por_llm'])
+            titles={s['titulo'] for s in response.json()['fontes']}
+            self.assertIn('Horários de funcionamento e agendamento',titles)
+            self.assertIn('Políticas, convênios e pagamento',titles)
+            messages=model.return_value.generate.call_args.args[0]
+            self.assertIn(question,messages[-1]['content'])
+            self.assertIn('24 horas',messages[-1]['content'])
+            self.assertIn('Vou consultar essas informações.',messages[-1]['content'])
+        self.assertEqual(len(next(a for a in app.state.repository.list('attendance','a') if a['id']==identifier)['mensagens']),2)
+        headers_b=self.login('b@example.test')
+        with patch('app.create_llm') as model:
+            self.assertEqual(self.client.post(route,headers=headers_b).status_code,404)
+            model.assert_not_called()
+        headers_c=self.login('c@example.test')
+        self.assertEqual(self.client.post(route,headers=headers_c).status_code,403)
+
+    def test_owner_assistant_queries_followups_and_isolation(self):
+        from seed_demo import seed
+        from enhance_clinic import enhance
+        from populate_conversations import populate
+        headers=self.login()
+        seed(app.state.repository,'a')
+        enhance(app.state.repository,'a')
+        populate(app.state.repository,'a')
+        self.assertEqual(self.client.post('/api/assistente',json={'pergunta':'Agenda de amanhã'}).status_code,403)
+        with patch('app.create_llm') as model:
+            for question in ['Oi!','Quais são os agendamentos de amanhã?','Quais itens do estoque precisam de reposição?','Quantos pacientes estão cadastrados?','Quais reclamações foram identificadas?','Resumo da semana','Quais atendimentos estão pendentes?','Quais resumos estão pendentes?']:
+                response=self.client.post('/api/assistente',headers=headers,json={'pergunta':question})
+                self.assertEqual(response.status_code,200,question)
+                self.assertEqual(response.json()['origem'],'registros')
+                self.assertFalse(response.json()['gerado_por_llm'])
+            model.assert_not_called()
+        with patch('app.create_llm') as model:
+            model.return_value.generate.return_value='Na base fictícia, a limpeza custa R$ 180,00.'
+            response=self.client.post('/api/assistente',headers=headers,json={'pergunta':'Qual o preço da limpeza?'})
+            self.assertEqual(response.status_code,200)
+            self.assertEqual(response.json()['origem'],'llm')
+            self.assertTrue(response.json()['fontes'])
+            model.return_value.generate.assert_called_once()
+        response=self.client.post('/api/assistente',headers=headers,json={'pergunta':'E amanhã?','contexto':'agenda'})
+        self.assertIn('amanhã',response.json()['resposta'])
+        self.assertIn('/agendamentos',str(response.json()['acoes']))
+        count=len(app.state.repository.list('patients','a'))
+        self.client.post('/api/assistente',headers=headers,json={'pergunta':'Exclua os pacientes'})
+        self.assertEqual(len(app.state.repository.list('patients','a')),count)
+        self.assertEqual(self.client.post('/api/assistente',headers=headers,json={'pergunta':'Oi','contexto':'invalido'}).status_code,422)
+        headers_b=self.login('b@example.test')
+        response=self.client.post('/api/assistente',headers=headers_b,json={'pergunta':'Quantos pacientes estão cadastrados?'})
+        self.assertNotIn('Ana',response.json()['resposta'])
+        self.assertIn('0 paciente',response.json()['resposta'])
+        headers=self.login('c@example.test')
+        self.assertEqual(self.client.post('/api/assistente',headers=headers,json={'pergunta':'Quantos pacientes estão cadastrados?'}).status_code,403)
+
+    def test_procedure_options_and_initial_guidance(self):
+        self.assertEqual(self.client.get('/api/procedimentos').status_code,401)
+        headers=self.login()
+        self.assertIn('Avaliação ortodôntica',self.client.get('/api/procedimentos').json())
+        self.assertEqual(len(self.client.get('/api/procedimentos').json()),10)
+        response=self.client.post('/api/chat',json={'pergunta':'Tenho dor no dente superior'},headers=headers)
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json()['tipo'],'orientacao_inicial')
+        self.assertFalse(response.json()['gerado_por_llm'])
+
+    def test_patient_conversation_creation_reuse_and_scope(self):
+        headers=self.login()
+        patient=dict(nome='Paciente integrado',email='integrado@example.test')
+        response=self.client.post('/api/pacientes',json=patient,headers=headers)
+        self.assertEqual(response.status_code,201)
+        patient_id=response.json()['id']
+        route=f'/api/pacientes/{patient_id}/atendimento'
+        self.assertEqual(len(self.client.get('/api/atendimentos').json()),1)
+        self.assertEqual(self.client.post(route).status_code,403)
+        first=self.client.post(route,headers=headers).json()
+        self.assertEqual(self.client.post(route,headers=headers).json()['id'],first['id'])
+        self.client.post(f'/api/atendimentos/{first["id"]}/mensagens',headers=headers,json={'texto':'Mensagem preservada'})
+        self.client.put(f'/api/pacientes/{patient_id}',headers=headers,json=dict(patient,nome='Nome atualizado'))
+        conversation=self.client.post(route,headers=headers).json()
+        self.assertEqual(conversation['cliente'],'Nome atualizado')
+        self.assertEqual(conversation['mensagens'][0]['texto'],'Mensagem preservada')
+        self.assertEqual(len(self.client.get('/api/atendimentos').json()),1)
+        headers_b=self.login('b@example.test')
+        self.assertEqual(self.client.post(route,headers=headers_b).status_code,404)
+        self.assertEqual(self.client.get('/api/atendimentos').json(),[])
+
+    def test_chat_page_uses_backend_client(self):
+        self.login('c@example.test')
+        response=self.client.get('/chat')
+        self.assertEqual(response.status_code,200)
+        self.assertIn('/static/ai-client.js',response.text)
+        self.assertNotIn('const respostasIA',response.text)
+        self.assertIn('window.smartdentAsk(texto)',response.text)
+        self.assertEqual(self.client.get('/static/ai-client.js').status_code,200)
+
+    def test_management_period_filters_use_persisted_records(self):
+        from datetime import datetime, timedelta, timezone
+        headers=self.login()
+        data=dict(cliente='Teste de período',preview='Assunto fictício',status='pending',canal='human')
+        identifier=self.client.post('/api/atendimentos',json=data,headers=headers).json()['id']
+        stored=app.state.repository.list('attendance','a')[0]
+        stored.pop('id')
+        stored['criado_em']=(datetime.now(timezone.utc)-timedelta(days=15)).isoformat()
+        app.state.repository.save('attendance','a',stored,identifier)
+        self.assertEqual(self.client.get('/api/gestao?dias=7').json()['metricas']['atendimentos_semana'],0)
+        report=self.client.get('/api/gestao?dias=30').json()
+        self.assertEqual(report['metricas']['atendimentos_semana'],1)
+        self.assertEqual(len(report['grafico']['labels']),30)
+        self.assertEqual(sum(report['grafico']['humano']),1)
+
+    def test_sprint4_summary_reporting_and_isolation(self):
+        headers=self.login()
+        data=dict(cliente='Cliente de teste',preview='Cobrança divergente fictícia',status='pending',canal='human')
+        identifier=self.client.post('/api/atendimentos',json=data,headers=headers).json()['id']
+        route=f'/api/atendimentos/{identifier}/resumo'
+        self.assertIsNone(self.client.get(route).json()['resumo'])
+        self.assertEqual(self.client.post(route).status_code,403)
+        self.assertEqual(self.client.post(route,headers=headers).status_code,503)
+        with patch('app.create_llm') as model:
+            model.return_value.generate.return_value='Solicitação de revisão de cobrança. Sem desfecho registrado.'
+            response=self.client.post(route,headers=headers)
+            self.assertEqual(response.status_code,200)
+            self.assertFalse(response.json()['desatualizado'])
+            self.assertEqual(self.client.post(route,headers=headers).status_code,200)
+            model.return_value.generate.assert_called_once()
+        self.client.post(f'/api/atendimentos/{identifier}/mensagens',headers=headers,json={'texto':'Revisão fictícia em andamento'})
+        self.assertTrue(self.client.get(route).json()['resumo']['desatualizado'])
+        with patch('app.create_llm') as model:
+            model.return_value.generate.return_value=''
+            self.assertEqual(self.client.post(route,headers=headers).status_code,503)
+        # Falha de geração preserva o resumo antigo e sua indicação de desatualizado.
+        self.assertTrue(self.client.get(route).json()['resumo']['desatualizado'])
+        with patch.dict(os.environ,{'SMARTDENT_LLM_ENABLED':'true'}),patch('app.create_llm') as model:
+            model.return_value.generate.return_value='Revisão solicitada; confirmação pendente.'
+            response=self.client.put(f'/api/atendimentos/{identifier}',headers=headers,json=dict(data,status='resolved'))
+            self.assertEqual(response.status_code,200)
+            self.assertEqual(response.json()['resumo_status'],'gerado')
+        self.client.put(f'/api/atendimentos/{identifier}/reclamacao',headers=headers,json=dict(reclamacao=True,categoria='preco_pagamento',motivo='Cobrança fictícia divergente'))
+        report=self.client.get('/api/gestao?dias=7').json()
+        self.assertEqual(report['metricas']['atendimentos_semana'],1)
+        self.assertEqual(report['metricas']['resumos'],1)
+        self.assertEqual(report['reclamacoes']['reclamacoes'],1)
+        self.assertEqual(sum(report['grafico']['humano']),1)
+        self.assertIsNone(report['metricas']['satisfacao'])
+        with patch.dict(os.environ,{'SMARTDENT_LLM_ENABLED':'true'}),patch('app.create_llm') as model:
+            from llm import LLMUnavailable
+            model.return_value.generate.side_effect=LLMUnavailable('Falha simulada')
+            response=self.client.put(f'/api/atendimentos/{identifier}',headers=headers,json=dict(data,status='resolved',preview='Assunto modificado'))
+            self.assertEqual(response.status_code,200)
+            self.assertEqual(response.json()['resumo_status'],'indisponivel')
+            self.assertEqual(response.json()['status'],'resolved')
+        for page in ['/', '/relatorios?dias=30']:
+            response=self.client.get(page)
+            self.assertEqual(response.status_code,200)
+            self.assertIn('cobrança',response.text.lower())
+            self.assertNotIn('91%',response.text)
+        self.assertEqual(self.client.get('/api/gestao?dias=0').status_code,422)
+        self.assertEqual(self.client.get('/relatorios?dias=91').status_code,422)
+        self.login('b@example.test')
+        self.assertEqual(self.client.get(route).status_code,404)
+        self.assertEqual(self.client.get('/api/gestao').json()['metricas']['atendimentos_semana'],0)
+        self.login('c@example.test')
+        self.assertEqual(self.client.get('/api/gestao').status_code,403)
+        self.assertEqual(self.client.get(route).status_code,403)
+        headers=self.login()
+        self.client.delete(f'/api/atendimentos/{identifier}',headers=headers)
+        self.assertEqual(app.state.repository.list('summaries','a'),[])
 
     def test_crud_pages_render_safe_records_and_controls(self):
         headers = self.login()
@@ -200,7 +385,7 @@ class APITests(unittest.TestCase):
         self.assertEqual(response.status_code,200)
         self.assertEqual((response.json()['origem'],response.json()['rotulo'],response.json()['cliente']),('manual','Atrasos e tempo de espera','Cliente 0'))
         self.assertEqual(self.client.post(f'/api/atendimentos/{ids[1]}/reclamacao/classificar',headers=headers).status_code,503)
-        with patch('app.GroqClient') as model:
+        with patch('app.create_llm') as model:
             model.return_value.generate.side_effect = ['{"reclamacao": true, "categoria": "preco_pagamento", "motivo": "Cobrança divergente"}',
                                                        '```json\n{"reclamacao": false, "categoria": null, "motivo": ""}\n```']
             body = self.client.post('/api/reclamacoes/classificar',headers=headers).json()

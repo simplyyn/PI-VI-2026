@@ -25,6 +25,27 @@ class RepositoryContract:
         for email, clinic in [('a@example.test','a'),('b@example.test','b')]:
             self.repo.add_user(dict(email=email,nome='Teste',iniciais='TT',role='owner',empresa_id=clinic,password_hash='hash-ficticio'))
 
+    def test_patient_conversation_is_atomic_and_isolated(self):
+        patient=self.repo.save('patients','a',SAMPLES['patients'])
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            conversations=list(pool.map(lambda _:self.repo.ensure_patient_attendance('a',patient['id'],SAMPLES['attendance']),range(4)))
+        self.assertEqual(len({a['id'] for a in conversations}),1)
+        self.assertEqual(len(self.repo.list('attendance','a')),1)
+        with self.assertRaises(LookupError):
+            self.repo.ensure_patient_attendance('b',patient['id'],SAMPLES['attendance'])
+
+    def test_summary_upsert_scope_and_cascade(self):
+        attendance=self.repo.save('attendance','a',SAMPLES['attendance'])
+        data=dict(resumo='Resumo fictício',modelo='modelo-teste',gerado_em=STAMP,versao='abc')
+        first=self.repo.set_summary('a',attendance['id'],data)
+        second=self.repo.set_summary('a',attendance['id'],dict(data,resumo='Resumo atualizado'))
+        self.assertEqual(first['id'],second['id'])
+        self.assertEqual(len(self.repo.list('summaries','a')),1)
+        self.assertEqual(self.repo.list('summaries','b'),[])
+        with self.assertRaises(LookupError): self.repo.set_summary('b',attendance['id'],data)
+        self.repo.delete('attendance','a',attendance['id'])
+        self.assertEqual(self.repo.list('summaries','a'),[])
+
     def test_users(self):
         user = self.repo.user(' A@Example.test ')
         self.assertEqual((user['email'],user['role'],user['empresa_id']),('a@example.test','owner','a'))
