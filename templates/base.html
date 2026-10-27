@@ -184,6 +184,9 @@
   </button>
 
   <div class="chat-widget-panel" id="cwpPanel">
+    <div class="cwp-resize cwp-resize-top" data-dir="n" title="Arraste para redimensionar (duplo clique restaura)"></div>
+    <div class="cwp-resize cwp-resize-left" data-dir="w" title="Arraste para redimensionar (duplo clique restaura)"></div>
+    <div class="cwp-resize cwp-resize-corner" data-dir="nw" title="Arraste para redimensionar (duplo clique restaura)"></div>
     <div class="cwp-header">
       <div class="cwp-header-info">
         <div class="cwp-avatar"><i data-lucide="sparkles"></i></div>
@@ -281,6 +284,77 @@
         document.getElementById('cwpInput').focus();
       }
     }
+
+    // ── Redimensionamento do painel (tamanho salvo neste navegador) ──
+    (function () {
+      const panel = document.getElementById('cwpPanel');
+      const KEY = 'smartdent.chatWidgetSize';
+      const MIN_W = 300, MIN_H = 360, MARGIN = 16;
+
+      // O painel fica a 28px da direita e 100px de baixo; o resto da janela é o limite.
+      // (Calculado pela janela: o painel fechado tem transform: scale, que distorce o getBoundingClientRect.)
+      function limits() {
+        const cs = getComputedStyle(panel);
+        return {
+          maxW: window.innerWidth - parseFloat(cs.right) - MARGIN,
+          maxH: window.innerHeight - parseFloat(cs.bottom) - MARGIN,
+        };
+      }
+
+      function apply(w, h) {
+        const { maxW, maxH } = limits();
+        w = Math.max(MIN_W, Math.min(w, maxW));
+        h = Math.max(MIN_H, Math.min(h, maxH));
+        panel.style.width = w + 'px';
+        panel.style.height = h + 'px';
+        panel.style.maxHeight = 'none';
+        return { w, h };
+      }
+
+      function reset() {
+        panel.style.width = panel.style.height = panel.style.maxHeight = '';
+        try { localStorage.removeItem(KEY); } catch (e) {}
+      }
+
+      try {
+        const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+        if (saved && saved.w && saved.h) apply(saved.w, saved.h);
+      } catch (e) {}
+
+      panel.querySelectorAll('.cwp-resize').forEach(handle => {
+        handle.addEventListener('dblclick', reset);
+        handle.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          handle.setPointerCapture(e.pointerId);
+          const dir = handle.dataset.dir;
+          const start = { x: e.clientX, y: e.clientY, w: panel.offsetWidth, h: panel.offsetHeight };
+          let size = { w: start.w, h: start.h };
+          panel.classList.add('resizing');
+
+          function move(ev) {
+            // Arrastar para a esquerda/para cima aumenta, porque o canto oposto é fixo.
+            const w = dir.includes('w') ? start.w + (start.x - ev.clientX) : start.w;
+            const h = dir.includes('n') ? start.h + (start.y - ev.clientY) : start.h;
+            size = apply(w, h);
+          }
+          function up() {
+            panel.classList.remove('resizing');
+            handle.removeEventListener('pointermove', move);
+            handle.removeEventListener('pointerup', up);
+            handle.removeEventListener('pointercancel', up);
+            try { localStorage.setItem(KEY, JSON.stringify(size)); } catch (e) {}
+          }
+          handle.addEventListener('pointermove', move);
+          handle.addEventListener('pointerup', up);
+          handle.addEventListener('pointercancel', up);
+        });
+      });
+
+      // Se a janela diminuir, mantém o painel dentro da tela.
+      window.addEventListener('resize', () => {
+        if (panel.style.width) apply(panel.offsetWidth, panel.offsetHeight);
+      });
+    })();
   </script>
 <script src="/static/session.js"></script>
 </body>

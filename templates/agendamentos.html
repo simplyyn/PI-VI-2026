@@ -2,25 +2,36 @@
 {% block title %}SmartDent AI — Agendamentos{% endblock %}
 {% block content %}
 <div class="page-container">
-  <div class="page-header"><div><h1>Agendamentos</h1><p class="page-subtitle">{{ total }} consultas cadastradas</p></div><div class="kb-actions"><button class="btn-icon" data-action="filter" title="Filtrar">Filtrar</button><button class="btn-primary" data-action="create">Novo Agendamento</button></div></div>
+  <div class="page-header"><div><h1>Agendamentos</h1><p class="page-subtitle">{{ total }} consultas cadastradas</p></div><div class="kb-actions"><button class="btn-secondary" data-action="filter" title="Ir para os filtros"><i data-lucide="sliders-horizontal"></i>Filtrar</button><button class="btn-primary" data-action="create"><i data-lucide="plus"></i>Novo Agendamento</button></div></div>
   <div class="page-body">
     <section class="metrics-grid" style="margin-bottom:24px">
       <div class="card metric"><div class="metric-info"><h3>{{ agendamentos | selectattr('status','eq','confirmado') | list | length }}</h3><p>Confirmados</p></div></div>
       <div class="card metric"><div class="metric-info"><h3>{{ agendamentos | selectattr('status','eq','pendente') | list | length }}</h3><p>Aguardando confirmação</p></div></div>
       <div class="card metric"><div class="metric-info"><h3>{{ total }}</h3><p>Total de agendamentos</p></div></div>
     </section>
-    <div class="kb-filters"><input class="search-input" id="records-search" placeholder="Buscar paciente ou dentista"><input type="date" id="agenda-date" aria-label="Filtrar por data"><select id="records-filter" aria-label="Filtrar status"><option value="todos">Todos</option><option value="pendente">Pendentes</option><option value="confirmado">Confirmados</option><option value="cancelado">Cancelados</option></select><button class="btn-icon" data-action="clear-filter">Limpar</button></div>
+    <div class="agenda-toolbar">
+      <label class="toolbar-field toolbar-search"><i data-lucide="search"></i><input id="records-search" type="search" placeholder="Buscar paciente, dentista ou procedimento" aria-label="Buscar"></label>
+      <label class="toolbar-field"><i data-lucide="calendar-days"></i><input type="date" id="agenda-date" aria-label="Filtrar por data"></label>
+      <label class="toolbar-field toolbar-select"><i data-lucide="list-filter"></i><select id="records-filter" aria-label="Filtrar status"><option value="todos">Todos os status</option><option value="pendente">Pendentes</option><option value="confirmado">Confirmados</option><option value="cancelado">Cancelados</option></select><i data-lucide="chevron-down" class="toolbar-chevron"></i></label>
+      <button class="btn-secondary" data-action="clear-filter"><i data-lucide="x"></i>Limpar</button>
+    </div>
     <div class="agenda-layout">
-      <div class="agenda-calendar-panel"><div class="cal-header"><button class="cal-nav-btn" data-action="previous-month" aria-label="Mês anterior">‹</button><h4 id="calendar-title"></h4><button class="cal-nav-btn" data-action="next-month" aria-label="Próximo mês">›</button></div><div class="cal-weekdays"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div><div class="cal-days" id="calDays"></div></div>
+      <div class="agenda-calendar-panel">
+        <div class="cal-header"><button class="cal-nav-btn" data-action="previous-month" aria-label="Mês anterior"><i data-lucide="chevron-left"></i></button><h4 id="calendar-title"></h4><button class="cal-nav-btn" data-action="next-month" aria-label="Próximo mês"><i data-lucide="chevron-right"></i></button></div>
+        <div class="cal-weekdays"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+        <div class="cal-days" id="calDays"></div>
+        <div class="cal-legend"><span><i class="cal-legend-dot"></i>Com consultas</span><span><i class="cal-legend-today"></i>Hoje</span></div>
+      </div>
       <div class="agenda-list-panel">
         {% for appt in agendamentos | sort(attribute='data') %}
         <div class="appt-card" data-id="{{ appt.id }}" style="border-left:3px solid {{ appt.cor }}">
-          <div class="appt-time">{{ appt.horario[:5] }}<small>{{ appt.data }} · {{ appt.duracao }}min</small></div><div class="appt-divider"></div>
+          <div class="appt-time">{{ appt.horario[:5] }}<small>{{ appt.data.split('-') | reverse | join('/') }} · {{ appt.duracao }}min</small></div><div class="appt-divider"></div>
           <div class="appt-info"><div class="appt-patient">{{ appt.paciente }}</div><div class="appt-proc">{{ appt.procedimento }}</div></div>
           <div class="appt-meta"><span class="badge-appt-{{ appt.status }}">{{ appt.status | capitalize }}</span><span class="appt-dentista">{{ appt.dentista }}</span></div>
-          <div class="kb-actions"><button class="btn-icon" data-action="confirm" title="Confirmar">✓</button><button class="btn-icon" data-action="edit" title="Editar">✎</button><button class="btn-icon" data-action="cancel" title="Cancelar consulta">Cancelar</button><button class="btn-icon danger" data-action="delete" title="Excluir">×</button></div>
+          <div class="kb-actions"><button class="btn-icon" data-action="confirm" title="Confirmar" aria-label="Confirmar"><i data-lucide="check"></i></button><button class="btn-icon" data-action="edit" title="Editar" aria-label="Editar"><i data-lucide="pencil"></i></button><button class="btn-icon" data-action="cancel" title="Cancelar consulta" aria-label="Cancelar consulta"><i data-lucide="ban"></i></button><button class="btn-icon danger" data-action="delete" title="Excluir" aria-label="Excluir"><i data-lucide="trash-2"></i></button></div>
         </div>
-        {% else %}<p>Nenhum agendamento cadastrado. Cadastre um paciente antes de agendar.</p>{% endfor %}
+        {% else %}<div class="agenda-empty"><i data-lucide="calendar-plus"></i><p>Nenhum agendamento cadastrado.</p><small>Cadastre um paciente antes de agendar.</small></div>{% endfor %}
+        {% if agendamentos %}<div class="agenda-empty" id="records-empty" hidden><i data-lucide="search-x"></i><p>Nenhum agendamento para este filtro.</p><small>Ajuste a busca ou clique em Limpar.</small></div>{% endif %}
       </div>
     </div>
   </div>

@@ -20,7 +20,8 @@ class GroqClient:
             raise LLMUnavailable('Provedor não configurado')
         request = Request('https://api.groq.com/openai/v1/chat/completions',
             data=json.dumps({'model':model,'messages':messages,'temperature':0,'max_tokens':700}).encode(),
-            headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'},method='POST')
+            # User-Agent próprio: o Cloudflare do Groq bloqueia o padrão "Python-urllib" (403, erro 1010).
+            headers={'Authorization':'Bearer '+key,'Content-Type':'application/json','User-Agent':'smartdent/1.0'},method='POST')
         try:
             with self.opener(request, timeout=20) as response:
                 raw = response.read(1048577)
