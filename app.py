@@ -224,6 +224,12 @@ async def admin_painel(request: Request):
         "request": request, "usuario": user, "clinicas": clinicas,
     })
 
+# ─── Demo Route (sem autenticação) ───────────────────────────────────────────
+
+@app.get("/demo", response_class=HTMLResponse)
+async def demo_chat(request: Request):
+    return templates.TemplateResponse("demo_chat.html", {"request": request})
+
 # ─── Customer Routes ──────────────────────────────────────────────────────────
 
 @app.get("/chat", response_class=HTMLResponse)

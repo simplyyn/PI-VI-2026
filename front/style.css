@@ -229,6 +229,18 @@ body {
   color: var(--primary-color);
 }
 
+.menu-demo-link {
+  margin-top: 8px;
+  border: 1.5px dashed var(--border-color) !important;
+  color: var(--primary-color) !important;
+}
+
+.menu-demo-link:hover {
+  background: var(--primary-light) !important;
+  border-color: var(--primary-color) !important;
+
+}
+
 .user-profile {
   display: flex;
   align-items: center;
@@ -1541,6 +1553,113 @@ body {
 .admin-empresa-nome { font-size: 15px; font-weight: 600; display: flex; align-items: center; }
 .admin-empresa-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
 .admin-empresa-acoes { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+/* ========================
+   CARD CHAT DO PACIENTE
+   ======================== */
+
+.cliente-chat-section { margin-bottom: 24px; }
+
+.cliente-chat-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.cliente-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cliente-chat-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-primary);
+}
+
+.cliente-chat-title svg { width: 20px; height: 20px; color: var(--primary-color); }
+
+.cliente-chat-title h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.cliente-chat-title span { font-size: 12px; color: var(--text-secondary); display: block; margin-top: 1px; }
+
+.btn-abrir-chat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--primary-color);
+  color: #fff;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+.btn-abrir-chat:hover { opacity: 0.85; }
+.btn-abrir-chat svg { width: 14px; height: 14px; }
+
+.cliente-chat-preview {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-color);
+  position: relative;
+  cursor: pointer;
+  min-height: 150px;
+}
+
+.preview-msg { display: flex; }
+.preview-ai  { justify-content: flex-start; }
+.preview-user { justify-content: flex-end; }
+
+.preview-bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  max-width: 75%;
+  line-height: 1.5;
+}
+
+.preview-ai .preview-bubble {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-bottom-left-radius: 4px;
+  color: var(--text-primary);
+}
+
+.preview-user .preview-bubble {
+  background: var(--primary-color);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.preview-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-color);
+  opacity: 0;
+  transition: opacity 0.2s;
+  backdrop-filter: blur(2px);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.dark .preview-overlay { background: rgba(13,15,22,0.7); }
+
+.preview-overlay svg { width: 18px; height: 18px; }
+
+.cliente-chat-preview:hover .preview-overlay { opacity: 1; }
 
 /* ========================
    CHAT DO CLIENTE
