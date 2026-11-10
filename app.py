@@ -153,9 +153,10 @@ async def dashboard(request: Request):
 
 @app.get("/atendimentos", response_class=HTMLResponse)
 async def pagina_atendimentos(request: Request):
-    ctx = _owner_ctx(request, {"pagina": "atendimentos", "atendimentos": records_service(request).list("attendance")})
+    ctx = _owner_ctx(request, {"pagina": "atendimentos"})
     if ctx is None:
         return RedirectResponse("/login", status_code=302)
+    ctx['atendimentos']=await api_atendimentos(request)
     return templates.TemplateResponse("atendimentos.html", ctx)
 
 @app.get("/base-conhecimento", response_class=HTMLResponse)
@@ -194,6 +195,7 @@ async def pagina_agendamentos(request: Request):
     ctx = _owner_ctx(request, {"pagina": "agendamentos", "agendamentos": agendamentos, "total": total})
     if ctx is None:
         return RedirectResponse("/login", status_code=302)
+    ctx['profissionais']=request.app.state.repository.list('professionals',ctx['usuario']['empresa_id']) if getattr(request.app.state.repository,'supports_workflows',False) else []
     return templates.TemplateResponse("agendamentos.html", ctx)
 
 @app.get("/estoque", response_class=HTMLResponse)
@@ -229,7 +231,10 @@ async def admin_painel(request: Request):
 
 @app.get("/demo", response_class=HTMLResponse)
 async def demo_chat(request: Request):
-    return templates.TemplateResponse("demo_chat.html", {"request": request})
+    user=usuario_logado(request)
+    if not user: return RedirectResponse('/login',status_code=302)
+    if user['role']=='customer': return templates.TemplateResponse('demo_chat.html',{'request':request,'usuario':user})
+    return templates.TemplateResponse('client_access.html',{'request':request,'usuario':user})
 
 # ─── Customer Routes ──────────────────────────────────────────────────────────
 
@@ -238,7 +243,7 @@ async def chat_cliente(request: Request):
     user = usuario_logado(request)
     if not user or user["role"] != "customer":
         return RedirectResponse("/login", status_code=302)
-    return templates.TemplateResponse("chat.html", {
+    return templates.TemplateResponse("demo_chat.html", {
         "request": request, "usuario": user,
     })
 
@@ -246,8 +251,12 @@ async def chat_cliente(request: Request):
 
 @app.get("/api/atendimentos")
 async def api_atendimentos(request: Request):
-    require_user(request, {"owner"})
-    return records_service(request).list("attendance")
+    user=require_user(request, {"owner"})
+    rows=records_service(request).list("attendance")
+    if getattr(request.app.state.repository,'supports_workflows',False):
+        metas={m['attendance_id']:m for m in request.app.state.repository.list('attendance_meta',user['empresa_id'])}
+        return [dict(r,prioridade=metas.get(r['id'],{}).get('prioridade','normal'),revisado_manualmente=metas.get(r['id'],{}).get('revisado',False)) for r in rows]
+    return rows
 
 @app.get("/api/metricas")
 async def api_metricas(request: Request):
@@ -322,6 +331,10 @@ async def missing_record(request, exc):
 @app.exception_handler(ValueError)
 async def invalid_value(request, exc):
     from fastapi.responses import JSONResponse
+    from scheduling import AppointmentConflict
+    from workflows import WorkflowConflict
+    if isinstance(exc,(AppointmentConflict,WorkflowConflict)):
+        return JSONResponse({'detail':str(exc)},status_code=409)
     return JSONResponse({'detail':'Operação inválida'},status_code=400)
 
 
@@ -330,9 +343,20 @@ from fastapi import Query
 from llm import create_llm, LLMUnavailable
 from rag import AttendanceAgent, RetrievalUnavailable, create_retriever
 
+def request_llm(request):
+    user=require_user(request,{'owner','customer'})
+    return create_llm(user['empresa_id'])
+
+@app.get('/api/ia/uso')
+def llm_usage(request: Request):
+    from usage import totals
+    user=require_user(request,{'owner'})
+    return totals(user['empresa_id'])
+
 class ChatQuestion(BaseModel):
     model_config = ConfigDict(extra='forbid')
     pergunta: str = Field(min_length=1,max_length=2000)
+    request_id: str | None = Field(default=None,min_length=8,max_length=100)
 
 @app.post('/api/chat')
 def api_chat(request: Request, question: ChatQuestion):
@@ -340,9 +364,16 @@ def api_chat(request: Request, question: ChatQuestion):
     csrf_check(request)
     if not question.pergunta.strip():
         raise HTTPException(422,'Pergunta vazia')
+    if user['role']=='customer':
+        from integrated_api import customer_send,CustomerMessage
+        if not question.request_id:raise HTTPException(422,'Informe request_id para não duplicar mensagens. Use o portal do paciente.')
+        data=customer_send(request,CustomerMessage(texto=question.pergunta,request_id=question.request_id))
+        boundary=max((i for i,m in enumerate(data['mensagens']) if m['autor']=='client'),default=-1)
+        latest=next((m for m in reversed(data['mensagens'][boundary+1:]) if m['autor'] in ('ai','human')),{})
+        return dict(data,resposta=latest.get('texto',data.get('aviso','Mensagem registrada.')),fontes=[],gerado_por_llm=latest.get('gerado_por_llm',False))
     retriever = create_retriever(request.app.state.repository)
     try:
-        return AttendanceAgent(retriever,create_llm()).answer(user['empresa_id'],question.pergunta)
+        return AttendanceAgent(retriever,request_llm(request)).answer(user['empresa_id'],question.pergunta)
     except (LLMUnavailable,RetrievalUnavailable) as exc:
         raise HTTPException(503,str(exc)) from None
 
@@ -357,7 +388,7 @@ def attendance_reply_suggestion(identifier: int,request: Request):
     if not latest_client and question=='Conversa do paciente':
         return dict(resposta='Ainda não há mensagem do cliente para preparar uma resposta. Registre o relato ou a pergunta primeiro.',fontes=[],gerado_por_llm=False,tipo='sem_contexto')
     try:
-        return AttendanceAgent(create_retriever(request.app.state.repository),create_llm()).answer(user['empresa_id'],question,history)
+        return AttendanceAgent(create_retriever(request.app.state.repository),request_llm(request)).answer(user['empresa_id'],question,history)
     except (LLMUnavailable,RetrievalUnavailable) as exc:
         raise HTTPException(503,str(exc)) from None
 
@@ -365,12 +396,34 @@ from typing import Literal
 
 class AssistantQuestion(ChatQuestion):
     contexto: Literal['agenda','pacientes','estoque','gestao','clinica','atendimentos'] | None = None
+    resetar: bool = False
 
 @app.post('/api/assistente')
 def clinic_assistant(request: Request,question: AssistantQuestion):
     user=require_user(request,{'owner'})
     csrf_check(request)
     if not question.pergunta.strip():raise HTTPException(422,'Pergunta vazia')
+    if question.resetar:
+        request.session.pop('booking',None)
+        request.session.pop('admin_action',None)
+        request.session.pop('admin_followup',None)
+        request.session.pop('reply_batch',None)
+        return dict(resposta='Conversa reiniciada e rascunho de agendamento descartado. Nenhuma consulta existente foi alterada.',origem='registros',fontes=[],gerado_por_llm=False,acoes=[])
+    from assistant_admin import respond as administrative_reply
+    from integrated_api import generation
+    import re
+    if re.search(r'\b(agende|agendar|marque uma consulta|marcar uma consulta)\b',question.pergunta.casefold()):
+        request.session.pop('admin_action',None)
+        request.session.pop('admin_followup',None)
+        request.session.pop('reply_batch',None)
+    try:
+        response=administrative_reply(request,user,question.pergunta,lambda:request_llm(request),generation(request,user))
+    except (LLMUnavailable,RetrievalUnavailable) as exc:
+        raise HTTPException(503,str(exc)) from None
+    if response is not None:return response
+    from scheduling import SchedulingAgent
+    scheduled=SchedulingAgent(request.app.state.repository,user,request.session).respond(question.pergunta)
+    if scheduled is not None:return scheduled
     from assistant import ClinicAssistant
     response=ClinicAssistant(request.app.state.repository,user['empresa_id']).reply(question.pergunta,question.contexto)
     if response is not None:return response
@@ -405,7 +458,13 @@ def list_patients(request: Request):
 def procedure_options(request: Request):
     require_user(request,{'owner'})
     from catalog import PROCEDURE_OPTIONS
-    return list(PROCEDURE_OPTIONS)
+    options=list(PROCEDURE_OPTIONS)
+    if getattr(request.app.state.repository,'supports_workflows',False):
+        user=require_user(request,{'owner'})
+        for p in request.app.state.repository.list('professionals',user['empresa_id']):
+            for name in p['procedimentos']:
+                if name not in options:options.append(name)
+    return options
 
 @app.post('/api/pacientes/{identifier}/atendimento')
 def patient_conversation(identifier: int,request: Request):
@@ -462,7 +521,7 @@ def update_attendance(identifier: int,request: Request,data: Attendance):
         result['resumo_status'] = 'desativado'
     if data.status == 'resolved' and os.getenv('SMARTDENT_LLM_ENABLED','false').lower() == 'true':
         try:
-            summary_service(request).generate(identifier,AttendanceSummarizer(create_llm()))
+            summary_service(request).generate(identifier,AttendanceSummarizer(request_llm(request)))
             result['resumo_status'] = 'gerado'
         except LLMUnavailable as exc:
             result['resumo_status'] = 'indisponivel'
@@ -478,6 +537,9 @@ def delete_attendance(identifier: int,request: Request):
 def send_human_message(identifier: int,request: Request,data: HumanMessage):
     user = require_user(request, {'owner'})
     csrf_check(request)
+    if getattr(request.app.state.repository,'supports_workflows',False):
+        from workflows import deliver
+        return deliver(request.app.state.repository,user,identifier,data.texto,data.request_id or secrets.token_hex(16))
     return request.app.state.repository.append_message(user['empresa_id'],identifier,dict(texto=data.texto,autor='human',criado_em=datetime.now(timezone.utc).isoformat()))
 
 # ─── RF005: reclamações (Agente de Análise) ──────────────────────────────────
@@ -506,7 +568,7 @@ def classify_pending_complaints(request: Request, limite: int = Query(10,ge=1,le
     csrf_check(request)
     service = complaint_service(request)
     try:
-        return service.classify_pending(ComplaintClassifier(create_llm()),limite)
+        return service.classify_pending(ComplaintClassifier(request_llm(request)),limite)
     except LLMUnavailable as exc:
         raise HTTPException(503,str(exc)) from None
 
@@ -515,7 +577,7 @@ def classify_complaint(identifier: int, request: Request):
     csrf_check(request)
     service = complaint_service(request)
     try:
-        return service.classify(identifier,ComplaintClassifier(create_llm()))
+        return service.classify(identifier,ComplaintClassifier(request_llm(request)))
     except LLMUnavailable as exc:
         raise HTTPException(503,str(exc)) from None
 
@@ -549,10 +611,13 @@ def attendance_summary(identifier: int,request: Request):
 def generate_attendance_summary(identifier: int,request: Request):
     csrf_check(request)
     try:
-        return summary_service(request).generate(identifier,AttendanceSummarizer(create_llm()))
+        return summary_service(request).generate(identifier,AttendanceSummarizer(request_llm(request)))
     except LLMUnavailable as exc:
         raise HTTPException(503,str(exc)) from None
 
 @app.get('/api/gestao')
 def management_data(request: Request,dias: int = Query(7,ge=1,le=90)):
     return management_report(request).build(dias)
+
+from integrated_api import router as integrated_router
+app.include_router(integrated_router)

@@ -5,6 +5,7 @@ const records=JSON.parse(document.getElementById('records-data').textContent);
 const map=new Map(records.map(r=>[String(r.id),r]));
 const dialog=document.getElementById('crud-dialog'), form=document.getElementById('crud-form'), fields=document.getElementById('crud-fields'), error=document.getElementById('crud-error'), feedback=document.getElementById('crud-feedback');
 let mode, id, selected, busy=false, statusFilter='todos';
+const drafts=new Map(),outgoingAttempts=new Map();
 const notice=sessionStorage.getItem('smartdent-summary-notice');if(notice){feedback.textContent=notice;sessionStorage.removeItem('smartdent-summary-notice');}
 const definitions={
  pacientes:[['nome','Nome','text',true,200],['telefone','Telefone','text',false,40],['email','E-mail','email',false,254],['status','Status',['novo','ativo','inativo']],['plano','Plano / Convênio','text',false,100],['ultima_consulta','Última consulta','date'],['proxima_consulta','Próxima consulta','date'],['procedimentos','Quantidade de procedimentos','number',true,1000000000]],
@@ -34,6 +35,8 @@ async function open(action,identifier,patientId) {
   wrapper.append(input);fields.append(wrapper);
  }
  if(resource==='agendamentos'){
+  const professionals=await api('/api/profissionais').catch(()=>[]);
+  if(professionals.length){const old=fields.querySelector('[name=dentista]'),select=document.createElement('select');select.name='dentista';select.required=true;for(const p of professionals){const option=document.createElement('option');option.value=p.nome;option.textContent=p.nome+' — '+p.especialidades.join(', ');select.append(option);}if(record.dentista&&professionals.some(p=>p.nome===record.dentista))select.value=record.dentista;old.replaceWith(select);}
   const options=await api('/api/procedimentos');const list=document.createElement('datalist');list.id='procedure-options';
   for(const name of options){const option=document.createElement('option');option.value=name;list.append(option);}
   fields.append(list);fields.querySelector('[name=procedimento]').setAttribute('list',list.id);
@@ -48,13 +51,16 @@ form.addEventListener('submit',async event=>{
 });
 document.getElementById('crud-cancel').onclick=()=>{if(!busy)dialog.close();};dialog.addEventListener('cancel',e=>{if(busy)e.preventDefault();});
 function selectAttendance(identifier){
- selected=identifier;const r=map.get(identifier);if(!r)return;
+ const draft=document.getElementById('human-message-form').elements.texto;
+ if(selected)drafts.set(selected,draft.value);
+ selected=identifier;const r=map.get(identifier);if(!r)return;draft.value=drafts.get(identifier)||'';
  document.getElementById("attendance-detail").dataset.id=identifier;
  document.dispatchEvent(new CustomEvent("attendance-selected",{detail:{id:identifier}}));
- document.getElementById('attendance-detail').hidden=false;document.getElementById('attendance-name').textContent=r.cliente;document.getElementById('attendance-subject').textContent=r.preview;
+ document.getElementById('attendance-detail').hidden=false;document.getElementById('attendance-name').textContent=r.cliente;document.getElementById('attendance-subject').textContent=r.preview+(r.prioridade==='urgente'?' — Prioridade urgente':'')+(r.revisado_manualmente?' — Revisado manualmente':'');
  const area=document.getElementById('attendance-messages');area.replaceChildren();
- for(const m of r.mensagens||[]){const row=document.createElement('div');row.className='message-row';const text=document.createElement('p');text.className='message-bubble';text.textContent=m.texto;const when=document.createElement('small');when.textContent=({human:'Atendente humano',client:'Paciente',ai:'Assistente IA'}[m.autor]||'Sistema')+' · '+new Date(m.criado_em).toLocaleString('pt-BR');row.append(text,when);area.append(row);}
+ for(const m of r.mensagens||[]){const row=document.createElement('div');row.className='message-row '+({client:'client',human:'human-op',ai:'ai'}[m.autor]||'client');const text=document.createElement('p');text.className='message-bubble';text.textContent=m.texto;const when=document.createElement('small');when.textContent=({human:'Atendente humano',client:'Paciente',ai:'Assistente IA'}[m.autor]||'Sistema')+' · '+new Date(m.criado_em).toLocaleString('pt-BR');row.append(text,when);area.append(row);}
  if(!r.mensagens?.length)area.textContent='Nenhuma mensagem registrada.';
+ area.scrollTop=area.scrollHeight;
  document.querySelectorAll('.conv-item').forEach(el=>el.classList.toggle('active',el.dataset.id===identifier));
 }
 document.addEventListener('click',async event=>{
@@ -66,7 +72,7 @@ document.addEventListener('click',async event=>{
   if(action==='schedule'){location.href='/agendamentos?paciente_id='+encodeURIComponent(identifier);return;}
   if(action==='ai-info'){feedback.textContent='Resumo e sugestão por IA dependem da integração com um modelo real. Essa função ainda não está disponível.';return;}
   if(action==='filter'){const search=document.getElementById('records-search');search.scrollIntoView({behavior:'smooth',block:'center'});search.focus({preventScroll:true});return;}
-  if(action==='clear-filter'){document.getElementById('agenda-date').value='';document.getElementById('records-search').value='';document.getElementById('records-filter').value='todos';statusFilter='todos';filter();calendar();return;}
+  if(action==='clear-filter'){const prof=document.getElementById('agenda-professional');if(prof)prof.value='';document.getElementById('agenda-date').value='';document.getElementById('records-search').value='';document.getElementById('records-filter').value='todos';statusFilter='todos';filter();calendar();return;}
   if(action==='previous-month'||action==='next-month'){month.setMonth(month.getMonth()+(action==='next-month'?1:-1));calendar();return;}
   if(action==='history'){const history=await api('/api/agendamentos');const entries=history.filter(a=>String(a.paciente_id)===identifier);feedback.textContent=entries.length?entries.map(a=>`${a.data} ${a.horario.slice(0,5)} — ${a.procedimento} (${a.status})`).join(' | '):'Nenhum agendamento registrado para esse paciente.';return;}
   if(action==='export'){const data=JSON.stringify(records,null,2);const url=URL.createObjectURL(new Blob([data],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='pacientes.json';link.click();URL.revokeObjectURL(url);return;}
@@ -76,8 +82,8 @@ document.addEventListener('click',async event=>{
  }catch(e){feedback.textContent=e.message;button.disabled=false;}
 });
 const messageForm=document.getElementById('human-message-form');
-messageForm?.addEventListener('submit',async event=>{event.preventDefault();if(!selected)return;const input=messageForm.elements.texto;const text=input.value.trim();if(!text)return;const button=messageForm.querySelector('button[type=submit]');button.disabled=true;try{const updated=await api('/api/atendimentos/'+selected+'/mensagens','POST',{texto:text});map.set(selected,updated);input.value='';selectAttendance(selected);}catch(e){feedback.textContent=e.message;}finally{button.disabled=false;}});
-function filter(){const query=(document.getElementById('records-search')||document.getElementById('searchPacientes')).value.toLocaleLowerCase('pt-BR');const date=document.getElementById('agenda-date')?.value;for(const el of document.querySelectorAll('[data-id]')){const r=map.get(el.dataset.id);const text=[r.nome,r.telefone,r.cliente,r.preview,r.paciente,r.dentista,r.procedimento].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR');el.hidden=!text.includes(query)||(statusFilter!=='todos'&&r.status!==statusFilter)||(!!date&&r.data!==date);}const empty=document.getElementById('records-empty');if(empty)empty.hidden=[...document.querySelectorAll('[data-id]')].some(el=>!el.hidden);}
+messageForm?.addEventListener('submit',async event=>{event.preventDefault();if(!selected)return;const input=messageForm.elements.texto;const original=input.value,text=original.trim(),id=selected;if(!text)return;const button=messageForm.querySelector('button[type=submit]');if(button.disabled)return;button.disabled=true;let attempt=outgoingAttempts.get(id);if(!attempt||attempt.text!==text){attempt={text,key:crypto.randomUUID()};outgoingAttempts.set(id,attempt);}try{const updated=await api('/api/atendimentos/'+id+'/mensagens','POST',{texto:text,request_id:attempt.key});outgoingAttempts.delete(id);map.set(id,updated);if(selected===id){if(input.value===original)input.value='';selectAttendance(id);}else if(drafts.get(id)===original)drafts.delete(id);}catch(e){feedback.textContent=e.message;}finally{button.disabled=false;}});
+function filter(){const query=(document.getElementById('records-search')||document.getElementById('searchPacientes')).value.toLocaleLowerCase('pt-BR');const date=document.getElementById('agenda-date')?.value;const professional=document.getElementById('agenda-professional')?.value;for(const el of document.querySelectorAll('[data-id]')){const r=map.get(el.dataset.id);const text=[r.nome,r.telefone,r.cliente,r.preview,r.paciente,r.dentista,r.procedimento].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR');el.hidden=!text.includes(query)||(statusFilter!=='todos'&&r.status!==statusFilter)||(!!date&&r.data!==date)||(!!professional&&String(r.profissional_id)!==professional);}const empty=document.getElementById('records-empty');if(empty)empty.hidden=[...document.querySelectorAll('[data-id]')].some(el=>!el.hidden);}
 (document.getElementById('records-search')||document.getElementById('searchPacientes')).addEventListener('input',filter);
 document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>{document.querySelector('.filter-tab.active')?.classList.remove('active');b.classList.add('active');statusFilter=b.dataset.filter;filter();}));
 document.getElementById('records-filter')?.addEventListener('change',e=>{statusFilter=e.target.value;filter();});
@@ -85,10 +91,43 @@ document.getElementById('records-filter')?.addEventListener('change',e=>{statusF
 document.getElementById('agenda-date')?.addEventListener('change',e=>{const [y,m]=e.target.value.split('-').map(Number);if(y&&m)month.setFullYear(y,m-1,1);filter();calendar();});
 const month=new Date();month.setDate(1);
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-function calendar(){const area=document.getElementById('calDays');if(!area)return;area.replaceChildren();const title=month.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});document.getElementById('calendar-title').textContent=title[0].toUpperCase()+title.slice(1);const input=document.getElementById('agenda-date');const today=iso(new Date());for(let i=0;i<month.getDay();i++)area.append(document.createElement('div'));const count=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();for(let day=1;day<=count;day++){const button=document.createElement('button');button.type='button';button.className='cal-day';button.textContent=day;const date=iso(new Date(month.getFullYear(),month.getMonth(),day));const total=records.filter(r=>r.data===date).length;if(total){button.classList.add('has-apt');button.title=total+(total===1?' consulta':' consultas');}if(date===today)button.classList.add('today');if(date===input.value){button.classList.add('selected');button.setAttribute('aria-pressed','true');}
+function calendar(){const area=document.getElementById('calDays');if(!area)return;area.replaceChildren();const title=month.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});document.getElementById('calendar-title').textContent=title[0].toUpperCase()+title.slice(1);const input=document.getElementById('agenda-date');const today=iso(new Date());for(let i=0;i<month.getDay();i++)area.append(document.createElement('div'));const count=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();for(let day=1;day<=count;day++){const button=document.createElement('button');button.type='button';button.className='cal-day';button.textContent=day;const date=iso(new Date(month.getFullYear(),month.getMonth(),day));const professional=document.getElementById('agenda-professional')?.value;const total=records.filter(r=>r.data===date&&(!professional||String(r.profissional_id)===professional)).length;if(total){button.classList.add('has-apt');button.title=total+(total===1?' consulta':' consultas');}if(date===today)button.classList.add('today');if(date===input.value){button.classList.add('selected');button.setAttribute('aria-pressed','true');}
  // Clicar no dia já selecionado remove o filtro de data.
  button.onclick=()=>{input.value=input.value===date?'':date;filter();calendar();};area.append(button);}}
 calendar();
+let agendaRefreshBusy=false;
+async function refreshAgenda(createdId){
+ if(resource!=='agendamentos'||agendaRefreshBusy||dialog.open)return;
+ agendaRefreshBusy=true;
+ try{
+  const response=await fetch('/agendamentos');if(!response.ok)throw Error('Não foi possível atualizar a agenda. Entre novamente se a sessão expirou.');
+  const page=new DOMParser().parseFromString(await response.text(),'text/html');
+  const next=page.querySelector('.agenda-list-panel'),data=page.getElementById('records-data');
+  if(!next||!data)throw Error('Não foi possível atualizar a agenda. Recarregue a página.');
+  const incoming=JSON.parse(data.textContent);
+  if(JSON.stringify(incoming)===JSON.stringify(records)&&!createdId)return;
+  records.splice(0,records.length,...incoming);map.clear();for(const r of records)map.set(String(r.id),r);
+  document.querySelector('.agenda-list-panel').replaceChildren(...next.childNodes);
+  document.querySelector('.metrics-grid').replaceChildren(...page.querySelector('.metrics-grid').childNodes);
+  document.querySelector('.page-subtitle').textContent=page.querySelector('.page-subtitle').textContent;
+  const created=createdId?map.get(String(createdId)):null;
+  if(created){document.getElementById('agenda-date').value=created.data;const [y,m]=created.data.split('-').map(Number);month.setFullYear(y,m-1,1);}
+  filter();calendar();window.lucide?.createIcons();
+ }catch(error){feedback.textContent=error.message;}
+ finally{agendaRefreshBusy=false;}
+}
+document.addEventListener('smartdent-agenda-updated',event=>refreshAgenda(event.detail.id));
+if(resource==='agendamentos'){
+ setInterval(()=>{if(!document.hidden)refreshAgenda();},4000);
+ window.addEventListener('focus',()=>refreshAgenda());
+}
 if(resource==='atendimentos'&&records.length){const requested=new URLSearchParams(location.search).get('atendimento_id');selectAttendance(map.has(requested)?requested:String(records[0].id));}
-if(resource==='agendamentos'){const patientId=new URLSearchParams(location.search).get('paciente_id');if(patientId)open('create',undefined,patientId).catch(e=>feedback.textContent=e.message);}
+if(resource==='agendamentos'){const select=document.getElementById('agenda-professional'),requestedProfessional=new URLSearchParams(location.search).get('profissional_id');if(select){if(requestedProfessional&&[...select.options].some(o=>o.value===requestedProfessional)){select.value=requestedProfessional;filter();calendar();}select.addEventListener('change',()=>{filter();calendar();});}const patientId=new URLSearchParams(location.search).get('paciente_id');if(patientId)open('create',undefined,patientId).catch(e=>feedback.textContent=e.message);}
+
+let attendancePollBusy=false;
+if(resource==='atendimentos')setInterval(async()=>{
+ if(attendancePollBusy||document.hidden||dialog.open)return;attendancePollBusy=true;
+ try{const latest=await api('/api/atendimentos');for(const r of latest){const key=String(r.id),old=map.get(key);if(JSON.stringify(old)===JSON.stringify(r))continue;map.set(key,r);const index=records.findIndex(v=>String(v.id)===key);if(index>=0)records[index]=r;else records.push(r);let button=document.querySelector('.conv-item[data-id="'+key+'"]');if(!button){button=document.createElement('button');button.type='button';button.className='conv-item';button.dataset.id=key;button.dataset.action='select';document.querySelector('.conv-list').append(button);}button.textContent=r.cliente+' — '+r.preview;if(selected===key)selectAttendance(key);}}
+ catch(error){feedback.textContent=error.message;}finally{attendancePollBusy=false;}
+},4000);
 })();

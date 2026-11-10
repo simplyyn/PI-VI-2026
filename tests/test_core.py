@@ -75,7 +75,7 @@ class CoreTests(unittest.TestCase):
         seed(self.repo,'a')
         result=enhance(self.repo,'a',today=date(2026,10,27))
         self.assertEqual(result,dict(agendamentos_criados=4,artigos_criados=1))
-        self.assertEqual(len(PROCEDURE_OPTIONS),10)
+        self.assertEqual(len(PROCEDURE_OPTIONS),21)
         self.assertEqual(enhance(self.repo,'a',today=date(2026,10,27)),dict(agendamentos_criados=0,artigos_criados=0))
         self.assertEqual(self.repo.list('appointments','b'),[])
         for appointment in self.repo.list('appointments','a'):
@@ -224,5 +224,18 @@ class CoreTests(unittest.TestCase):
             retriever = create_retriever(SemanticRepository())
             self.assertIsInstance(retriever,PgVectorRetriever)
             with self.assertRaises(RetrievalUnavailable): retriever.retrieve('a','teste')
+
+    def test_symptom_does_not_hide_documented_practical_answer(self):
+        from unittest.mock import Mock
+        self.repo.save('kb','a',dict(titulo='Horários',categoria='Clínica',conteudo='Segunda a sexta das 08h às 18h.',status=True))
+        model=Mock();model.generate.return_value='A clínica funciona de segunda a sexta, das 08h às 18h.'
+        result=AttendanceAgent(LocalKeywordRetriever(self.repo),model).answer('a','Estou com dor no dente. Quais são os horários de funcionamento?')
+        self.assertIn('08h',result['resposta'])
+        self.assertTrue(result['gerado_por_llm'])
+        self.assertTrue(result['fontes'])
+        model.reset_mock()
+        urgent=AttendanceAgent(LocalKeywordRetriever(self.repo),model).answer('a','Não consigo respirar. Quais os horários de funcionamento?')
+        self.assertEqual(urgent['tipo'],'orientacao_urgente')
+        model.generate.assert_not_called()
 
 if __name__ == '__main__': unittest.main()

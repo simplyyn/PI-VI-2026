@@ -174,6 +174,8 @@ class PostgresRepository:
         return [self._row(kind, row, messages.get(row['id'])) for row in rows]
 
     def save(self, kind, clinic, data, identifier=None):
+        if kind == 'appointments':
+            return self.save_appointment(clinic,data,identifier)
         table, columns = self._spec(kind)
         unknown = set(data) - set(columns) - ({'mensagens'} if kind == 'attendance' else set())
         if unknown:
@@ -201,6 +203,28 @@ class PostgresRepository:
                 self._write_index(conn, clinic, row['id'], chunks)
             messages = self._messages(conn, clinic, row['id']).get(row['id']) if kind == 'attendance' else None
         return self._row(kind, row, messages)
+
+    def save_appointment(self, clinic, data, identifier=None, operation_key=None):
+        from scheduling import check_conflict
+        if operation_key:
+            raise ValueError('Confirmações persistentes do agente requerem alinhamento do esquema PostgreSQL.')
+        table, columns = self._spec('appointments')
+        values = {name: columns[name][0](data[name]) for name in columns if name in data}
+        with self._transaction() as conn:
+            # All writes through this adapter serialize per clinic, including manual edits.
+            conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',('smartdent:appointments:'+clinic,))
+            if not conn.execute('SELECT id FROM patients WHERE clinic_id=%s AND id=%s',(clinic,data['paciente_id'])).fetchone():
+                raise LookupError('Paciente não encontrado')
+            rows=conn.execute('SELECT id, {} FROM appointments WHERE clinic_id=%s'.format(','.join(columns)),(clinic,)).fetchall()
+            check_conflict([self._row('appointments',r) for r in rows],data,identifier)
+            if identifier is None:
+                query=sql.SQL('INSERT INTO {} ({}) VALUES ({}) RETURNING id, {}').format(sql.Identifier(table),_names(['clinic_id',*values]),sql.SQL(',').join([sql.Placeholder()]*(len(values)+1)),_names(columns))
+                row=conn.execute(query,[clinic,*values.values()]).fetchone()
+            else:
+                query=sql.SQL('UPDATE {} SET {} WHERE clinic_id=%s AND id=%s RETURNING id, {}').format(sql.Identifier(table),sql.SQL(',').join(sql.SQL('{}=%s').format(sql.Identifier(name)) for name in values),_names(columns))
+                row=conn.execute(query,[*values.values(),clinic,identifier]).fetchone()
+                if not row: raise LookupError('Registro não encontrado')
+        return self._row('appointments',row)
 
     def delete(self, kind, clinic, identifier):
         table, _ = self._spec(kind)

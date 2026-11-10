@@ -22,9 +22,25 @@ class Repository(Protocol):
     def delete_complaint(self, clinic, attendance_id): ...
     def set_summary(self, clinic, attendance_id, data): ...
     def ensure_patient_attendance(self, clinic, patient_id, data, existing_id=None): ...
+    def save_appointment(self, clinic, data, identifier=None, operation_key=None): ...
 
 class SQLiteRepository:
     supports_semantic_search = False
+    supports_booking_receipts = True
+    supports_workflows = True
+
+    @contextmanager
+    def transaction(self):
+        """A unit of work reuses this connection; inner services cannot commit early."""
+        with self.connect() as db:
+            if not db.in_transaction: db.execute('BEGIN IMMEDIATE')
+            child=object.__new__(SQLiteRepository)
+            child.path=self.path
+            @contextmanager
+            def same_connection():
+                yield db
+            child.connect=same_connection
+            yield child
 
     def __init__(self, path):
         self.path = str(path)
@@ -68,11 +84,13 @@ class SQLiteRepository:
         return [dict(json.loads(data), id=identifier) for identifier, data in rows]
 
     def save(self, kind, clinic, data, identifier=None):
+        if kind == 'appointments':
+            return self.save_appointment(clinic,data,identifier)
         with self.connect() as db:
             if identifier is None:
                 identifier = db.execute('INSERT INTO records(kind,clinic,data) VALUES (?,?,?)', (kind,clinic,json.dumps(data))).lastrowid
             else:
-                db.execute('BEGIN IMMEDIATE')
+                if not db.in_transaction: db.execute('BEGIN IMMEDIATE')
                 row = db.execute('SELECT data FROM records WHERE id=? AND kind=? AND clinic=?',(identifier,kind,clinic)).fetchone()
                 if not row:
                     raise LookupError('Registro não encontrado')
@@ -81,9 +99,50 @@ class SQLiteRepository:
                 db.execute('UPDATE records SET data=? WHERE id=? AND kind=? AND clinic=?', (json.dumps(data),identifier,kind,clinic))
         return dict(data, id=identifier)
 
+    def save_appointment(self, clinic, data, identifier=None, operation_key=None):
+        from scheduling import check_conflict
+        with self.connect() as db:
+            if not db.in_transaction: db.execute('BEGIN IMMEDIATE')
+            if operation_key:
+                receipt=db.execute("SELECT data FROM records WHERE kind='booking_receipts' AND clinic=? AND json_extract(data,'$.key')=?",(clinic,operation_key)).fetchone()
+                if receipt:
+                    saved_id=json.loads(receipt[0])['appointment_id']
+                    row=db.execute("SELECT data FROM records WHERE kind='appointments' AND clinic=? AND id=?",(clinic,saved_id)).fetchone()
+                    if not row:
+                        raise ValueError('Confirmação já processada; o agendamento foi removido. Inicie um novo pedido.')
+                    return dict(json.loads(row[0]),id=saved_id)
+            patient=db.execute("SELECT data FROM records WHERE kind='patients' AND clinic=? AND id=?",(clinic,data['paciente_id'])).fetchone()
+            if not patient:
+                raise LookupError('Paciente não encontrado')
+            if operation_key and json.loads(patient[0]).get('status')=='inativo':
+                raise ValueError('Paciente inativo')
+            rows=db.execute("SELECT id,data FROM records WHERE kind='appointments' AND clinic=?",(clinic,)).fetchall()
+            appointments=[dict(json.loads(raw),id=i) for i,raw in rows]
+            from professionals import validate_professional
+            professionals=[dict(json.loads(raw),id=i) for i,raw in db.execute("SELECT id,data FROM records WHERE kind='professionals' AND clinic=?",(clinic,)).fetchall()]
+            data=validate_professional(professionals,data)
+            if identifier is not None and not any(a['id']==identifier for a in appointments):
+                raise LookupError('Registro não encontrado')
+            check_conflict(appointments,data,identifier)
+            if identifier is None:
+                identifier=db.execute("INSERT INTO records(kind,clinic,data) VALUES ('appointments',?,?)",(clinic,json.dumps(data))).lastrowid
+            else:
+                db.execute("UPDATE records SET data=? WHERE kind='appointments' AND clinic=? AND id=?",(json.dumps(data),clinic,identifier))
+            if operation_key:
+                db.execute("INSERT INTO records(kind,clinic,data) VALUES ('booking_receipts',?,?)",(clinic,json.dumps(dict(key=operation_key,appointment_id=identifier))))
+        return dict(data,id=identifier)
+
+    def sync_professional_name(self,clinic,professional_id):
+        with self.connect() as db:
+            if not db.in_transaction:db.execute('BEGIN IMMEDIATE')
+            row=db.execute("SELECT data FROM records WHERE clinic=? AND kind='professionals' AND id=?",(clinic,professional_id)).fetchone()
+            if row is None:raise LookupError('Profissional não encontrado')
+            name=json.loads(row[0])['nome']
+            db.execute("UPDATE records SET data=json_set(data,'$.dentista',?) WHERE clinic=? AND kind='appointments' AND json_extract(data,'$.profissional_id')=?",(name,clinic,professional_id))
+
     def ensure_patient_attendance(self, clinic, patient_id, data, existing_id=None):
         with self.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
+            if not db.in_transaction: db.execute('BEGIN IMMEDIATE')
             if not db.execute("SELECT 1 FROM records WHERE kind='patients' AND clinic=? AND id=?",(clinic,patient_id)).fetchone():
                 raise LookupError('Paciente não encontrado')
             row=db.execute("SELECT data FROM records WHERE kind='patient_links' AND clinic=? AND json_extract(data,'$.patient_id')=?",(clinic,patient_id)).fetchone()
@@ -114,7 +173,7 @@ class SQLiteRepository:
     def set_summary(self, clinic, attendance_id, data):
         data = dict(data,attendance_id=attendance_id)
         with self.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
+            if not db.in_transaction: db.execute('BEGIN IMMEDIATE')
             if not db.execute('SELECT 1 FROM records WHERE id=? AND kind=? AND clinic=?',(attendance_id,'attendance',clinic)).fetchone():
                 raise LookupError('Registro não encontrado')
             row = db.execute("SELECT id FROM records WHERE kind='summaries' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,attendance_id)).fetchone()
@@ -128,7 +187,7 @@ class SQLiteRepository:
     def set_complaint(self, clinic, attendance_id, data):
         data = dict(data, attendance_id=attendance_id)
         with self.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
+            if not db.in_transaction: db.execute('BEGIN IMMEDIATE')
             if not db.execute('SELECT 1 FROM records WHERE id=? AND kind=? AND clinic=?',(attendance_id,'attendance',clinic)).fetchone():
                 raise LookupError('Registro não encontrado')
             row = db.execute("SELECT id FROM records WHERE kind='complaints' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,attendance_id)).fetchone()
@@ -146,7 +205,7 @@ class SQLiteRepository:
 
     def append_message(self, clinic, identifier, message):
         with self.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
+            if not db.in_transaction: db.execute('BEGIN IMMEDIATE')
             row = db.execute('SELECT data FROM records WHERE id=? AND kind=? AND clinic=?',(identifier,'attendance',clinic)).fetchone()
             if not row:
                 raise LookupError('Registro não encontrado')
@@ -157,7 +216,7 @@ class SQLiteRepository:
 
     def move(self, clinic, identifier, delta):
         with self.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
+            if not db.in_transaction: db.execute('BEGIN IMMEDIATE')
             row = db.execute('SELECT data FROM records WHERE id=? AND kind=? AND clinic=?', (identifier,'stock',clinic)).fetchone()
             if not row:
                 raise LookupError('Registro não encontrado')

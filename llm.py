@@ -2,6 +2,9 @@
 import json
 import os
 import socket
+import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 from urllib.parse import quote
@@ -16,18 +19,41 @@ def configured_model():
     return os.getenv('GROQ_MODEL','')
 
 
-def create_llm():
+def create_llm(clinic=None):
     provider=os.getenv('SMARTDENT_LLM_PROVIDER','groq').strip().lower()
     if provider == 'gemini':
-        return GeminiClient()
+        return GeminiClient(clinic=clinic)
     if provider == 'groq':
-        return GroqClient()
+        return GroqClient(clinic=clinic)
     raise LLMUnavailable('Provedor inválido. Configure SMARTDENT_LLM_PROVIDER=gemini ou groq.')
 
 
+def read_response(opener, request, sleeper):
+    """At most two generation attempts; never used for database writes."""
+    for attempt in range(2):
+        try:
+            with opener(request,timeout=20) as response:
+                raw=response.read(1048577)
+            return raw, attempt+1
+        except HTTPError as error:
+            if attempt or error.code not in (429,502,503,504): raise
+            delay=1.0
+            retry=error.headers.get('Retry-After') if error.headers else None
+            if retry:
+                try: delay=max(0,float(retry))
+                except ValueError:
+                    try: delay=max(0,(parsedate_to_datetime(retry)-datetime.now(timezone.utc)).total_seconds())
+                    except (ValueError,TypeError,OverflowError): raise error
+            # Long waits return a readable error instead of freezing the interface.
+            if delay > 2: raise
+            error.close()
+            sleeper(delay)
+
+
 class GeminiClient:
-    def __init__(self, opener=urlopen):
+    def __init__(self, opener=urlopen, clinic=None, sleeper=time.sleep):
         self.opener=opener
+        self.clinic,self.sleeper=clinic,sleeper
 
     def generate(self,messages):
         if os.getenv('SMARTDENT_LLM_ENABLED','false').lower() != 'true':
@@ -48,8 +74,7 @@ class GeminiClient:
         request=Request('https://generativelanguage.googleapis.com/v1beta/models/'+quote(model,safe='')+':generateContent',
             data=json.dumps(body).encode(),headers={'Content-Type':'application/json','x-goog-api-key':key},method='POST')
         try:
-            with self.opener(request,timeout=20) as response:
-                raw=response.read(1048577)
+            raw,attempts=read_response(self.opener,request,self.sleeper)
             if len(raw)>1048576: raise ValueError('Resposta excessiva')
             data=json.loads(raw)
             candidate=data['candidates'][0]
@@ -57,6 +82,10 @@ class GeminiClient:
                 raise ValueError('Resposta incompleta ou bloqueada')
             text=''.join(part['text'] for part in candidate['content']['parts'] if isinstance(part.get('text'),str) and not part.get('thought',False))
             if not text.strip(): raise ValueError('Resposta vazia')
+            from usage import record_usage
+            metadata=data.get('usageMetadata') or {}
+            if not isinstance(metadata,dict): metadata={}
+            record_usage(self.clinic,'gemini',model,{'input':metadata.get('promptTokenCount'),'output':metadata.get('candidatesTokenCount'),'thinking':metadata.get('thoughtsTokenCount'),'total':metadata.get('totalTokenCount')},attempts)
             return text.strip()
         except HTTPError as exc:
             code=exc.code
@@ -75,8 +104,9 @@ class GeminiClient:
             raise LLMUnavailable('Gemini retornou uma resposta vazia, incompleta ou bloqueada. Tente novamente.') from None
 
 class GroqClient:
-    def __init__(self, opener=urlopen):
+    def __init__(self, opener=urlopen, clinic=None, sleeper=time.sleep):
         self.opener = opener
+        self.clinic,self.sleeper=clinic,sleeper
 
     def generate(self, messages):
         if os.getenv('SMARTDENT_LLM_ENABLED','false').lower() != 'true':
@@ -92,13 +122,17 @@ class GroqClient:
             # User-Agent próprio: o Cloudflare do Groq bloqueia o padrão "Python-urllib" (403, erro 1010).
             headers={'Authorization':'Bearer '+key,'Content-Type':'application/json','User-Agent':'smartdent/1.0'},method='POST')
         try:
-            with self.opener(request, timeout=20) as response:
-                raw = response.read(1048577)
+            raw,attempts=read_response(self.opener,request,self.sleeper)
             if len(raw)>1048576:
                 raise ValueError('Resposta excessiva')
-            text = json.loads(raw)['choices'][0]['message']['content']
+            data=json.loads(raw)
+            text = data['choices'][0]['message']['content']
             if not isinstance(text,str) or not text.strip():
                 raise ValueError('Resposta vazia')
+            from usage import record_usage
+            metadata=data.get('usage') or {}
+            if not isinstance(metadata,dict): metadata={}
+            record_usage(self.clinic,'groq',model,{'input':metadata.get('prompt_tokens'),'output':metadata.get('completion_tokens'),'total':metadata.get('total_tokens')},attempts)
             return text.strip()
         except HTTPError as exc:
             code=exc.code

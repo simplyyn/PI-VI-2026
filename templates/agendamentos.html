@@ -3,13 +3,14 @@
 {% block content %}
 <div class="page-container">
   <div class="page-header"><div><h1>Agendamentos</h1><p class="page-subtitle">{{ total }} consultas cadastradas</p></div><div class="kb-actions"><button class="btn-secondary" data-action="filter" title="Ir para os filtros"><i data-lucide="sliders-horizontal"></i>Filtrar</button><button class="btn-primary" data-action="create"><i data-lucide="plus"></i>Novo Agendamento</button></div></div>
-  <div class="page-body">
+  <div class="page-body"><details class="chart-card"><summary>Profissionais e expediente</summary><div id="professional-overview"></div></details>
     <section class="metrics-grid" style="margin-bottom:24px">
       <div class="card metric"><div class="metric-info"><h3>{{ agendamentos | selectattr('status','eq','confirmado') | list | length }}</h3><p>Confirmados</p></div></div>
       <div class="card metric"><div class="metric-info"><h3>{{ agendamentos | selectattr('status','eq','pendente') | list | length }}</h3><p>Aguardando confirmação</p></div></div>
       <div class="card metric"><div class="metric-info"><h3>{{ total }}</h3><p>Total de agendamentos</p></div></div>
     </section>
     <div class="agenda-toolbar">
+      <label class="toolbar-field toolbar-select"><select id="agenda-professional" aria-label="Filtrar profissional"><option value="">Todos os profissionais</option>{% for p in profissionais %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}</select></label>
       <label class="toolbar-field toolbar-search"><i data-lucide="search"></i><input id="records-search" type="search" placeholder="Buscar paciente, dentista ou procedimento" aria-label="Buscar"></label>
       <label class="toolbar-field"><i data-lucide="calendar-days"></i><input type="date" id="agenda-date" aria-label="Filtrar por data"></label>
       <label class="toolbar-field toolbar-select"><i data-lucide="list-filter"></i><select id="records-filter" aria-label="Filtrar status"><option value="todos">Todos os status</option><option value="pendente">Pendentes</option><option value="confirmado">Confirmados</option><option value="cancelado">Cancelados</option></select><i data-lucide="chevron-down" class="toolbar-chevron"></i></label>
@@ -26,7 +27,7 @@
         {% for appt in agendamentos | sort(attribute='data') %}
         <div class="appt-card" data-id="{{ appt.id }}" style="border-left:3px solid {{ appt.cor }}">
           <div class="appt-time">{{ appt.horario[:5] }}<small>{{ appt.data.split('-') | reverse | join('/') }} · {{ appt.duracao }}min</small></div><div class="appt-divider"></div>
-          <div class="appt-info"><div class="appt-patient">{{ appt.paciente }}</div><div class="appt-proc">{{ appt.procedimento }}</div></div>
+          <div class="appt-info"><div class="appt-patient">{{ appt.paciente }} <small>#{{ appt.id }}</small></div><div class="appt-proc">{{ appt.procedimento }}</div></div>
           <div class="appt-meta"><span class="badge-appt-{{ appt.status }}">{{ appt.status | capitalize }}</span><span class="appt-dentista">{{ appt.dentista }}</span></div>
           <div class="kb-actions"><button class="btn-icon" data-action="confirm" title="Confirmar" aria-label="Confirmar"><i data-lucide="check"></i></button><button class="btn-icon" data-action="edit" title="Editar" aria-label="Editar"><i data-lucide="pencil"></i></button><button class="btn-icon" data-action="cancel" title="Cancelar consulta" aria-label="Cancelar consulta"><i data-lucide="ban"></i></button><button class="btn-icon danger" data-action="delete" title="Excluir" aria-label="Excluir"><i data-lucide="trash-2"></i></button></div>
         </div>

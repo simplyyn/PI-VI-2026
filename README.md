@@ -235,3 +235,15 @@ A recuperação usa a pergunta real e expande um vocabulário limitado de atendi
 A sugestão permanece um rascunho, sem envio automático nem alteração de mensagens. Fontes ficam no aviso ao atendente, não são acrescentadas automaticamente ao texto a enviar ao cliente. Ausência de contexto é exibida como aviso, sem preencher o rascunho; edição do rascunho durante a requisição é preservada. O botão de orientação inicial também passou a usar a mensagem real persistida.
 
 Validação: 65 testes encontrados, 38 aprovados e 27 ignorados por dependerem de PostgreSQL. O caso da pergunta sobre horários e política de remarcação foi reproduzido com LLM simulado: recuperou ambos os artigos, incluiu a última pergunta e o histórico correto, não gravou/enviou resposta e bloqueou acesso de outra clínica e perfil customer. Também foram testadas paráfrases e Pix. No banco local, a pergunta de Diego recuperou os artigos de Horários e Políticas. Sintaxe do JS e git diff --check passaram. Não foi feita chamada real ao provedor nesta correção.
+
+
+## Conversa e agendamento assistido
+
+Consulte [o roteiro de apresentacao, operacao e limitacoes](docs/APRESENTACAO.md) para o resumo em modal, agendamento com confirmacao, consumo da IA, testes e pendencias do PostgreSQL.
+
+O [guia da base de conhecimento](docs/BASE_CONHECIMENTO.md) documenta os 21 procedimentos, as fontes e os valores de referência pesquisados, a preparação do SQLite e a limpeza dos rótulos visíveis da apresentação.
+
+
+## Portal do paciente e operacoes do assistente
+
+O [roteiro dos fluxos integrados](docs/FLUXOS_INTEGRADOS.md) explica o acesso de Pedro, comunicacao com a recepcao, pendencias, respostas em lote, agendas de Elias/Roberto e ferramentas administrativas com confirmacao. Os novos fluxos usam o SQLite local; a adaptacao do contrato PostgreSQL continua pendente.

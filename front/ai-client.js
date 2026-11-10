@@ -8,11 +8,11 @@ window.smartdentAsk = async function (question) {
   const sources = (data.fontes||[]).map(s=>`[${s.id}] ${s.titulo}`).join('; ');
   return data.resposta + (sources ? '\n\nFontes consultadas: '+sources : '');
 };
-window.smartdentAskOwner = async function(question,context=null) {
+window.smartdentAskOwner = async function(question,context=null,reset=false) {
   const session=await fetch('/api/session');
   if(!session.ok)throw Error('Sua sessão expirou. Entre novamente.');
   const token=(await session.json()).csrf_token;
-  const response=await fetch('/api/assistente',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':token},body:JSON.stringify({pergunta:question,contexto:context})});
+  const response=await fetch('/api/assistente',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':token},body:JSON.stringify({pergunta:question,contexto:context,resetar:reset})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw Error(typeof data.detail==='string'?data.detail:'Não foi possível consultar o assistente. Tente novamente.');
   const sources=(data.fontes||[]).map(s=>`[${s.id}] ${s.titulo}`).join('; ');

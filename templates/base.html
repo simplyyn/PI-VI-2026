@@ -46,6 +46,9 @@
           <a href="/pacientes" class="{% if pagina == 'pacientes' %}active{% endif %}">
             <i data-lucide="users"></i> Pacientes
           </a>
+          <a href="/profissionais" class="{% if pagina == 'profissionais' %}active{% endif %}">
+            <i data-lucide="stethoscope"></i> Profissionais
+          </a>
           <a href="/agendamentos" class="{% if pagina == 'agendamentos' %}active{% endif %}">
             <i data-lucide="calendar"></i> Agendamentos
           </a>
@@ -203,7 +206,7 @@
 
     <div class="cwp-messages" id="cwpMessages" role="log" aria-live="polite" aria-label="Conversa com o assistente">
       <div class="cwp-msg cwp-msg-ai">
-        <p>Olá! Posso consultar agenda, pacientes, estoque e reclamações, além de explicar preços e políticas cadastrados. Escolha um atalho abaixo ou escreva sua pergunta.</p>
+        <p>Olá! Posso consultar pendências e agenda, preparar respostas em lote e alterações nos cadastros. Para gravar ou enviar, você revisa e confirma. Experimente: quantos clientes estão sem resposta?</p>
         <span class="cwp-time">agora</span>
       </div>
     </div>
@@ -211,6 +214,11 @@
     <div class="cwp-tools"><button type="button" class="cwp-tool active" data-cwp-group="rotina" aria-pressed="true">Rotina</button><button type="button" class="cwp-tool" data-cwp-group="gestao" aria-pressed="false">Gestão</button><button type="button" class="cwp-tool" data-cwp-group="clinica" aria-pressed="false">Clínica</button><button type="button" class="cwp-reset" onclick="cwpClear()" aria-label="Limpar conversa local">Limpar</button></div>
     <div class="cwp-suggestions" id="cwpSuggestions">
       <button data-cwp-topic="rotina" onclick="cwpSend('Quais são os agendamentos de hoje?')">Agenda de hoje</button>
+      <button data-cwp-topic="rotina" onclick="cwpSend('Quantos clientes estão sem resposta?')">Sem resposta</button>
+      <button data-cwp-topic="rotina" onclick="cwpSend('Prepare respostas para todos os clientes sem resposta')">Preparar respostas</button>
+      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Consultas por profissional')">Por profissional</button>
+      <button data-cwp-topic="clinica" hidden onclick="cwpSend('Quais os profissionais e especialidades?')">Profissionais</button>
+      <button data-cwp-topic="clinica" hidden onclick="cwpSend('Quais os preços da clínica cadastrados?')">Preços próprios</button>
       <button data-cwp-topic="rotina" onclick="cwpSend('Quais são os agendamentos de amanhã?')">Agenda de amanhã</button>
       <button data-cwp-topic="rotina" onclick="cwpSend('Quais são os próximos agendamentos?')">Próximas consultas</button>
       <button data-cwp-topic="rotina" onclick="cwpSend('Quantos pacientes estão cadastrados?')">Pacientes</button>
@@ -235,13 +243,13 @@
     async function cwpGetReply(msg) { return window.smartdentAskOwner(msg,cwpContext); }
     function cwpAddMsg(text,isUser,actions=[],origin='') {
       const box=document.getElementById('cwpMessages');const div=document.createElement('div');div.className='cwp-msg '+(isUser?'cwp-msg-usr':'cwp-msg-ai');
-      if(origin){const badge=document.createElement('small');badge.className='cwp-origin';badge.textContent=({registros:'Consulta aos registros',llm:'IA com contexto da clínica',orientacao:'Orientação inicial',base:'Base de conhecimento'}[origin]||'Assistente');div.append(badge);}
+      if(origin){const badge=document.createElement('small');badge.className='cwp-origin';badge.textContent=({agendamento:'Agendamento assistido',registros:'Consulta aos registros',llm:'IA com contexto da clínica',orientacao:'Orientação inicial',base:'Base de conhecimento'}[origin]||'Assistente');div.append(badge);}
       const p=document.createElement('p');p.textContent=text;p.style.whiteSpace='pre-wrap';div.append(p);
-      const allowed=['/agendamentos','/atendimentos','/pacientes','/estoque','/relatorios','/base-conhecimento'];
+      const allowed=['/agendamentos','/atendimentos','/pacientes','/estoque','/relatorios','/base-conhecimento','/respostas'];
       for(const action of actions){const path=action.url?.split('?')[0];if(!allowed.includes(path))continue;const a=document.createElement('a');a.className='cwp-action';a.href=action.url;a.textContent=action.rotulo;div.append(a);}
       const stamp=document.createElement('span');stamp.className='cwp-time';stamp.textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});div.append(stamp);box.append(div);box.scrollTop=box.scrollHeight;
     }
-    function cwpClear(){if(cwpBusy)return;cwpContext=null;document.getElementById('cwpMessages').replaceChildren();cwpAddMsg('Vamos começar de novo. Escolha um atalho ou pergunte sobre os registros da clínica.',false);}
+    async function cwpClear(){if(cwpBusy)return;cwpBusy=true;try{const reply=await window.smartdentAskOwner('limpar',null,true);cwpContext=null;document.getElementById('cwpMessages').replaceChildren();cwpAddMsg(reply.resposta,false);}catch(error){cwpAddMsg(error.message,false);}finally{cwpBusy=false;}}
     document.querySelectorAll('[data-cwp-group]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-cwp-group]').forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});document.querySelectorAll('[data-cwp-topic]').forEach(b=>b.hidden=b.dataset.cwpTopic!==button.dataset.cwpGroup);}));
     function cwpTyping() {
       const box = document.getElementById('cwpMessages');
@@ -258,7 +266,7 @@
       if(msg.length>2000){cwpAddMsg('Sua mensagem está muito longa. Use até 2000 caracteres para eu consultar.',false);return;}
       cwpBusy=true;input.value='';input.disabled=true;document.getElementById('cwpSendButton').disabled=true;document.getElementById('cwpMessages').setAttribute('aria-busy','true');
       document.querySelectorAll('[data-cwp-topic]').forEach(b=>b.disabled=true);cwpAddMsg(msg,true);cwpTyping();
-      try{const reply=await cwpGetReply(msg);cwpContext=({"/agendamentos":"agenda","/pacientes":"pacientes","/estoque":"estoque","/atendimentos":"atendimentos","/relatorios":"gestao","/base-conhecimento":"clinica"}[reply.acoes?.[0]?.url]||null);cwpAddMsg(reply.resposta,false,reply.acoes||[],reply.origem);}
+      try{const reply=await cwpGetReply(msg);cwpContext=({"/agendamentos":"agenda","/pacientes":"pacientes","/estoque":"estoque","/atendimentos":"atendimentos","/relatorios":"gestao","/base-conhecimento":"clinica"}[reply.acoes?.[0]?.url]||null);cwpAddMsg(reply.resposta,false,reply.acoes||[],reply.origem);if((reply.estado==='concluido'&&reply.agendamento_id)||reply.registro_tipo==='appointments')document.dispatchEvent(new CustomEvent('smartdent-agenda-updated',{detail:{id:reply.agendamento_id||reply.registro_id}}));}
       catch(error){cwpAddMsg(error.message+' Você pode tentar novamente ou abrir a seção pelo menu.',false);}
       finally{document.getElementById('cwpTyping')?.remove();cwpBusy=false;input.disabled=false;document.getElementById('cwpSendButton').disabled=false;document.querySelectorAll('[data-cwp-topic]').forEach(b=>b.disabled=false);document.getElementById('cwpMessages').setAttribute('aria-busy','false');if(document.getElementById('cwpPanel').classList.contains('open'))input.focus();}
     }
@@ -347,5 +355,6 @@
 <link rel="stylesheet" href="/static/widget.css">
 <script src="/static/ai-client.js"></script>
 <script src="/static/session.js"></script>
+<script src="/static/clinic-overview.js"></script>
 </body>
 </html>

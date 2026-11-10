@@ -334,14 +334,7 @@
 <div class="demo-chat-wrapper">
 
   <!-- Barra de aviso para admin/dev -->
-  <div class="demo-admin-bar" id="adminBar">
-    <span>👁️ Modo demonstração — visualizando como o cliente vê o chat</span>
-    <a href="/">
-      <i data-lucide="arrow-left" style="width:14px;height:14px;"></i>
-      Voltar ao painel
-    </a>
-  </div>
-
+  <div class="demo-admin-bar"><span>{{ usuario.nome }} — {{ usuario.empresa or usuario.empresa_id }}</span><a href="/logout">Sair</a></div>
   <!-- Header do chat -->
   <header class="demo-header">
     <div class="demo-header-brand">
@@ -352,7 +345,7 @@
         <h2>Assistente SmartDent</h2>
         <div class="demo-status">
           <span class="dot"></span>
-          Online agora
+          Canal de atendimento
         </div>
       </div>
     </div>
@@ -365,28 +358,10 @@
   </header>
 
   <!-- Mensagens -->
-  <div class="demo-messages" id="demo-messages">
-
-    <div class="demo-msg-group">
-      <div class="demo-msg ai-msg">
-        <div class="demo-msg-bubble">
-          Olá! 👋 Sou o assistente virtual da <strong>Clínica SmartDent</strong>.<br><br>
-          Posso ajudar com agendamentos, informações sobre procedimentos, planos de saúde aceitos e muito mais. Como posso te ajudar hoje?
-        </div>
-        <span class="demo-msg-time">agora</span>
-      </div>
-    </div>
-
-    <div class="demo-suggestions" id="demo-suggestions">
-      <button class="demo-chip" onclick="enviarChip(this)">📅 Agendar consulta</button>
-      <button class="demo-chip" onclick="enviarChip(this)">🦷 Procedimentos</button>
-      <button class="demo-chip" onclick="enviarChip(this)">💳 Planos aceitos</button>
-      <button class="demo-chip" onclick="enviarChip(this)">🕐 Horários</button>
-      <button class="demo-chip" onclick="enviarChip(this)">💰 Preços</button>
-    </div>
-
-  </div>
-
+  <div class="demo-messages" id="demo-messages" role="log" aria-live="polite"></div>
+  <p id="customer-feedback" role="status" style="padding:8px 20px"></p>
+  <div id="booking-confirmation" hidden style="padding:8px 20px"><p>Revise os dados na mensagem acima. A consulta só aparece na agenda depois da confirmação.</p><button type="button" class="btn-primary" id="confirm-booking">Confirmar agendamento</button> <button type="button" class="btn-secondary" id="cancel-booking">Cancelar pedido</button></div>
+  <details style="padding:8px 20px"><summary>Meus agendamentos</summary><div id="customer-appointments"></div></details>
   <!-- Input -->
   <div class="demo-input-footer">
     <div class="demo-input-bar">
@@ -395,155 +370,18 @@
         id="demo-input"
         placeholder="Digite sua mensagem..."
         onkeydown="if(event.key==='Enter') enviarMensagem()"
-        autocomplete="off"
+        autocomplete="off" maxlength="2000" aria-label="Mensagem para a clínica"
       >
       <button class="btn-send" onclick="enviarMensagem()">
         <i data-lucide="send"></i>
       </button>
     </div>
-    <p class="demo-disclaimer">Assistente com IA · Respostas geradas automaticamente · Em caso de dor aguda, ligue imediatamente</p>
+    <label><input type="checkbox" id="customer-auto" checked> Receber resposta automática da IA</label><p class="demo-disclaimer">Mensagens registradas neste portal. Você também pode pedir atendimento humano.</p>
   </div>
 
 </div>
 
-<script>
-  lucide.createIcons();
-
-  function toggleDark() {
-    const isDark = document.documentElement.classList.toggle('dark');
-    document.getElementById('btn-dark-toggle').classList.toggle('active', isDark);
-    localStorage.setItem('smartdent-dark', isDark ? '1' : '');
-  }
-
-  if (localStorage.getItem('smartdent-dark') === '1') {
-    document.getElementById('btn-dark-toggle').classList.add('active');
-  }
-
-  // ── Respostas da IA ──────────────────────────────────────────────────────────
-  const respostas = {
-    agendamento: `Para agendar sua consulta, temos os seguintes horários disponíveis:<br><br>
-      📅 <strong>Segunda a Sexta:</strong> 08h às 18h<br>
-      📅 <strong>Sábados:</strong> 08h às 13h<br><br>
-      Qual período prefere? Posso verificar a disponibilidade com o seu dentista preferido.`,
-
-    procedimento: `Realizamos os seguintes procedimentos:<br><br>
-      🦷 Consulta de rotina e profilaxia<br>
-      ✨ Clareamento dental<br>
-      📐 Aparelho ortodôntico (fixo e invisível)<br>
-      🔩 Implante dentário<br>
-      💊 Tratamento de canal<br>
-      🛠️ Restaurações em resina<br>
-      ✂️ Extrações simples e complexas<br><br>
-      Sobre qual procedimento gostaria de mais detalhes?`,
-
-    plano: `Aceitamos os seguintes planos:<br><br>
-      ✅ Unimed<br>
-      ✅ Amil Dental<br>
-      ✅ OdontoPrev<br>
-      ✅ Bradesco Saúde<br>
-      ✅ SulAmérica<br>
-      ✅ Porto Seguro Odonto<br><br>
-      Também atendemos <strong>particular</strong> com parcelamento em até <strong>12x sem juros</strong>.`,
-
-    horario: `Nossos horários de atendimento são:<br><br>
-      🕗 <strong>Segunda a Sexta:</strong> 08h às 18h<br>
-      🕗 <strong>Sábados:</strong> 08h às 13h<br>
-      ❌ <strong>Domingos e feriados:</strong> fechado<br><br>
-      Para urgências fora do horário, entre em contato pelo WhatsApp.`,
-
-    dor: `Sentindo dor? Isso é prioridade! 🚨<br><br>
-      Entre em contato agora pelo telefone <strong>(11) 99999-0001</strong> para atendimento de urgência.<br><br>
-      Se for uma dor forte ou inchaço, procure o pronto-socorro odontológico mais próximo.`,
-
-    preco: `Nossos valores:<br><br>
-      💰 <strong>Consulta inicial:</strong> R$ 150<br>
-      💰 <strong>Limpeza (profilaxia):</strong> R$ 180<br>
-      💰 <strong>Clareamento:</strong> a partir de R$ 350<br>
-      💰 <strong>Canal:</strong> a partir de R$ 400 (por dente)<br>
-      💰 <strong>Implante:</strong> a partir de R$ 1.800<br><br>
-      Para procedimentos complexos, fazemos uma <strong>avaliação gratuita</strong> antes do orçamento final.`,
-
-    localizacao: `Estamos localizados em:<br><br>
-      📍 Rua das Flores, 123 — Bairro Jardim<br>
-      São Paulo — SP<br><br>
-      Temos estacionamento gratuito para pacientes. Fácil acesso pelo metrô linha 2 (Verde).`,
-
-    default: `Entendido! Posso te ajudar com agendamentos, procedimentos, valores, planos de saúde e horários de atendimento.<br><br>
-      Para outras dúvidas, entre em contato pelo telefone <strong>(11) 99999-0001</strong> ou pelo WhatsApp. 😊`,
-  };
-
-  function getRespostaIA(texto) {
-    const t = texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    if (t.match(/agenda|consult|marcar|horario disponivel|agendar/)) return respostas.agendamento;
-    if (t.match(/procediment|tratament|implante|canal|clarear|aparelho|limpeza|extracao|restaura/)) return respostas.procedimento;
-    if (t.match(/plano|convenio|unimed|amil|odontoprev|bradesco|sulamerica|porto/)) return respostas.plano;
-    if (t.match(/horario|funciona|abre|fecha|horários/)) return respostas.horario;
-    if (t.match(/dor|doi|urgencia|emergencia/)) return respostas.dor;
-    if (t.match(/preco|valor|custa|quanto|orcamento/)) return respostas.preco;
-    if (t.match(/endere|localiz|onde fica|como chegar|mapa/)) return respostas.localizacao;
-    return respostas.default;
-  }
-
-  // ── Funções de UI ────────────────────────────────────────────────────────────
-  function agora() {
-    const d = new Date();
-    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-  }
-
-  function adicionarMensagem(html, tipo) {
-    const container = document.getElementById('demo-messages');
-    const grupo = document.createElement('div');
-    grupo.className = 'demo-msg-group';
-    grupo.innerHTML = `
-      <div class="demo-msg ${tipo}-msg">
-        <div class="demo-msg-bubble">${html}</div>
-        <span class="demo-msg-time">${agora()}</span>
-      </div>
-    `;
-    container.appendChild(grupo);
-    container.scrollTop = container.scrollHeight;
-  }
-
-  function mostrarDigitando() {
-    const container = document.getElementById('demo-messages');
-    const div = document.createElement('div');
-    div.className = 'demo-msg-group';
-    div.id = 'typing-indicator';
-    div.innerHTML = `
-      <div class="demo-msg ai-msg">
-        <div class="demo-msg-bubble typing-bubble">
-          <span></span><span></span><span></span>
-        </div>
-      </div>
-    `;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
-  }
-
-  function enviarMensagem() {
-    const input = document.getElementById('demo-input');
-    const texto = input.value.trim();
-    if (!texto) return;
-
-    // Remove sugestões na primeira mensagem
-    const sugestoes = document.getElementById('demo-suggestions');
-    if (sugestoes) sugestoes.remove();
-
-    adicionarMensagem(texto, 'user');
-    input.value = '';
-    mostrarDigitando();
-
-    setTimeout(() => {
-      document.getElementById('typing-indicator')?.remove();
-      adicionarMensagem(getRespostaIA(texto), 'ai');
-    }, 800 + Math.random() * 700);
-  }
-
-  function enviarChip(btn) {
-    const texto = btn.textContent.replace(/^[\p{Emoji}\s]+/u, '').trim();
-    document.getElementById('demo-input').value = texto;
-    enviarMensagem();
-  }
-</script>
+<script src="/static/customer-chat.js"></script>
+<script src="/static/session.js"></script>
 </body>
 </html>

@@ -259,7 +259,7 @@ class APITests(unittest.TestCase):
         self.assertEqual(self.client.get('/api/procedimentos').status_code,401)
         headers=self.login()
         self.assertIn('Avaliação ortodôntica',self.client.get('/api/procedimentos').json())
-        self.assertEqual(len(self.client.get('/api/procedimentos').json()),10)
+        self.assertEqual(len(self.client.get('/api/procedimentos').json()),21)
         response=self.client.post('/api/chat',json={'pergunta':'Tenho dor no dente superior'},headers=headers)
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.json()['tipo'],'orientacao_inicial')
@@ -290,10 +290,10 @@ class APITests(unittest.TestCase):
         self.login('c@example.test')
         response=self.client.get('/chat')
         self.assertEqual(response.status_code,200)
-        self.assertIn('/static/ai-client.js',response.text)
+        self.assertIn('/static/customer-chat.js',response.text)
         self.assertNotIn('const respostasIA',response.text)
-        self.assertIn('window.smartdentAsk(texto)',response.text)
-        self.assertEqual(self.client.get('/static/ai-client.js').status_code,200)
+        self.assertNotIn('getRespostaIA',response.text)
+        self.assertEqual(self.client.get('/static/customer-chat.js').status_code,200)
 
     def test_management_period_filters_use_persisted_records(self):
         from datetime import datetime, timedelta, timezone
@@ -442,5 +442,61 @@ class APITests(unittest.TestCase):
         self.assertEqual(self.client.delete(route,headers=headers).status_code,404)
         self.assertEqual(self.client.delete(f'/api/atendimentos/{ids[1]}',headers=headers).status_code,204)
         self.assertEqual(self.client.get('/api/relatorios/reclamacoes').json()['reclamacoes'],0)
+
+    def test_booking_api_confirmation_csrf_scope_and_reset(self):
+        if not getattr(app.state.repository,'supports_booking_receipts',False):
+            self.skipTest('Confirmações do agente no PostgreSQL aguardam contrato persistente')
+        headers=self.login()
+        self.client.post('/api/pacientes',headers=headers,json={'nome':'Pedro Silva'})
+        def ask(message):
+            response=self.client.post('/api/assistente',headers=headers,json={'pergunta':message})
+            self.assertEqual(response.status_code,200)
+            return response.json()
+        with patch('app.create_llm') as llm:
+            self.assertEqual(ask('Agende para o Pedro amanhã às 16h')['estado'],'coletando')
+            ask('Consulta de avaliação');ask('Dra. Ana')
+            ready=ask('30 minutos')
+            self.assertEqual(ready['estado'],'aguardando_confirmacao')
+            self.assertEqual(self.client.get('/api/agendamentos').json(),[])
+            pending_cookie=self.client.cookies.get('session')
+            self.assertEqual(self.client.post('/api/assistente',json={'pergunta':'confirmar'}).status_code,403)
+            done=ask('confirmar')
+            self.assertEqual(done['estado'],'concluido')
+            self.client.cookies.clear();self.client.cookies.set('session',pending_cookie)
+            replay=ask('confirmar')
+            self.assertEqual(done['agendamento_id'],replay['agendamento_id'])
+            self.assertEqual(len(self.client.get('/api/agendamentos').json()),1)
+            llm.assert_not_called()
+        ask('Agende para o Pedro amanhã às 17h')
+        reset=self.client.post('/api/assistente',headers=headers,json={'pergunta':'limpar','resetar':True})
+        self.assertEqual(reset.status_code,200)
+        headers=self.login('b@example.test')
+        self.assertEqual(self.client.get('/api/agendamentos').json(),[])
+        self.assertIn('Não encontrei',ask('Agende para o Pedro amanhã às 16h')['resposta'])
+        headers=self.login('c@example.test')
+        self.assertEqual(self.client.post('/api/assistente',headers=headers,json={'pergunta':'agende uma consulta'}).status_code,403)
+
+    def test_attendance_summary_modal_and_complaints_moved(self):
+        headers=self.login()
+        self.client.post('/api/atendimentos',headers=headers,json={'cliente':'Pedro','preview':'Avaliação'})
+        page=self.client.get('/atendimentos').text
+        self.assertIn('<dialog id="summary-dialog"',page)
+        self.assertGreater(page.index('<dialog id="summary-dialog"'),page.index('<body>'))
+        self.assertIn('id="human-message-form"',page)
+        self.assertNotIn('id="complaint-form"',page)
+        self.assertNotIn('id="attendance-guidance"',page)
+        reports=self.client.get('/relatorios').text
+        self.assertIn('id="complaint-form"',reports)
+        self.assertIn('id="llm-usage"',reports)
+        with patch.dict(os.environ,{'SMARTDENT_USAGE_PATH':self.tmp.name+'/usage.jsonl'}):
+            from usage import record_usage
+            record_usage('a','gemini','test',{'input':10,'output':5},1)
+            record_usage('b','gemini','test',{'input':100,'output':50},1)
+            usage=self.client.get('/api/ia/uso').json()
+            self.assertEqual(usage['tokens_entrada'],10)
+            self.assertEqual(usage['tokens_saida'],5)
+            self.assertNotIn('tokens_restantes',usage)
+            self.login('c@example.test')
+            self.assertEqual(self.client.get('/api/ia/uso').status_code,403)
 
 if __name__ == '__main__': unittest.main()

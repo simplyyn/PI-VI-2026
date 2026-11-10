@@ -26,7 +26,7 @@ class ClinicAssistant:
             if prefix:m=prefix+' '+m
             else:return result('Você quer consultar a agenda, os pacientes ou o estoque? Escolha um atalho ou escreva, por exemplo, "agenda de amanhã".',('Abrir agenda','/agendamentos'))
         if m in ('oi','ola','bom dia','boa tarde','boa noite','ajuda') or any(p in m for p in ('o que voce pode','como pode me ajudar','suas funcionalidades')):
-            return result('Olá! Posso consultar sua agenda, localizar pacientes, mostrar o estoque, acompanhar reclamações e resumir os indicadores da clínica. Também respondo sobre preços, procedimentos, horários e políticas cadastrados. Para registrar ou alterar dados, abro a tela certa para você conferir.',('Ver agenda','/agendamentos'),('Ver atendimentos','/atendimentos'))
+            return result('Olá! Posso consultar agenda, pacientes, estoque e indicadores; contar mensagens sem resposta; preparar respostas em lote; agendar consultas; e preparar alterações de telefone, prioridade, preços próprios e cadastros. Para gravar, mostro a prévia e peço sua confirmação. Experimente: quantos clientes estão sem resposta? Ou: agende uma avaliação para o Pedro amanhã às 16h.',('Ver agenda','/agendamentos'),('Revisar respostas','/respostas'))
         if m in ('obrigado','obrigada','valeu','ok','entendi','perfeito'):
             return result('Por nada! Quando precisar, escolha um dos atalhos ou me diga o que quer consultar na clínica.')
         if re.search(r'\b(agende|marque|cadastre|exclua|remova|altere|adicione|registre|cancele)\b',m):
@@ -34,13 +34,10 @@ class ClinicAssistant:
             return result('Posso te levar ao formulário para conferir e salvar os dados. Não fiz nenhuma alteração nem confirmei agendamentos nesta conversa.',('Abrir formulário',url))
         if re.search(r'\b(agenda|agendamentos)\b',m) or any(p in m for p in ('proximas consultas','consultas de hoje','consultas de amanha','consultas para amanha','consultas da semana','consultas hoje','consultas amanha')):
             return self.agenda(m)
-        if 'estoque' in m or any(p in m for p in ('repor','reposicao','insumos','esgotados')):
+        if 'estoque' in m or any(p in m for p in ('repor','reposicao','insumos','esgotados','materiais em falta','itens em falta','materiais faltando')):
             stocks=ClinicService(self.repository,self.clinic).stocks()
-            if 'esgotad' in m: stocks=[s for s in stocks if s['quantidade']==0]
-            elif any(p in m for p in ('baixo','repor','reposicao','faltando')): stocks=[s for s in stocks if s['quantidade']<s['minimo'] or s['quantidade']==0]
-            if not stocks:return result('Não encontrei itens nessa condição. Você pode conferir o cadastro completo na tela de estoque.',('Conferir estoque','/estoque'))
-            lines=[f"• {s['nome']}: {s['quantidade']} {s['unidade']} (mínimo {s['minimo']})." for s in stocks[:8]]
-            return result(f'Encontrei {len(stocks)} item(ns) para a sua consulta:\n'+'\n'.join(lines)+('\nMostrei os primeiros 8; abra o estoque para ver todos.' if len(stocks)>8 else ''),('Abrir estoque','/estoque'))
+            from inventory import stock_answer
+            return stock_answer(stocks,m)
         if any(p in m for p in ('quantos pacientes','listar pacientes','pacientes cadastrados','pacientes ativos','pacientes novos','novos pacientes','buscar paciente','localizar paciente')) or re.search(r'\b(mostre|liste|listar|ver|quais|meus) (os )?pacientes\b',m) or (context=='pacientes' and m.startswith('pacientes ')):
             if re.search(r'\b(dor|dores|diagnostico|doenca|sintoma|sintomas)\b',m):
                 return result('Não há um prontuário clínico estruturado para filtrar pacientes por sintomas ou diagnóstico. Posso consultar nomes e status cadastrais; confira as conversas individualmente com a equipe.',('Abrir pacientes','/pacientes'),('Ver atendimentos','/atendimentos'))

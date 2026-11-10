@@ -23,27 +23,29 @@ def enhance(repository,clinic,today=None):
         kb.save_article(Article(titulo=CATALOG_TITLE,categoria='Procedimentos',conteudo=CATALOG_TEXT))
         added_article=1
     patients={p.get('email'):p for p in admin.list('patients')}
-    examples=[('ana@example.test',1,'09:00',PROCEDURE_OPTIONS[0],'confirmado'),
-              ('bruno@example.test',1,'10:00',PROCEDURE_OPTIONS[1],'pendente'),
-              ('carla@example.test',2,'14:00',PROCEDURE_OPTIONS[7],'confirmado'),
-              ('ana@example.test',3,'09:30',PROCEDURE_OPTIONS[3],'pendente')]
+    examples=[('ana@example.test',1,'09:00',PROCEDURE_OPTIONS[0],'confirmado','Roberto'),
+              ('bruno@example.test',1,'10:00',PROCEDURE_OPTIONS[1],'pendente','Roberto'),
+              ('carla@example.test',2,'14:00',PROCEDURE_OPTIONS[0],'confirmado','Elias'),
+              ('ana@example.test',3,'09:30',PROCEDURE_OPTIONS[3],'pendente','Roberto')]
     existing=admin.list('appointments')
     created=0
-    for email,offset,hour,procedure,status in examples:
+    for email,offset,hour,procedure,status,doctor in examples:
         patient=patients.get(email)
         if not patient or patient['status']=='inativo':continue
         # Executar novamente não recria as consultas demonstrativas existentes.
-        if any(a['paciente_id']==patient['id'] and a['procedimento']==procedure and a['dentista']=='Dra. Marina (exemplo)' for a in existing):continue
+        legacy={'Dra. Marina (exemplo)','Dra. Marina',doctor}
+        matching_procedures={procedure,PROCEDURE_OPTIONS[7]} if email=='carla@example.test' else {procedure}
+        if any(a['paciente_id']==patient['id'] and a['procedimento'] in matching_procedures and a['dentista'] in legacy for a in existing):continue
         day=today+timedelta(days=offset)
         while day.weekday()>=5:day+=timedelta(days=1)
         for _ in range(14):
             start=int(hour[:2])*60+int(hour[3:])
-            overlap=any(a['data']==day.isoformat() and a['dentista']=='Dra. Marina (exemplo)' and a['status']!='cancelado' and int(a['horario'][:2])*60+int(a['horario'][3:5])<start+30 and int(a['horario'][:2])*60+int(a['horario'][3:5])+a['duracao']>start for a in existing)
+            overlap=any(a['data']==day.isoformat() and a['dentista']==doctor and a['status']!='cancelado' and int(a['horario'][:2])*60+int(a['horario'][3:5])<start+30 and int(a['horario'][:2])*60+int(a['horario'][3:5])+a['duracao']>start for a in existing)
             if not overlap:break
             day+=timedelta(days=1)
             while day.weekday()>=5:day+=timedelta(days=1)
         else:continue
-        result=admin.save('appointments',Appointment(paciente_id=patient['id'],data=day,horario=hour,duracao=30,procedimento=procedure,dentista='Dra. Marina (exemplo)',status=status))
+        result=admin.save('appointments',Appointment(paciente_id=patient['id'],data=day,horario=hour,duracao=30,procedimento=procedure,dentista=doctor,status=status))
         existing.append(result);created+=1
     return dict(agendamentos_criados=created,artigos_criados=added_article)
 

@@ -2443,3 +2443,4 @@ body {
 .dark .badge-appt-confirmado { background: #14532d; color: #86efac; }
 .dark .badge-appt-pendente   { background: #713f12; color: #fde047; }
 .dark .badge-appt-cancelado  { background: #7f1d1d; color: #fca5a5; }
+[hidden] { display: none !important; }

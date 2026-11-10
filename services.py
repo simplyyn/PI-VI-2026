@@ -114,12 +114,20 @@ class Patient(BaseModel):
 class Appointment(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     paciente_id: StrictInt = Field(gt=0)
+    profissional_id: StrictInt | None = Field(default=None,gt=0)
     data: date
     horario: time
     duracao: StrictInt = Field(ge=1,le=1440)
     procedimento: str = Field(min_length=1,max_length=200)
     dentista: str = Field(min_length=1,max_length=200)
     status: Literal['confirmado','pendente','cancelado'] = 'pendente'
+
+    @field_validator('horario')
+    @classmethod
+    def minute_precision(cls,value):
+        if value.second or value.microsecond or value.tzinfo:
+            raise ValueError('Informe um horário local com precisão de minutos')
+        return value
 
 class Attendance(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
@@ -131,6 +139,7 @@ class Attendance(BaseModel):
 class HumanMessage(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     texto: str = Field(min_length=1,max_length=4000)
+    request_id: str | None = Field(default=None,min_length=8,max_length=100)
 
 class ClinicRecords:
     """CRUD administrativo provisório sem SQL nas regras de negócio."""
@@ -158,20 +167,27 @@ class ClinicRecords:
                   iniciais=patient['iniciais'],cor='',hora=now.strftime('%H:%M'),criado_em=now.isoformat(),mensagens=[])
         return self.repository.ensure_patient_attendance(self.clinic,patient_id,data,existing_id)
 
-    def save(self,kind,model,identifier=None):
+    def save(self,kind,model,identifier=None,operation_key=None):
         existing = self.get(kind,identifier) if identifier is not None else {}
         data = model.model_dump(mode='json')
         if kind == 'patients':
             data.update(iniciais=''.join(p[0] for p in data['nome'].split())[:2].upper(),cor='#0284c7')
         elif kind == 'appointments':
             self.get('patients',data['paciente_id'])
+            if data.get('profissional_id') is None: data.pop('profissional_id',None)
+            if getattr(self.repository,'supports_workflows',False):
+                from professionals import validate_professional
+                data=validate_professional(self.repository.list('professionals',self.clinic),data)
             data['cor'] = '#0284c7'
         else:
             data.update(iniciais=''.join(p[0] for p in data['cliente'].split())[:2].upper(),cor='',
                         hora=existing.get('hora',datetime.now().strftime('%H:%M')),
                         mensagens=existing.get('mensagens',[]))
         data['criado_em'] = existing.get('criado_em',datetime.now(timezone.utc).isoformat())
-        result=self.repository.save(kind,self.clinic,data,identifier)
+        if kind == 'appointments':
+            result=self.repository.save_appointment(self.clinic,data,identifier,operation_key)
+        else:
+            result=self.repository.save(kind,self.clinic,data,identifier)
         if kind=='patients':
             self.patient_attendance(result['id'])
         return result

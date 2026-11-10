@@ -3,7 +3,21 @@
 {% block content %}
 <div class="page-container">
 <div class="page-header"><div><h1>Relatórios & IA</h1><p class="page-subtitle">{{ inicio }} a {{ fim }} · dados persistidos da sua clínica</p></div><div class="date-filter">{% for period in [7,30,90] %}<a class="date-btn {% if periodo_dias == period %}active{% endif %}" href="/relatorios?dias={{ period }}">{{ period }} dias</a>{% endfor %}</div></div>
-<div class="page-body">
+<div class="page-body"><section class="analysis-card" id="complaint-review-panel" aria-labelledby="complaint-heading">
+  <header class="analysis-card-header"><div><span class="analysis-eyebrow">Qualidade do atendimento</span><h3 id="complaint-heading">Reclamações e oportunidades de melhoria</h3></div><button type="button" class="btn-primary" data-action="classify">Analisar com IA</button></header>
+  <label class="analysis-field">Atendimento<select id="complaint-attendance"><option value="">Selecione uma conversa</option></select></label><p class="analysis-description">Identifica insatisfação com a clínica, como atraso, cobrança ou atendimento. Relatar dor, por si só, não significa uma reclamação.</p>
+  <p id="complaint-status" role="status" class="analysis-result"></p>
+  <details class="analysis-review"><summary>Revisar classificação manualmente</summary>
+    <form id="complaint-form" class="complaint-form">
+      <label class="complaint-toggle"><input type="checkbox" name="reclamacao"><span><strong>Há uma reclamação sobre a clínica</strong><small>Marque apenas quando houver insatisfação registrada.</small></span></label>
+      <label class="analysis-field">Categoria<select name="categoria" aria-label="Categoria de reclamação"></select></label>
+      <label class="analysis-field">Motivo<textarea name="motivo" maxlength="300" rows="3" aria-label="Motivo da reclamação" placeholder="Descreva brevemente a insatisfação registrada"></textarea></label>
+      <div class="analysis-form-actions"><span>A classificação alimenta os relatórios da clínica.</span><button class="btn-primary" type="submit">Salvar revisão</button></div>
+    </form>
+  </details>
+</section>
+
+<section class="chart-card" aria-labelledby="usage-title"><h3 id="usage-title">Uso da IA nesta aplicação</h3><p id="llm-usage" role="status">Consultando consumo registrado...</p><p>Não representa tokens restantes nem o custo da conta. Chamadas antigas, feitas por outros sistemas ou sem contagem do provedor podem não estar incluídas.</p><a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Consultar uso, limites e faturamento no Google AI Studio</a></section>
 <section class="metrics-grid" style="margin-bottom:24px">
 <div class="card metric"><div class="metric-info"><h3>{{ metricas.atendimentos_semana }}</h3><p>Atendimentos no período</p></div></div>
 <div class="card metric"><div class="metric-info"><h3>{{ metricas.resolvidos }}</h3><p>Resolvidos</p></div></div>
@@ -18,6 +32,8 @@
 </div></div>
 {% endblock %}
 {% block extra_scripts %}
+<link rel="stylesheet" href="/static/attendance-analysis.css">
+<script src="/static/complaint-review.js"></script>
 <script src="/static/management.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
