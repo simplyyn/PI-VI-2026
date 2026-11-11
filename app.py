@@ -7,7 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from auth import autenticar, usuario_logado, redirecionar_por_role
 
 from security import lifespan, session_secret, require_user, csrf_check
-from services import ClinicService, Article, Stock, Movement, ClinicRecords, Patient, Appointment, Attendance, HumanMessage
+from services import ClinicService, Article, Stock, Movement, ClinicRecords, Patient, Appointment, Attendance, HumanMessage, stock_alerts
 import os
 import secrets
 from datetime import datetime, timezone
@@ -208,6 +208,7 @@ async def pagina_estoque(request: Request):
         "total": total,
         "baixo": baixo,
         "esgotado": esgotado,
+        "alertas": stock_alerts(estoque),
     })
     if ctx is None:
         return RedirectResponse("/login", status_code=302)

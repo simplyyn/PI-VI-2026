@@ -24,7 +24,14 @@
       const detail = body.detail;
       throw Error(Array.isArray(detail) ? detail.map(e => `${e.loc.at(-1)}: ${e.msg}`).join('; ') : detail || 'Não foi possível salvar. Tente novamente.');
     }
+    return response.status === 204 ? null : response.json().catch(() => null);
   }
+
+  // Alerta de estoque devolvido por uma movimentação: guardado antes do reload e exibido depois.
+  try {
+    const alerta = sessionStorage.getItem('estoque-alerta');
+    if (alerta) { sessionStorage.removeItem('estoque-alerta'); document.getElementById('crud-feedback').textContent = alerta; }
+  } catch { /* sem armazenamento: o aviso da página continua listando o item */ }
 
   function addField(name, label, type, value, maximum) {
     const wrapper = document.createElement('label');
@@ -83,7 +90,8 @@
     busy = true; save.disabled = true; save.textContent = 'Salvando…'; error.textContent = '';
     try {
       const url = action === 'create' ? endpoint : endpoint + '/' + identifier + (action === 'move' ? '/movimentacoes' : '');
-      await request(url, action === 'edit' ? 'PUT' : 'POST', payload);
+      const result = await request(url, action === 'edit' ? 'PUT' : 'POST', payload);
+      if (result?.alerta) { try { sessionStorage.setItem('estoque-alerta', result.alerta); } catch { /* idem */ } }
       window.location.reload();
     } catch (exception) { error.textContent = exception.message; }
     finally { busy = false; save.disabled = false; save.textContent = 'Salvar'; }

@@ -44,7 +44,23 @@ class Movement(BaseModel):
         return value
 
 def stock_view(data):
-    return dict(data,status='esgotado' if data['quantidade']==0 else 'baixo' if data['quantidade']<data['minimo'] else 'ok')
+    """RF009: esgotado sem unidades; baixo ao atingir o mínimo (ponto de reposição); ok acima dele.
+    faltam = unidades que faltam para voltar ao mínimo (0 quando está no mínimo ou acima)."""
+    quantidade, minimo = data['quantidade'], data['minimo']
+    status = 'esgotado' if quantidade == 0 else 'baixo' if quantidade <= minimo else 'ok'
+    return dict(data,status=status,faltam=max(minimo-quantidade,0))
+
+def stock_alerts(stocks):
+    """Itens a repor: esgotados primeiro, depois os proporcionalmente mais abaixo do mínimo."""
+    return sorted((s for s in stocks if s['status'] != 'ok'),
+                  key=lambda s:(s['status'] != 'esgotado',s['quantidade']/s['minimo'] if s['minimo'] else 0,s['nome'].lower()))
+
+def stock_alert(item):
+    if item['status'] == 'esgotado':
+        return f"{item['nome']} esgotou. Solicite reposição ao fornecedor."
+    if item['status'] == 'baixo':
+        return f"{item['nome']} está com estoque baixo: {item['quantidade']} {item['unidade']} (mínimo {item['minimo']})."
+    return None
 
 class ClinicService:
     def __init__(self, repository, clinic):
@@ -70,7 +86,9 @@ class ClinicService:
         return stock_view(self.repository.save('stock',self.clinic,stock.model_dump(),identifier))
 
     def move(self, identifier, delta):
-        return stock_view(self.repository.move(self.clinic,identifier,delta))
+        item = stock_view(self.repository.move(self.clinic,identifier,delta))
+        # Alerta só em saídas: é a saída que deixa o item baixo ou esgotado.
+        return dict(item,alerta=stock_alert(item) if delta < 0 else None)
 
 from datetime import date, time
 from typing import Literal

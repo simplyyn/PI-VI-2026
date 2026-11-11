@@ -41,12 +41,19 @@
       </div>
     </section>
 
-    {% if (baixo + esgotado) > 0 %}
+    {% if alertas %}
     <div class="insight-item warning" style="margin-bottom: 20px; border-radius: 12px;">
       <i data-lucide="alert-triangle"></i>
       <div>
-        <h4>Atenção: {{ baixo + esgotado }} iten(s) precisam de reposição</h4>
-        <p>Verifique os itens marcados em laranja (baixo) e vermelho (esgotado) na tabela abaixo e solicite reposição com o fornecedor.</p>
+        <h4>Atenção: {{ alertas | length }} {{ 'item precisa' if alertas | length == 1 else 'itens precisam' }} de reposição</h4>
+        <ul class="stock-alerts">
+          {% for item in alertas[:5] %}
+          <li><strong>{{ item.nome }}</strong>:
+            {% if item.status == 'esgotado' %}esgotado{% else %}{{ item.quantidade }} em estoque, mínimo {{ item.minimo }}{% if item.faltam %} (faltam {{ item.faltam }}){% else %} (no limite){% endif %}{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% if alertas | length > 5 %}<p>E mais {{ alertas | length - 5 }} na tabela abaixo.</p>{% endif %}
       </div>
     </div>
     {% endif %}

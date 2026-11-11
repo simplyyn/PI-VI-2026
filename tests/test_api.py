@@ -94,6 +94,34 @@ class APITests(unittest.TestCase):
         self.assertEqual(response.status_code,200)
         self.assertFalse(response.json()['gerado_por_llm'])
 
+    def test_stock_alert_rules_on_page_and_movements(self):
+        headers = self.login()
+        def item(nome,quantidade,minimo):
+            return self.client.post('/api/estoque',json=dict(nome=nome,categoria='Teste',unidade='cx',quantidade=quantidade,minimo=minimo),headers=headers).json()
+        def move(record,delta):
+            return self.client.post(f"/api/estoque/{record['id']}/movimentacoes",json={'delta':delta},headers=headers).json()
+        luvas,resina,brocas,fio,mascaras = item('Luvas',6,5),item('Resina',1,4),item('<b>Brocas</b>',0,2),item('Fio',0,0),item('Máscaras',10,0)
+        self.assertEqual([r['status'] for r in (luvas,resina,brocas,fio,mascaras)],['ok','baixo','esgotado','esgotado','ok'])
+        moved = move(luvas,-1)
+        self.assertEqual((moved['status'],moved['faltam']),('baixo',0))
+        self.assertEqual(moved['alerta'],'Luvas está com estoque baixo: 5 cx (mínimo 5).')
+        moved = move(resina,1)
+        self.assertEqual((moved['status'],moved['faltam'],moved['alerta']),('baixo',2,None))
+        self.assertIsNone(move(mascaras,-1)['alerta'])
+        moved = move(luvas,-5)
+        self.assertEqual((moved['status'],moved['alerta']),('esgotado','Luvas esgotou. Solicite reposição ao fornecedor.'))
+        page = self.client.get('/estoque').text
+        self.assertIn('1 com estoque baixo · 3 esgotados',page)
+        self.assertIn('4 itens precisam de reposição',page)
+        start = page.index('class="stock-alerts"')
+        alerts = page[start:page.index('</ul>',start)]
+        self.assertTrue(alerts.index('Brocas') < alerts.index('Fio') < alerts.index('Luvas') < alerts.index('Resina'))
+        self.assertIn('2 em estoque, mínimo 4 (faltam 2)',alerts)
+        self.assertIn('&lt;b&gt;Brocas&lt;/b&gt;',alerts)
+        self.assertNotIn('<b>Brocas</b>',page)
+        self.login('b@example.test')
+        self.assertNotIn('stock-alerts',self.client.get('/estoque').text)
+
     def test_chat_context_disabled_and_simulated_model(self):
         headers = self.login()
         data = dict(titulo='Documento fictício',categoria='Teste',conteudo='Protocolo fictício alfa',status=True)

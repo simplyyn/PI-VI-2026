@@ -452,6 +452,8 @@ body {
 
 .insight-item h4 { font-size: 14px; margin-bottom: 4px; }
 .insight-item p { font-size: 12px; margin-bottom: 10px; }
+.stock-alerts { list-style: disc; padding-left: 18px; margin: 6px 0 8px; font-size: 13px; }
+.stock-alerts li { margin: 2px 0; }
 
 .btn-action {
   background-color: #ea580c;
