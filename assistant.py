@@ -73,12 +73,14 @@ class ClinicAssistant:
         if any(p in m for p in ('resumo da semana','relatorio','indicador','balanco da semana')):
             r=ManagementReport(self.repository,self.clinic).build(7)
             v=r['metricas']
-            return result(f"Aqui está o panorama dos últimos 7 dias:\n• {v['atendimentos_semana']} atendimentos cadastrados; {v['resolvidos']} marcados como resolvidos.\n• {v['resumos']} resumos atualizados.\n• {r['reclamacoes']['reclamacoes']} reclamações identificadas; {r['reclamacoes']['pendentes']} atendimentos ainda não analisados.\nOs números vêm dos registros da sua clínica. Não há medição de satisfação ou de tempo de resposta.",('Detalhar relatórios','/relatorios'))
+            average = v['tempo_resposta']
+            response_time = (f"{average} s em {v['amostras_tempo_resposta']} intervalos." if average is not None else 'sem intervalos medidos no período.')
+            return result(f"Aqui está o panorama dos últimos 7 dias:\n• {v['atendimentos_semana']} atendimentos cadastrados; {v['resolvidos']} marcados como resolvidos.\n• {v['resumos']} resumos atualizados.\n• {r['reclamacoes']['reclamacoes']} reclamações identificadas; {r['reclamacoes']['pendentes']} atendimentos ainda não analisados.\nTempo médio de resposta: {response_time}",('Detalhar relatórios','/relatorios'))
         return None
 
     def cleaning_count(self, question):
         if not hasattr(self.repository, 'set_appointment_completion'):
-            return result('O registro de limpezas realizadas está disponível no SQLite local.', ('Abrir agenda', '/agendamentos'))
+            return result('O repositório configurado não registra limpezas realizadas.', ('Abrir agenda', '/agendamentos'))
         today = datetime.now(LOCAL_ZONE).date()
         end = today
         start = today.replace(day=1)

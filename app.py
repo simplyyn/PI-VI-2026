@@ -256,7 +256,11 @@ async def api_atendimentos(request: Request):
     rows=records_service(request).list("attendance")
     if getattr(request.app.state.repository,'supports_workflows',False):
         metas={m['attendance_id']:m for m in request.app.state.repository.list('attendance_meta',user['empresa_id'])}
-        return [dict(r,prioridade=metas.get(r['id'],{}).get('prioridade','normal'),revisado_manualmente=metas.get(r['id'],{}).get('revisado',False)) for r in rows]
+        from workflows import evaluations_for
+        ratings = {}
+        for rating in evaluations_for(request.app.state.repository, user):
+            ratings.setdefault(rating['attendance_id'], {})[rating['message_id']] = rating['util']
+        return [dict(r,prioridade=metas.get(r['id'],{}).get('prioridade','normal'),revisado_manualmente=metas.get(r['id'],{}).get('revisado',False),avaliacoes=ratings.get(r['id'], {})) for r in rows]
     return rows
 
 @app.get("/api/metricas")
@@ -516,7 +520,7 @@ def set_appointment_completion(identifier: int, request: Request, data: Appointm
     repository = request.app.state.repository
     mark = getattr(repository, 'set_appointment_completion', None)
     if mark is None:
-        raise HTTPException(409, 'O registro de realização está disponível no SQLite local.')
+        raise HTTPException(409, 'O repositório configurado não aceita marcações de realização.')
     from management import LOCAL_ZONE
     return mark(user['empresa_id'], identifier, data.realizado, datetime.now(LOCAL_ZONE))
 

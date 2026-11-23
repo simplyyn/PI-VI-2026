@@ -69,6 +69,12 @@ class SQLiteRepository:
             row = db.execute('SELECT id,data FROM users WHERE id=?', (user_id,)).fetchone()
         return dict(json.loads(row[1]), id=row[0]) if row else None
 
+    def clinic_owner(self, clinic):
+        with self.connect() as db:
+            row = db.execute("SELECT id, data FROM users WHERE json_extract(data, '$.empresa_id')=? "
+                             "AND json_extract(data, '$.role')='owner' ORDER BY id LIMIT 1", (clinic,)).fetchone()
+        return dict(json.loads(row[1]), id=row[0]) if row else None
+
     def add_user(self, data):
         data = dict(data, email=data['email'].strip().lower())
         try:
@@ -203,9 +209,10 @@ class SQLiteRepository:
             if kind == 'attendance':
                 db.execute("DELETE FROM records WHERE kind='patient_links' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,identifier))
                 db.execute("DELETE FROM records WHERE kind='complaints' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,identifier))
-                db.execute("DELETE FROM records WHERE kind='summaries' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,identifier))
+                db.execute("DELETE FROM records WHERE kind IN ('summaries','answer_ratings','attendance_meta') AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,identifier))
             if kind == 'patients':
                 db.execute("DELETE FROM records WHERE kind='patient_links' AND clinic=? AND json_extract(data,'$.patient_id')=?",(clinic,identifier))
+                db.execute("DELETE FROM records WHERE kind='customer_links' AND clinic=? AND json_extract(data,'$.patient_id')=?",(clinic,identifier))
 
     def set_summary(self, clinic, attendance_id, data):
         data = dict(data,attendance_id=attendance_id)

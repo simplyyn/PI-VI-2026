@@ -1,0 +1,4 @@
+.answer-rating { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 7px; font-size: .8rem; }
+.answer-rating button { padding: 5px 8px; border: 1px solid var(--control-line); border-radius: 3px; background: var(--surface); color: var(--action); }
+.answer-rating button[aria-pressed="true"] { background: var(--message); border-color: var(--action); font-weight: 700; }
+.answer-rating span { color: var(--muted); }

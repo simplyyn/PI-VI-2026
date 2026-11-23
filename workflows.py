@@ -12,7 +12,7 @@ class WorkflowConflict(ValueError):
 
 def require_workflows(repo):
     if not getattr(repo,'supports_workflows',False):
-        raise WorkflowConflict('Este fluxo requer o contrato de operações persistentes do PostgreSQL. Use o SQLite local enquanto a integração é alinhada.')
+        raise WorkflowConflict('O repositório configurado não suporta operações integradas.')
 
 
 def now(): return datetime.now(timezone.utc).isoformat()
@@ -70,6 +70,30 @@ def customer_conversation(repo,user):
     return ClinicRecords(repo,user['empresa_id']).patient_attendance(patient['id'])
 
 
+def evaluations_for(repo, user):
+    return [rating for rating in repo.list('answer_ratings', user['empresa_id'])
+            if rating['user_id'] == user['id']]
+
+
+def rate_answer(repo, user, attendance_id, message_id, useful):
+    clinic = user['empresa_id']
+    with repo.transaction() as tx:
+        item = customer_conversation(tx, user) if user['role'] == 'customer' else record(tx, 'attendance', clinic, attendance_id)
+        if item['id'] != attendance_id or not any(
+            message.get('id') == message_id and message['autor'] == 'ai' and message.get('gerado_por_llm')
+            for message in item['mensagens']
+        ):
+            raise LookupError('Resposta não encontrada')
+        existing = next((rating for rating in evaluations_for(tx, user)
+                         if (rating['attendance_id'], rating['message_id']) == (attendance_id, message_id)), None)
+        if existing and existing['util'] == useful:
+            return {'message_id': message_id, 'util': useful}
+        rating = tx.save('answer_ratings', clinic, dict(attendance_id=attendance_id, message_id=message_id,
+                         user_id=user['id'], role=user['role'], util=useful, criado_em=now()),
+                         existing['id'] if existing else None)
+        return {'message_id': rating['message_id'], 'util': rating['util']}
+
+
 def deliver(repo,user,attendance_id,text,key,expected=None,autor='human',responde=True):
     """Compare-and-append with durable idempotency and audit in the same transaction."""
     require_workflows(repo)
@@ -100,7 +124,8 @@ class CustomerChat:
                       if a['paciente_id']==customer_patient(self.repo,self.user)['id']]
         messages=item.get('mensagens',[])
         action = next((message['acao'] for message in reversed(messages) if message.get('acao')), None)
-        return dict(atendimento_id=item['id'],mensagens=messages,status=item['status'],agendamentos=appointments,acao=action)
+        ratings = {r['message_id']: r['util'] for r in evaluations_for(self.repo, self.user) if r['attendance_id'] == item['id']}
+        return dict(atendimento_id=item['id'],mensagens=messages,status=item['status'],agendamentos=appointments,acao=action,avaliacoes=ratings)
 
     def send(self,text,key,agent,automatic=True):
         require_workflows(self.repo)

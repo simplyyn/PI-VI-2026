@@ -1,6 +1,5 @@
 """Provision local presentation professionals and a linked patient login after backup."""
 import argparse
-import json
 import os
 import secrets
 import sqlite3
@@ -16,16 +15,13 @@ from professionals import Professional,available
 
 def prepare(repo,clinic,patient_id,email):
     from workflows import audit,WorkflowConflict
-    if not getattr(repo,'supports_workflows',False):raise ValueError('Somente SQLite local nesta entrega.')
     weekdays={str(i):[['08:00','12:00'],['13:00','18:00']] for i in range(5)}
     weekdays['5']=[['08:00','12:00']]
     profiles=[Professional(nome='Elias',especialidades=['Avaliação cirúrgica','Cirurgia oral','Reabilitação'],procedimentos=['Avaliação cirúrgica','Consulta de avaliação','Extração dentária simples','Extração de siso','Implante dentário','Tratamento de canal','Coroa dentária'],expediente=weekdays,duracao_padrao=60),
               Professional(nome='Roberto',especialidades=['Prevenção','Clínica geral'],procedimentos=['Consulta de avaliação','Limpeza dental (profilaxia)','Restauração dentária','Clareamento dental','Aplicação tópica de flúor','Aplicação de selante'],expediente=weekdays,duracao_padrao=30)]
     password=None
     with repo.transaction() as tx:
-        with tx.connect() as db:
-            owners=[dict(json.loads(raw),id=i) for i,raw in db.execute('SELECT id,data FROM users')]
-        owner=next((u for u in owners if u.get('role')=='owner' and u.get('empresa_id')==clinic),None)
+        owner = tx.clinic_owner(clinic)
         if not owner:raise ValueError('Clínica sem owner cadastrado.')
         patient=ClinicRecords(tx,clinic).get('patients',patient_id)
         if patient['status']=='inativo':raise ValueError('Escolha um paciente ativo.')

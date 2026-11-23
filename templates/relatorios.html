@@ -36,7 +36,25 @@
     </dl>
   </section>
 </div>
-<p>O canal é o valor cadastrado no atendimento; não comprova uma resposta gerada automaticamente. Satisfação e tempo de resposta ainda não são medidos.</p>
+<div class="chart-grid">
+  <section class="chart-card">
+    <h3>Tempo médio de resposta</h3>
+    {% if metricas.tempo_resposta is not none %}
+    <p>{{ metricas.tempo_resposta }} s · {{ metricas.amostras_tempo_resposta }} intervalos medidos</p>
+    {% else %}<p>Nenhuma resposta com intervalo mensurável no período.</p>{% endif %}
+    <p>Da primeira mensagem do paciente até a próxima resposta válida.</p>
+    <h3>Avaliações das respostas da IA</h3>
+    {% if avaliacoes.total %}<p>{{ avaliacoes.uteis }} de {{ avaliacoes.total }} avaliações marcaram a resposta como útil ({{ metricas.satisfacao }}%).</p>
+    {% else %}<p>Nenhuma avaliação registrada no período.</p>{% endif %}
+  </section>
+  <section class="chart-card">
+    <h3>Principais dúvidas</h3>
+    {% if principais_duvidas %}<dl class="report-channels">{% for item in principais_duvidas %}<dt>{{ item.tema }}</dt><dd>{{ item.total }}</dd>{% endfor %}</dl>
+    {% else %}<p>Nenhuma pergunta reconhecida no período.</p>{% endif %}
+    <p>Contagem por assunto das perguntas reconhecidas no período.</p>
+  </section>
+</div>
+<p>O canal mostra o valor registrado no atendimento.</p>
 <div class="chart-card"><h3>Motivos de reclamação</h3><p>{{ reclamacoes.reclamacoes }} reclamações · {{ reclamacoes.analisados }} atendimentos analisados · {{ reclamacoes.pendentes }} pendentes de análise.</p>
 <button class="btn-primary" id="classify-pending">Analisar pendentes com IA (até 10)</button><p id="analysis-feedback" role="status"></p>
 {% if not reclamacoes.categorias %}<p>Nenhuma reclamação classificada neste período.</p>{% endif %}

@@ -3,6 +3,7 @@ import os
 import unittest
 from unittest.mock import patch
 import test_api
+import test_integrated_api
 from pg_support import URL, SKIP_REASON, FakeEmbedder, fresh_database
 
 @unittest.skipUnless(URL, SKIP_REASON)
@@ -27,7 +28,8 @@ class PostgresTests(unittest.TestCase):
         from postgres import migrate
         self.assertEqual(migrate(self.url),[])
         with self.repo._transaction() as conn:
-            self.assertEqual(sorted(r['versao'] for r in conn.execute('SELECT versao FROM schema_migrations')),['001_schema','002_attendance_summaries','003_patient_attendance_links'])
+            self.assertEqual(sorted(r['versao'] for r in conn.execute('SELECT versao FROM schema_migrations')),
+                             ['001_schema','002_attendance_summaries','003_patient_attendance_links','004_integrated_workflows'])
             tables = {r['table_name'] for r in conn.execute('SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema()')}
         self.assertLessEqual({'clinics','users','kb_articles','kb_chunks','stock_items','stock_movements','patients','appointments',
                               'attendances','attendance_messages','complaint_classifications'},tables)
@@ -129,3 +131,9 @@ class PostgresAPITests(test_api.APITests):
             self.assertEqual(self.client.get('/api/base-conhecimento/busca',params={'q':'clareamento'}).status_code,503)
 
 if __name__ == '__main__': unittest.main()
+
+
+@unittest.skipUnless(URL, SKIP_REASON)
+class PostgresIntegratedAPITests(test_integrated_api.IntegratedAPITests):
+    def database_url(self):
+        return fresh_database(self)

@@ -99,6 +99,8 @@ function renderCustomer(data) {
     author.textContent = Number.isNaN(date.getTime()) ? names[message.autor] || 'Sistema' :
       `${names[message.autor] || 'Sistema'} · ${messageTime.format(date)}`;
     row.append(content, author);
+    const rating = answerRating(message, data.atendimento_id, data.avaliacoes?.[message.id], customerApi);
+    if (rating) row.append(rating);
     log.append(row);
   }
   if (nearBottom || busy) log.scrollTop = log.scrollHeight;

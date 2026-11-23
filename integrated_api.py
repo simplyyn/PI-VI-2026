@@ -4,12 +4,24 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal
 from security import require_user, csrf_check
-from workflows import CustomerChat, BatchReplies, pending, record, deliver, require_workflows
+from workflows import CustomerChat, BatchReplies, pending, rate_answer, require_workflows
 from rag import AttendanceAgent,create_retriever
 from guidance import initial_guidance
 from patient_scope import booking_reply, patient_response
 
 router=APIRouter()
+
+
+class AnswerRating(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    util: bool
+
+
+@router.put('/api/atendimentos/{attendance_id}/mensagens/{message_id}/avaliacao')
+def evaluate_answer(request: Request, attendance_id: int, message_id: str, data: AnswerRating):
+    user = require_user(request, {'owner', 'customer'})
+    csrf_check(request)
+    return rate_answer(request.app.state.repository, user, attendance_id, message_id, data.util)
 
 
 def generation(request,user):

@@ -44,7 +44,7 @@ O rascunho fica na sessão assinada existente, limitado aos campos da operação
 
 SQLite verifica conflitos e grava consulta + recibo de confirmação na mesma transação BEGIN IMMEDIATE. O recibo usa o armazenamento genérico já existente; não foi criada tabela ou executada migração. A proteção funciona mesmo com pedidos simultâneos e repetição da sessão anterior após reiniciar o processo. Um recibo de consulta removida não recria silenciosamente o registro.
 
-As regras de conflito são compartilhadas. O adaptador PostgreSQL possui implementação com advisory lock para gravações manuais, mas **não foi validado contra um servidor PostgreSQL nesta entrega**. O agendamento conversacional nele permanece explicitamente indisponível até Guilherme alinhar o contrato para recibos persistentes. Não há migração nova nesta entrega. Clientes externos que escrevam diretamente no banco precisam respeitar as mesmas restrições.
+A migração 004 habilita o agendamento conversacional e os recibos persistentes também no PostgreSQL. A revalidação de horários e a criação do recibo ocorrem na mesma transação. Para a demonstração já preparada com os dados locais, continue usando o SQLite ou provisione uma base PostgreSQL com registros próprios.
 
 ## IA e consumo
 

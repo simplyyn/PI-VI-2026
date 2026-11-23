@@ -30,6 +30,8 @@
 {% block extra_scripts %}
 <script id="records-data" type="application/json">{{ atendimentos | tojson }}</script>
 <div id="records-root" data-resource="atendimentos"></div>
+<link rel="stylesheet" href="/static/answer-rating.css">
+<script src="/static/answer-rating.js"></script>
 {% include "records_scripts.html" %}
 <link rel="stylesheet" href="/static/attendance-analysis.css">
 <script src="/static/attendance-analysis.js"></script>

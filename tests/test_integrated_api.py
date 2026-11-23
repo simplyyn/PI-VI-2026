@@ -16,9 +16,12 @@ class IntegratedAPITests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):cls.password='api-isolated-password';cls.hashed=hash_password(cls.password)
 
+    def database_url(self):
+        return ''
+
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
-        env=patch.dict(os.environ,{'SMARTDENT_DATABASE_URL':'','SMARTDENT_DB_PATH':self.tmp.name+'/db.sqlite3','SMARTDENT_ENV':'development','SMARTDENT_LLM_ENABLED':'false','SMARTDENT_RETRIEVAL':'local_keyword','SMARTDENT_LLM_PROVIDER':'groq','SMARTDENT_USAGE_PATH':self.tmp.name+'/usage.jsonl'})
+        env=patch.dict(os.environ,{'SMARTDENT_DATABASE_URL':self.database_url(),'SMARTDENT_DB_PATH':self.tmp.name+'/db.sqlite3','SMARTDENT_ENV':'development','SMARTDENT_LLM_ENABLED':'false','SMARTDENT_RETRIEVAL':'local_keyword','SMARTDENT_LLM_PROVIDER':'groq','SMARTDENT_USAGE_PATH':self.tmp.name+'/usage.jsonl','SMARTDENT_EMBEDDINGS':'off'})
         env.start();self.addCleanup(env.stop)
         self.client=TestClient(app);self.client.__enter__();self.addCleanup(lambda:self.client.__exit__(None,None,None))
         self.repo=app.state.repository
@@ -50,6 +53,43 @@ class IntegratedAPITests(unittest.TestCase):
         self.login('other@a.test',self.other['password'])
         self.assertNotIn('Olá, Pedro',str(self.client.get('/api/cliente/conversa').json()))
         self.login('owner@b.test');self.assertEqual(self.client.get('/api/pendencias').json()['conversas'],0)
+
+    def test_answer_feedback_and_response_indicators_are_scoped(self):
+        from datetime import timedelta, timezone
+        from workflows import customer_conversation
+
+        user = self.repo.user('patient@a.test')
+        attendance = customer_conversation(self.repo, user)
+        aid = attendance['id']
+        start = datetime.now(timezone.utc) - timedelta(minutes=3)
+        messages = [
+            ('question', 'client', 'Qual o preço da limpeza?', 0, {}),
+            ('handoff', 'ai', 'Mensagem encaminhada.', 5, {'responde': False}),
+            ('answer', 'ai', 'O preço público é R$ 80.', 60, {'gerado_por_llm': True}),
+        ]
+        for mid, author, text, seconds, extra in messages:
+            self.repo.append_message('a', aid, dict(id=mid, autor=author, texto=text,
+                                     criado_em=(start + timedelta(seconds=seconds)).isoformat(), **extra))
+        route = f'/api/atendimentos/{aid}/mensagens/answer/avaliacao'
+        headers = self.login('patient@a.test', self.account['password'])
+        self.assertEqual(self.client.put(route, json={'util': True}).status_code, 403)
+        self.assertEqual(self.client.put(route.replace('/answer/', '/handoff/'), headers=headers, json={'util': True}).status_code, 404)
+        for useful in (False, True, True):
+            self.assertEqual(self.client.put(route, headers=headers, json={'util': useful}).json()['util'], useful)
+        self.assertEqual(self.client.get('/api/cliente/conversa').json()['avaliacoes'], {'answer': True})
+        headers = self.login('other@a.test', self.other['password'])
+        self.assertEqual(self.client.put(route, headers=headers, json={'util': True}).status_code, 404)
+        headers = self.login('owner@b.test')
+        self.assertEqual(self.client.put(route, headers=headers, json={'util': True}).status_code, 404)
+        self.assertEqual(self.client.get('/api/gestao').json()['avaliacoes']['total'], 0)
+        headers = self.login('owner@a.test')
+        self.assertEqual(self.client.put(route, headers=headers, json={'util': False}).status_code, 200)
+        report = self.client.get('/api/gestao').json()
+        self.assertEqual(report['avaliacoes'], {'total': 2, 'uteis': 1})
+        self.assertEqual(report['metricas']['satisfacao'], 50)
+        self.assertEqual(report['metricas']['tempo_resposta'], 60)
+        self.assertEqual(report['metricas']['amostras_tempo_resposta'], 1)
+        self.assertEqual(report['principais_duvidas'], [{'tema': 'Preços e pagamentos', 'total': 1}])
 
     def test_patient_scope_blocks_private_and_unrelated_questions_before_generation(self):
         headers = self.login('patient@a.test', self.account['password'])

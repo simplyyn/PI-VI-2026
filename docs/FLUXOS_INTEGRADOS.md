@@ -188,7 +188,7 @@ Resultado executado em 10/11/2026: 108 testes Python, sendo 79 aprovados e 29 ig
 
 Não foram feitas chamadas reais ao Gemini. A conferência visual via computer-use foi interrompida porque a ferramenta não conseguiu determinar a URL do navegador com confiança; nenhuma tela foi declarada visualmente aprovada. A prévia preparada para essa tentativa usava um banco de teste separado e servidor somente de leitura, encerrado após a interrupção. Confira o layout e o fluxo manualmente nos dois navegadores antes da apresentação.
 
-Os novos fluxos administrativos, vínculos, lotes e agendas estruturadas usam o armazenamento genérico **SQLite de desenvolvimento** já existente. Não foi criada tabela nem executada migração. O adaptador PostgreSQL ainda precisa receber contrato de unidade de trabalho e armazenamento para esses novos tipos, com alinhamento e testes junto de Guilherme. Não aponte a apresentação para PostgreSQL esperando que esses novos fluxos estejam adaptados: o backend os recusa explicitamente quando o contrato não está disponível.
+A migração 004 habilita fluxos administrativos, vínculos, lotes, avaliação de respostas e agenda estruturada no PostgreSQL. A base de demonstração existente continua em SQLite. Consulte no README os comandos de provisionamento de uma nova base e faça backup antes de migrar um banco em uso.
 
 Limites atuais: atualização por consulta periódica, não WebSocket; até cinco sugestões por lote; uma operação administrativa por confirmação; interpretação de linguagem sujeita ao modelo e aos comandos disponíveis; disponibilidade futura pode mudar entre a oferta e a confirmação. Gemini pode impor cotas e timeout. Não há integração WhatsApp/e-mail nem garantia de resposta automática se o provedor estiver indisponível.
 

@@ -139,7 +139,7 @@ Ao salvar um atendimento como resolvido (PUT), o backend tenta gerar o resumo au
 
 RF005: o classificador e os endpoints existentes foram preservados. Atendimentos agora apresenta classificação individual por IA e formulário de correção manual. Relatórios oferece classificação em lote de até 10 pendentes da clínica, de todos os períodos (operação indicada no texto do botão/retorno). Alterar uma classificação atualiza os relatórios na próxima consulta. A classificação de reclamações existente não é automaticamente refeita quando a conversa muda; solicite nova classificação se necessário.
 
-RF006: Dashboard e Relatórios usam `management.ManagementReport` e registros da clínica autenticada. `GET /api/gestao?dias=7` fornece indicadores, série por dia, reclamações por categoria e últimos atendimentos. Filtros aceitam 1 a 90 dias; a interface oferece 7, 30 e 90 dias civis, em America/Sao_Paulo. Reclamações são recortadas pela data de criação do atendimento, não pela data de classificação. Os endpoints antigos de métricas e gráficos também passaram a calcular valores reais de 7 dias. O widget flutuante consulta esses indicadores e o estoque real; suas respostas são consultas determinísticas, não geração por LLM. Satisfação/tempo de resposta aparecem como não medidos, e canal IA é descrito como valor cadastrado, não prova de automação. Atendimentos excluídos saem dos indicadores.
+RF006: Dashboard e Relatórios usam `management.ManagementReport` e registros da clínica autenticada. `GET /api/gestao?dias=7` fornece indicadores, série por dia, reclamações por categoria e últimos atendimentos. Filtros aceitam 1 a 90 dias; a interface oferece 7, 30 e 90 dias civis, em America/Sao_Paulo. Reclamações são recortadas pela data de criação do atendimento, não pela data de classificação. Os endpoints antigos de métricas e gráficos também passaram a calcular valores reais de 7 dias. O widget flutuante consulta esses indicadores e o estoque real; suas respostas são consultas determinísticas, não geração por LLM. Essa versão inicial ainda não media avaliações ou latência. Consulte os indicadores atuais no fim deste README. Atendimentos excluídos saem dos indicadores.
 
 Persistência: SQLite usa `records.kind=summaries`; PostgreSQL usa `attendance_summaries`, criada pela migração aditiva `migrations/002_attendance_summaries.sql`, com chave estrangeira composta para isolamento e exclusão em cascata. A migração foi criada, NÃO executada nesta entrega. Atenção: o adaptador PostgreSQL existente aplica automaticamente migrações pendentes na inicialização. Revise e autorize a 002 com Guilherme antes de iniciar esta versão contra um banco PostgreSQL existente. Os testes de migração foram atualizados, mas permanecem pendentes de PostgreSQL descartável configurado.
 
@@ -246,4 +246,35 @@ O [guia da base de conhecimento](docs/BASE_CONHECIMENTO.md) documenta os 21 proc
 
 ## Portal do paciente e operacoes do assistente
 
-O [roteiro dos fluxos integrados](docs/FLUXOS_INTEGRADOS.md) explica o acesso de Pedro, comunicacao com a recepcao, pendencias, respostas em lote, agendas de Elias/Roberto e ferramentas administrativas com confirmacao. Os novos fluxos usam o SQLite local; a adaptacao do contrato PostgreSQL continua pendente.
+O [roteiro dos fluxos integrados](docs/FLUXOS_INTEGRADOS.md) explica o acesso de Pedro, comunicacao com a recepcao, pendencias, respostas em lote, agendas de Elias/Roberto e ferramentas administrativas com confirmacao. Os fluxos integrados funcionam em SQLite e PostgreSQL após a migração 004.
+
+
+## Avaliações da IA, indicadores e PostgreSQL integrado
+
+A tela do paciente e a tela de Atendimentos exibem **Útil** e **Não foi útil** em respostas geradas pelo modelo. Cada pessoa pode registrar ou alterar uma avaliação por resposta. O paciente avalia somente respostas da sua conversa. A equipe, pelo perfil responsável, avalia respostas da própria clínica. Mensagens de encaminhamento, controles de agenda e respostas humanas ficam fora dessa avaliação.
+
+Em **Relatórios e IA**, o tempo médio usa a primeira mensagem de um bloco enviado pelo paciente até a próxima resposta válida, humana ou da IA. O período é definido pela data local da primeira mensagem e o painel informa o número de amostras. As principais dúvidas são agrupadas por regras de assunto, sem enviar mensagens ao modelo. O percentual de respostas úteis usa as avaliações registradas no período e vem acompanhado do total de avaliações. Esses números não medem acurácia e permanecem vazios quando não há amostra.
+
+A migração PostgreSQL `004_integrated_workflows.sql` acrescenta o armazenamento dos fluxos integrados, a marcação de consultas realizadas, os metadados das mensagens e os recibos de confirmação. O PostgreSQL usa pgvector em `SMARTDENT_RETRIEVAL=pgvector`. No SQLite, configure `SMARTDENT_RETRIEVAL=local_keyword`. Nenhuma carga do SQLite para PostgreSQL é feita automaticamente. Faça backup de qualquer banco existente antes de aplicar a migração.
+
+Para provisionar um portal vazio nos dois adaptadores, crie as contas `owner` e `customer` com `manage.py create-user`, na mesma clínica. Cadastre o paciente pelo painel e vincule a conta ao seu ID. Cadastre profissionais com o JSON validado pela classe `Professional` em `professionals.py`. O horário usa os dias de 0 (segunda-feira) a 6 (domingo), com pares no formato `HH:MM`.
+
+```bash
+.venv/bin/python manage.py link-customer --clinic clinica-teste --email paciente@example.test --patient-id 1
+.venv/bin/python manage.py add-professional --clinic clinica-teste --arquivo profissional.json
+```
+
+Exemplo de `profissional.json` para uma demonstração fictícia:
+
+```json
+{
+  "nome": "Profissional de teste",
+  "especialidades": ["Clínica geral"],
+  "procedimentos": ["Consulta de avaliação", "Limpeza dental (profilaxia)"],
+  "expediente": {"0": [["08:00", "12:00"]], "2": [["13:00", "17:00"]]},
+  "duracao_padrao": 30,
+  "ativo": true
+}
+```
+
+Use as variáveis do banco no processo antes de rodar `manage.py` diretamente, ou use o atalho `npm run manage --` para carregar o `.env`. Configure `SMARTDENT_TEST_DATABASE_URL` com uma base PostgreSQL descartável para executar a suíte também nesse adaptador.

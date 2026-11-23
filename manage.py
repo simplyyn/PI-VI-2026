@@ -1,6 +1,7 @@
 import argparse
 import getpass
 import os
+from pathlib import Path
 from auth import hash_password
 from persistence import create_repository
 
@@ -47,6 +48,52 @@ def reindex(parser, args):
     finally:
         repository.close()
 
+
+def link_customer(parser, args):
+    from services import ClinicRecords
+
+    repository = create_repository()
+    try:
+        with repository.transaction() as tx:
+            user = tx.user(args.email)
+            if not user or user['role'] != 'customer' or user['empresa_id'] != args.clinic:
+                parser.error('A conta deve ser um paciente da clínica informada.')
+            patient = ClinicRecords(tx, args.clinic).get('patients', args.patient_id)
+            if patient['status'] == 'inativo':
+                parser.error('O paciente está inativo.')
+            existing = next((link for link in tx.list('customer_links', args.clinic) if link['user_id'] == user['id']), None)
+            if existing and existing['patient_id'] != args.patient_id:
+                parser.error('A conta já está vinculada a outro paciente.')
+            if not existing:
+                tx.save('customer_links', args.clinic, dict(user_id=user['id'], patient_id=args.patient_id))
+    except LookupError as exc:
+        parser.error(str(exc))
+    finally:
+        if hasattr(repository, 'close'):
+            repository.close()
+    print('Acesso ao portal vinculado.')
+
+
+def add_professional(parser, args):
+    from professionals import Professional, normalized
+
+    try:
+        profile = Professional.model_validate_json(Path(args.arquivo).read_text(encoding='utf-8'))
+    except (OSError, ValueError) as exc:
+        parser.error(str(exc))
+    repository = create_repository()
+    try:
+        with repository.transaction() as tx:
+            if not tx.clinic_owner(args.clinic):
+                parser.error('Não há responsável cadastrado para a clínica informada.')
+            if any(normalized(item['nome']) == normalized(profile.nome) for item in tx.list('professionals', args.clinic)):
+                parser.error('Já existe um profissional com esse nome na clínica.')
+            record = tx.save('professionals', args.clinic, profile.model_dump())
+    finally:
+        if hasattr(repository, 'close'):
+            repository.close()
+    print(f"Profissional cadastrado com ID {record['id']}.")
+
 def main():
     parser = argparse.ArgumentParser(description='Provisionamento e manutenção local explícitos')
     commands = parser.add_subparsers(dest='command', required=True)
@@ -57,6 +104,15 @@ def main():
     user.add_argument('--clinic', default='', help='Identificador da clínica (ex.: clinica-teste)')
     user.add_argument('--clinic-nome', default='', help='Nome exibido da clínica, ao criá-la no PostgreSQL')
     user.set_defaults(handler=create_user)
+    customer = commands.add_parser('link-customer', help='Vincula uma conta existente ao paciente da mesma clínica')
+    customer.add_argument('--clinic', required=True)
+    customer.add_argument('--email', required=True)
+    customer.add_argument('--patient-id', required=True, type=int)
+    customer.set_defaults(handler=link_customer)
+    professional = commands.add_parser('add-professional', help='Cadastra um profissional por arquivo JSON')
+    professional.add_argument('--clinic', required=True)
+    professional.add_argument('--arquivo', required=True)
+    professional.set_defaults(handler=add_professional)
     commands.add_parser('migrate', help='Aplica migrações pendentes no PostgreSQL').set_defaults(handler=migrate)
     index = commands.add_parser('reindex', help='Gera embeddings dos artigos sem índice semântico')
     index.add_argument('--todos', action='store_true', help='Reindexa todos os artigos (ex.: após trocar o modelo)')

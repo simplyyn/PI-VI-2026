@@ -16,6 +16,7 @@ class ProfessionalPageTests(unittest.TestCase):
         cls.hashed=hash_password(cls.password)
     setUp=test_integrated_api.IntegratedAPITests.setUp
     login=test_integrated_api.IntegratedAPITests.login
+    database_url=test_integrated_api.IntegratedAPITests.database_url
 
     def test_page_two_professionals_and_agenda_links(self):
         h=self.login('owner@a.test')

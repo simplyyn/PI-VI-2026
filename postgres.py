@@ -6,12 +6,14 @@ movimentação atômica de estoque e busca híbrida (pgvector + texto completo) 
 import logging
 import re
 from contextlib import contextmanager
-from datetime import date, datetime, time, timezone
+from copy import copy
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
 import psycopg
 from psycopg import sql
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
 from embeddings import EmbeddingUnavailable, chunk_text
@@ -43,12 +45,16 @@ TABLES = {
     'patients': ('patients', dict(nome=PLAIN, telefone=PLAIN, email=PLAIN, status=PLAIN, plano=PLAIN, ultima_consulta=DATE,
                                   proxima_consulta=DATE, procedimentos=PLAIN, iniciais=PLAIN, cor=PLAIN, criado_em=STAMP)),
     'appointments': ('appointments', dict(paciente_id=PLAIN, data=DATE, horario=TIME, duracao=PLAIN, procedimento=PLAIN,
-                                          dentista=PLAIN, status=PLAIN, cor=PLAIN, criado_em=STAMP)),
+                                          dentista=PLAIN, status=PLAIN, cor=PLAIN, criado_em=STAMP,
+                                          profissional_id=PLAIN, realizado_em=DATE)),
     'attendance': ('attendances', dict(cliente=PLAIN, preview=PLAIN, status=PLAIN, canal=PLAIN, iniciais=PLAIN, cor=PLAIN,
                                        hora=PLAIN, criado_em=STAMP)),
     'complaints': ('complaint_classifications', dict(attendance_id=PLAIN, reclamacao=PLAIN, categoria=PLAIN, motivo=PLAIN,
                                                      origem=PLAIN, modelo=PLAIN, classificado_em=STAMP)),
 }
+WORKFLOW_KINDS = frozenset({'action_drafts', 'action_receipts', 'answer_ratings', 'attendance_meta',
+                            'audit', 'chat_requests', 'customer_links', 'delivery_receipts',
+                            'prices', 'professionals', 'reply_batches'})
 
 USER_SQL = '''SELECT u.id, u.email, u.nome, u.iniciais, u.role, u.password_hash,
                      coalesce(u.clinic_id, '') AS empresa_id, coalesce(c.nome, '') AS empresa,
@@ -85,6 +91,9 @@ def migrate(conninfo):
 
 class PostgresRepository:
     supports_semantic_search = True
+    supports_workflows = True
+    supports_booking_receipts = True
+    _connection = None
 
     def __init__(self, conninfo, embedder=None, max_distance=0.7, pool_size=10, migrate_schema=True):
         if migrate_schema:
@@ -108,11 +117,31 @@ class PostgresRepository:
 
     @contextmanager
     def _transaction(self):
+        if self._connection is not None:
+            try:
+                with self._connection.transaction():
+                    yield self._connection
+            except (psycopg.IntegrityError, psycopg.DataError) as exc:
+                raise ValueError('Dados rejeitados pelo banco') from exc
+            return
         with self.pool.connection() as conn:
             try:
                 yield conn
             except (psycopg.IntegrityError, psycopg.DataError) as exc:
                 raise ValueError('Dados rejeitados pelo banco') from exc
+
+    @contextmanager
+    def transaction(self):
+        with self._transaction() as conn:
+            self._lock_workflows(conn)
+            transaction = copy(self)
+            transaction._connection = conn
+            yield transaction
+
+    @staticmethod
+    def _lock_workflows(conn):
+        # Keep ordinary writes from interleaving with a reviewed operation or a conversation update.
+        conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(current_schema() || ':smartdent:workflow', 0))")
 
     # ─── Usuários ────────────────────────────────────────────────────────────
 
@@ -123,6 +152,10 @@ class PostgresRepository:
     def user_by_id(self, user_id):
         with self._transaction() as conn:
             return conn.execute(USER_SQL + 'u.id = %s', (user_id,)).fetchone()
+
+    def clinic_owner(self, clinic):
+        with self._transaction() as conn:
+            return conn.execute(USER_SQL + "u.clinic_id = %s AND u.role = 'owner' ORDER BY u.id LIMIT 1", (clinic,)).fetchone()
 
     def add_user(self, data):
         data = dict(data, email=data['email'].strip().lower())
@@ -153,19 +186,31 @@ class PostgresRepository:
         record['id'] = row['id']
         if kind == 'attendance':
             record['mensagens'] = messages or []
+        if kind == 'appointments':
+            for optional in ('profissional_id', 'realizado_em'):
+                if record[optional] is None:
+                    del record[optional]
         return record
 
     def _messages(self, conn, clinic, attendance_id=None):
-        query, params = 'SELECT attendance_id, texto, autor, criado_em FROM attendance_messages WHERE clinic_id = %s', [clinic]
+        query, params = 'SELECT attendance_id, texto, autor, criado_em, metadata FROM attendance_messages WHERE clinic_id = %s', [clinic]
         if attendance_id is not None:
             query, params = query + ' AND attendance_id = %s', params + [attendance_id]
         grouped = {}
         for row in conn.execute(query + ' ORDER BY id', params):
             grouped.setdefault(row['attendance_id'], []).append(
-                dict(texto=row['texto'], autor=row['autor'], criado_em=STAMP[1](row['criado_em'])))
+                dict(row['metadata'], texto=row['texto'], autor=row['autor'], criado_em=STAMP[1](row['criado_em'])))
         return grouped
 
     def list(self, kind, clinic):
+        if kind in WORKFLOW_KINDS:
+            with self._transaction() as conn:
+                return [dict(row['payload'], id=row['id']) for row in conn.execute(
+                    'SELECT id, payload FROM workflow_records WHERE clinic_id=%s AND kind=%s ORDER BY id', (clinic, kind))]
+        if kind == 'patient_links':
+            with self._transaction() as conn:
+                return conn.execute('SELECT patient_id AS id, patient_id, attendance_id FROM patient_attendance_links '
+                                    'WHERE clinic_id=%s ORDER BY patient_id', (clinic,)).fetchall()
         table, columns = self._spec(kind)
         query = sql.SQL('SELECT id, {} FROM {} WHERE clinic_id = %s ORDER BY id').format(_names(columns), sql.Identifier(table))
         with self._transaction() as conn:
@@ -174,6 +219,18 @@ class PostgresRepository:
         return [self._row(kind, row, messages.get(row['id'])) for row in rows]
 
     def save(self, kind, clinic, data, identifier=None):
+        if kind in WORKFLOW_KINDS:
+            with self._transaction() as conn:
+                self._lock_workflows(conn)
+                if identifier is None:
+                    row = conn.execute('INSERT INTO workflow_records (clinic_id, kind, payload) VALUES (%s, %s, %s) RETURNING id',
+                                       (clinic, kind, Jsonb(data))).fetchone()
+                else:
+                    row = conn.execute('UPDATE workflow_records SET payload=%s WHERE clinic_id=%s AND kind=%s AND id=%s RETURNING id',
+                                       (Jsonb(data), clinic, kind, identifier)).fetchone()
+                if row is None:
+                    raise LookupError('Registro não encontrado')
+            return dict(data, id=row['id'])
         if kind == 'appointments':
             return self.save_appointment(clinic,data,identifier)
         table, columns = self._spec(kind)
@@ -183,6 +240,7 @@ class PostgresRepository:
         values = {name: columns[name][0](data[name]) for name in columns if name in data}
         chunks = self._prepare_index(clinic, data, identifier) if kind == 'kb' else None
         with self._transaction() as conn:
+            self._lock_workflows(conn)
             if identifier is None:
                 query = sql.SQL('INSERT INTO {} ({}) VALUES ({}) RETURNING id, {}').format(
                     sql.Identifier(table), _names(['clinic_id', *values]),
@@ -206,17 +264,35 @@ class PostgresRepository:
 
     def save_appointment(self, clinic, data, identifier=None, operation_key=None):
         from scheduling import check_conflict
-        if operation_key:
-            raise ValueError('Confirmações persistentes do agente requerem alinhamento do esquema PostgreSQL.')
+        from professionals import validate_professional
         table, columns = self._spec('appointments')
-        values = {name: columns[name][0](data[name]) for name in columns if name in data}
         with self._transaction() as conn:
-            # All writes through this adapter serialize per clinic, including manual edits.
-            conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',('smartdent:appointments:'+clinic,))
-            if not conn.execute('SELECT id FROM patients WHERE clinic_id=%s AND id=%s',(clinic,data['paciente_id'])).fetchone():
+            self._lock_workflows(conn)
+            conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('smartdent:appointments:'+clinic,))
+            if operation_key:
+                receipt = conn.execute('SELECT appointment_id FROM booking_receipts WHERE clinic_id=%s AND operation_key=%s',
+                                       (clinic, operation_key)).fetchone()
+                if receipt:
+                    saved = conn.execute('SELECT * FROM appointments WHERE clinic_id=%s AND id=%s',
+                                         (clinic, receipt['appointment_id'])).fetchone()
+                    if saved is None:
+                        raise ValueError('Confirmação já processada; o agendamento foi removido. Inicie um novo pedido.')
+                    return self._row('appointments', saved)
+            patient = conn.execute('SELECT status FROM patients WHERE clinic_id=%s AND id=%s',
+                                   (clinic, data['paciente_id'])).fetchone()
+            if patient is None:
                 raise LookupError('Paciente não encontrado')
-            rows=conn.execute('SELECT id, {} FROM appointments WHERE clinic_id=%s'.format(','.join(columns)),(clinic,)).fetchall()
-            check_conflict([self._row('appointments',r) for r in rows],data,identifier)
+            if operation_key and patient['status'] == 'inativo':
+                raise ValueError('Paciente inativo')
+            rows = conn.execute('SELECT * FROM appointments WHERE clinic_id=%s', (clinic,)).fetchall()
+            current = next((row for row in rows if row['id'] == identifier), None)
+            if current and current['realizado_em']:
+                raise ValueError('Desfaça a marcação de realizado antes de editar a consulta.')
+            profiles = [dict(row['payload'], id=row['id']) for row in conn.execute(
+                "SELECT id, payload FROM workflow_records WHERE clinic_id=%s AND kind='professionals'", (clinic,))]
+            data = validate_professional(profiles, data)
+            values = {name: columns[name][0](data[name]) for name in columns if name in data and name != 'realizado_em'}
+            check_conflict([self._row('appointments',row) for row in rows], data, identifier)
             if identifier is None:
                 query=sql.SQL('INSERT INTO {} ({}) VALUES ({}) RETURNING id, {}').format(sql.Identifier(table),_names(['clinic_id',*values]),sql.SQL(',').join([sql.Placeholder()]*(len(values)+1)),_names(columns))
                 row=conn.execute(query,[clinic,*values.values()]).fetchone()
@@ -224,17 +300,67 @@ class PostgresRepository:
                 query=sql.SQL('UPDATE {} SET {} WHERE clinic_id=%s AND id=%s RETURNING id, {}').format(sql.Identifier(table),sql.SQL(',').join(sql.SQL('{}=%s').format(sql.Identifier(name)) for name in values),_names(columns))
                 row=conn.execute(query,[*values.values(),clinic,identifier]).fetchone()
                 if not row: raise LookupError('Registro não encontrado')
+            if operation_key:
+                conn.execute('INSERT INTO booking_receipts (clinic_id, operation_key, appointment_id) VALUES (%s, %s, %s)',
+                             (clinic, operation_key, row['id']))
         return self._row('appointments',row)
 
+    def set_appointment_completion(self, clinic, identifier, completed, now):
+        from scheduling import AppointmentConflict
+
+        with self._transaction() as conn:
+            self._lock_workflows(conn)
+            conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('smartdent:appointments:'+clinic,))
+            row = conn.execute('SELECT * FROM appointments WHERE clinic_id=%s AND id=%s FOR UPDATE',
+                               (clinic, identifier)).fetchone()
+            if row is None:
+                raise LookupError('Agendamento não encontrado')
+            if completed and row['realizado_em'] is None:
+                end = datetime.combine(row['data'], row['horario'], tzinfo=now.tzinfo) + timedelta(minutes=row['duracao'])
+                if row['status'] == 'cancelado' or end > now:
+                    raise AppointmentConflict('Só é possível marcar como realizada uma consulta não cancelada após seu horário.')
+            value = row['data'] if completed else None
+            row = conn.execute('UPDATE appointments SET realizado_em=%s WHERE clinic_id=%s AND id=%s RETURNING *',
+                               (value, clinic, identifier)).fetchone()
+        return self._row('appointments', row)
+
+    def sync_professional_name(self, clinic, professional_id):
+        with self._transaction() as conn:
+            self._lock_workflows(conn)
+            conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('smartdent:appointments:'+clinic,))
+            conn.execute("UPDATE appointments SET dentista=w.payload->>'nome' FROM workflow_records w "
+                         "WHERE w.clinic_id=%s AND w.kind='professionals' AND w.id=%s "
+                         "AND appointments.clinic_id=w.clinic_id AND appointments.profissional_id=w.id",
+                         (clinic, professional_id))
+
     def delete(self, kind, clinic, identifier):
+        if kind in WORKFLOW_KINDS:
+            with self._transaction() as conn:
+                self._lock_workflows(conn)
+                if not conn.execute('DELETE FROM workflow_records WHERE clinic_id=%s AND kind=%s AND id=%s',
+                                    (clinic, kind, identifier)).rowcount:
+                    raise LookupError('Registro não encontrado')
+            return
         table, _ = self._spec(kind)
         query = sql.SQL('DELETE FROM {} WHERE id = %s AND clinic_id = %s').format(sql.Identifier(table))
         with self._transaction() as conn:
+            self._lock_workflows(conn)
+            if kind == 'appointments':
+                conn.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))', ('smartdent:appointments:'+clinic,))
+                if conn.execute('SELECT 1 FROM appointments WHERE clinic_id=%s AND id=%s AND realizado_em IS NOT NULL',
+                                (clinic, identifier)).fetchone():
+                    raise ValueError('Desfaça a marcação de realizado antes de excluir a consulta.')
             if conn.execute(query, (identifier, clinic)).rowcount == 0:
                 raise LookupError('Registro não encontrado')
+            if kind in {'patients', 'attendance'}:
+                linked_kinds = ['customer_links'] if kind == 'patients' else ['attendance_meta', 'answer_ratings']
+                key = 'patient_id' if kind == 'patients' else 'attendance_id'
+                conn.execute('DELETE FROM workflow_records WHERE clinic_id=%s AND kind=ANY(%s) AND payload->>%s=%s',
+                             (clinic, linked_kinds, key, str(identifier)))
 
     def move(self, clinic, identifier, delta):
         with self._transaction() as conn:
+            self._lock_workflows(conn)
             row = conn.execute('SELECT quantidade FROM stock_items WHERE id = %s AND clinic_id = %s FOR UPDATE',
                                (identifier, clinic)).fetchone()
             if row is None:
@@ -250,14 +376,16 @@ class PostgresRepository:
         return self._row('stock', updated)
 
     def _insert_message(self, conn, clinic, attendance_id, message):
-        conn.execute('INSERT INTO attendance_messages (clinic_id, attendance_id, texto, autor, criado_em) '
-                     'VALUES (%s, %s, %s, %s, coalesce(%s::timestamptz, now()))',
-                     (clinic, attendance_id, message['texto'], message['autor'], STAMP[0](message.get('criado_em'))))
+        metadata = {key: value for key, value in message.items() if key not in {'texto', 'autor', 'criado_em'}}
+        conn.execute('INSERT INTO attendance_messages (clinic_id, attendance_id, texto, autor, criado_em, metadata) '
+                     'VALUES (%s, %s, %s, %s, coalesce(%s::timestamptz, now()), %s)',
+                     (clinic, attendance_id, message['texto'], message['autor'], STAMP[0](message.get('criado_em')), Jsonb(metadata)))
 
     def append_message(self, clinic, identifier, message):
-        query = sql.SQL('SELECT id, {} FROM attendances WHERE id = %s AND clinic_id = %s FOR SHARE').format(
+        query = sql.SQL('SELECT id, {} FROM attendances WHERE id = %s AND clinic_id = %s FOR UPDATE').format(
             _names(TABLES['attendance'][1]))
         with self._transaction() as conn:
+            self._lock_workflows(conn)
             row = conn.execute(query, (identifier, clinic)).fetchone()
             if row is None:
                 raise LookupError('Registro não encontrado')
@@ -285,6 +413,7 @@ class PostgresRepository:
 
     def ensure_patient_attendance(self, clinic, patient_id, data, existing_id=None):
         with self._transaction() as conn:
+            self._lock_workflows(conn)
             if not conn.execute('SELECT id FROM patients WHERE clinic_id=%s AND id=%s FOR UPDATE',(clinic,patient_id)).fetchone():
                 raise LookupError('Paciente não encontrado')
             link=conn.execute('SELECT attendance_id FROM patient_attendance_links WHERE clinic_id=%s AND patient_id=%s',(clinic,patient_id)).fetchone()
