@@ -1,3 +1,14 @@
 {% extends "base.html" %}
-{% block title %}SmartDent — acesso do paciente{% endblock %}
-{% block content %}<div class="page-container"><div class="page-header"><h1>Chat do paciente</h1></div><div class="page-body"><section class="chart-card"><h2>Teste com duas sessões</h2><p>Seu acesso atual é administrativo. Abra uma janela anônima e acesse <strong>/chat</strong>, entrando com a conta do paciente vinculada pela clínica.</p><p>As mensagens e respostas ficam no mesmo atendimento. A janela administrativa mantém suas permissões e não assume a identidade de um paciente.</p><p>Para preparar um acesso, use o comando de provisionamento documentado em <code>docs/FLUXOS_INTEGRADOS.md</code>.</p></section></div></div>{% endblock %}
+{% block title %}Portal do paciente · SmartDent{% endblock %}
+{% block content %}
+<main class="page-container">
+  <header class="page-header"><h1>Portal do paciente</h1></header>
+  <div class="page-body workspace-settings">
+    <section class="workspace-settings-section" aria-labelledby="portal-access-title">
+      <h2 id="portal-access-title">Acesso do paciente</h2>
+      <p>Em uma janela anônima, abra <a href="/chat">/chat</a> e entre com a conta vinculada ao paciente.</p>
+      <p class="page-subtitle">Consulte as conversas recebidas em <a href="/atendimentos">Atendimentos</a>.</p>
+    </section>
+  </div>
+</main>
+{% endblock %}

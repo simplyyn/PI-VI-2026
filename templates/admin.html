@@ -1,153 +1,53 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartDent AI — Painel Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clínicas · SmartDent</title>
   <link rel="stylesheet" href="/static/style.css">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    (function () {
-      document.documentElement.setAttribute('data-theme', 'hospital');
-      var d = localStorage.getItem('smartdent-dark');
-      if (d === '1') document.documentElement.classList.add('dark');
-    })();
-  </script>
+  <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/interface.css">
+  <script>document.documentElement.classList.toggle('dark', localStorage.getItem('smartdent-dark') === '1');</script>
 </head>
 <body>
-<div class="app-container">
-
-  <aside class="sidebar">
-    <div>
-      <div class="logo">
-        <div class="logo-brand">
-          <i data-lucide="tooth"></i>
-          <h2>Smart<span>Dent</span></h2>
-        </div>
-        <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
-          <i data-lucide="moon"></i>
-        </button>
-      </div>
-
-      <div class="admin-role-badge">
-        <i data-lucide="shield-check"></i> Painel Administrativo
-      </div>
-
-      <nav class="menu">
-        <a href="/admin" class="active">
-          <i data-lucide="building-2"></i> Clínicas
-        </a>
-        <a href="#">
-          <i data-lucide="users"></i> Usuários
-        </a>
-        <a href="#">
-          <i data-lucide="bar-chart-2"></i> Métricas Globais
-        </a>
-        <a href="#">
-          <i data-lucide="settings"></i> Configurações
-        </a>
-      </nav>
-    </div>
-
-    <div class="user-profile">
-      <div class="avatar">{{ usuario.iniciais }}</div>
-      <div class="user-info">
-        <h4>{{ usuario.nome }}</h4>
-        <span>Administrador</span>
-      </div>
-      <a href="/logout" class="btn-logout" title="Sair">
-        <i data-lucide="log-out"></i>
-      </a>
-    </div>
-  </aside>
-
-  <div class="page-container">
-
-    <div class="page-header">
+  <div class="app-container">
+    <aside class="sidebar">
       <div>
-        <h1>Clínicas Cadastradas</h1>
-        <p class="page-subtitle">{{ clinicas | length }} clínicas · {{ clinicas | selectattr('suporte') | list | length }} aguardando suporte</p>
-      </div>
-      <button class="btn-primary">
-        <i data-lucide="plus"></i> Nova Clínica
-      </button>
-    </div>
-
-    <div class="page-body">
-
-      {% for cl in clinicas %}
-      <div class="admin-empresa-card {% if cl.suporte %}suporte-ativo{% endif %}">
-
-        <div class="admin-empresa-info">
-          <div class="admin-empresa-avatar">
-            {{ cl.nome[:2].upper() }}
-          </div>
-          <div>
-            <div class="admin-empresa-nome">
-              {{ cl.nome }}
-              {% if cl.suporte %}
-              <span class="badge badge-escalated" style="margin-left:8px;">Suporte solicitado</span>
-              {% endif %}
-            </div>
-            <div class="admin-empresa-meta">
-              Plano {{ cl.plano }} · {{ cl.atendimentos_mes }} atendimentos este mês
-            </div>
-          </div>
+        <div class="logo">
+          <h2>SmartDent</h2>
+          <button type="button" class="btn-secondary" id="btn-dark-toggle" aria-label="Modo escuro" aria-pressed="false">Tema</button>
         </div>
-
-        <div class="admin-empresa-acoes">
-          <span class="badge {% if cl.status == 'ativo' %}badge-resolved{% else %}badge-pending{% endif %}">
-            {{ cl.status | capitalize }}
-          </span>
-          {% if cl.suporte %}
-          <button class="btn-primary" style="padding: 8px 14px; font-size: 12px;">
-            <i data-lucide="headphones"></i> Iniciar Suporte
-          </button>
-          {% else %}
-          <button class="btn-icon" title="Ver conta">
-            <i data-lucide="eye"></i>
-          </button>
-          {% endif %}
-        </div>
-
+        <button type="button" class="btn-secondary menu-toggle" aria-controls="workspace-menu" aria-expanded="false">Menu</button>
+        <nav class="menu" id="workspace-menu" aria-label="Administração">
+          <a href="/admin" class="active" aria-current="page">Clínicas</a>
+        </nav>
       </div>
-      {% endfor %}
-
-    </div>
+      <div class="user-profile">
+        <div class="user-info"><h4>{{ usuario.nome }}</h4><span>Administrador</span></div>
+        <a href="/logout" class="btn-logout">Sair</a>
+      </div>
+    </aside>
+    <main class="page-container">
+      <header class="page-header">
+        <div><h1>Clínicas</h1><p class="page-subtitle">Painel de demonstração</p></div>
+      </header>
+      <div class="page-body">
+        <div class="workspace-table">
+          <table class="kb-table">
+            <thead><tr><th scope="col">Clínica</th><th scope="col">Plano</th><th scope="col">Atendimentos no mês</th><th scope="col">Situação</th><th scope="col">Suporte</th></tr></thead>
+            <tbody>
+              {% for clinica in clinicas %}
+              <tr><th scope="row">{{ clinica.nome }}</th><td>{{ clinica.plano }}</td><td>{{ clinica.atendimentos_mes }}</td><td>{{ clinica.status | capitalize }}</td><td>{{ 'Solicitado' if clinica.suporte else 'Sem solicitação' }}</td></tr>
+              {% else %}
+              <tr><td colspan="5">Nenhuma clínica cadastrada.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
   </div>
-
-</div>
-
-<script>
-  lucide.createIcons();
-
-  function toggleDark() {
-    const isDark = document.documentElement.classList.toggle('dark');
-    document.getElementById('btn-dark-toggle').classList.toggle('active', isDark);
-    localStorage.setItem('smartdent-dark', isDark ? '1' : '');
-  }
-
-  if (localStorage.getItem('smartdent-dark') === '1') {
-    document.getElementById('btn-dark-toggle').classList.add('active');
-  }
-
-  document.querySelectorAll('a[href]').forEach(link => {
-    const href = link.getAttribute('href');
-    if (!href || href.startsWith('#') || href.startsWith('http')) return;
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      const c = document.querySelector('.app-container');
-      c.classList.add('page-exit');
-      setTimeout(() => { window.location.href = link.getAttribute('href'); }, 300);
-    });
-  });
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const c = document.querySelector('.app-container');
-    c.classList.add('page-enter');
-    c.addEventListener('animationend', () => c.classList.remove('page-enter'), { once: true });
-  });
-</script>
-<script src="/static/session.js"></script>
+  <script src="/static/workspace.js"></script>
+  <script src="/static/session.js"></script>
 </body>
 </html>

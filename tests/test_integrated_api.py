@@ -3,11 +3,12 @@ import os
 import re
 import tempfile
 import unittest
+from datetime import datetime
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from app import app
 from auth import hash_password
-from services import Patient,ClinicRecords
+from services import Appointment, Patient, ClinicRecords
 from prepare_integrated import prepare
 
 
@@ -49,6 +50,92 @@ class IntegratedAPITests(unittest.TestCase):
         self.login('other@a.test',self.other['password'])
         self.assertNotIn('Olá, Pedro',str(self.client.get('/api/cliente/conversa').json()))
         self.login('owner@b.test');self.assertEqual(self.client.get('/api/pendencias').json()['conversas'],0)
+
+    def test_patient_scope_blocks_private_and_unrelated_questions_before_generation(self):
+        headers = self.login('patient@a.test', self.account['password'])
+
+        def send(question, key):
+            response = self.client.post('/api/cliente/mensagens', headers=headers,
+                                        json={'texto': question, 'request_id': key})
+            self.assertEqual(response.status_code, 200)
+            return response.json()
+
+        with patch('app.create_llm') as model:
+            reply = send('Quanto é dois mais dois?', 'scope-unrelated')
+            self.assertIn('assuntos da clínica', reply['mensagens'][-1]['texto'])
+            reply = send('Quero marcar uma limpeza', 'scope-booking')
+            self.assertEqual(reply['acao']['estado'], 'escolher_horario')
+            self.assertTrue(reply['acao']['opcoes'][0]['horarios'])
+            for key, question in (
+                ('scope-revenue', 'Quanto vocês faturaram este mês?'),
+                ('scope-count', 'Quantas limpezas vocês fizeram esse mês?'),
+                ('scope-mixed', 'Quanto custa a limpeza e qual foi o faturamento?'),
+            ):
+                reply = send(question, key)
+                self.assertIn('restritos à equipe', reply['mensagens'][-1]['texto'])
+                self.assertFalse(reply['mensagens'][-1]['gerado_por_llm'])
+                self.assertEqual(reply['acao']['estado'], 'escolher_horario')
+            model.assert_not_called()
+
+        self.repo.save('kb', 'a', dict(titulo='Limpeza dental', categoria='Procedimentos',
+                                       conteudo='O preço público é R$ 80.', status=True))
+        self.repo.save('kb', 'a', dict(titulo='Limpeza: relatório interno', categoria='Interno',
+                                       conteudo='O faturamento confidencial é R$ 999.', status=True))
+        with patch('app.create_llm') as model:
+            model.return_value.generate.return_value = 'A limpeza custa R$ 80.'
+            reply = send('Quanto custa a limpeza?', 'scope-public')
+            self.assertTrue(reply['mensagens'][-1]['gerado_por_llm'])
+            prompt = repr(model.return_value.generate.call_args)
+            self.assertIn('R$ 80', prompt)
+            self.assertNotIn('R$ 999', prompt)
+            self.assertNotIn('dois mais dois', prompt)
+
+    def test_only_marked_cleanings_count_for_the_owner_and_period(self):
+        from management import LOCAL_ZONE
+
+        def create(day, status='confirmado'):
+            return ClinicRecords(self.repo, 'a').save('appointments', Appointment(
+                paciente_id=self.patient['id'], data=day, horario='17:00', duracao=30,
+                procedimento='Limpeza dental (profilaxia)', dentista='Roberto', status=status,
+            ))
+
+        current = create('2026-11-03')
+        create('2026-11-04')  # Confirmado, sem realização registrada.
+        cancelled = create('2026-11-05', 'cancelado')
+        future = create('2026-11-24')
+        previous = create('2026-10-27')
+        now = datetime(2026, 11, 20, 12, tzinfo=LOCAL_ZONE)
+
+        def complete(appointment, headers, value=True):
+            return self.client.put(f"/api/agendamentos/{appointment['id']}/realizacao", headers=headers,
+                                   json={'realizado': value})
+
+        patient_headers = self.login('patient@a.test', self.account['password'])
+        self.assertEqual(complete(current, patient_headers).status_code, 403)
+        self.assertEqual(self.client.post('/api/assistente', headers=patient_headers,
+                                         json={'pergunta': 'Quantas limpezas fizemos?'}).status_code, 403)
+        self.assertEqual(complete(current, self.login('owner@b.test')).status_code, 404)
+        headers = self.login('owner@a.test')
+        with patch('app.datetime') as calendar, patch('assistant.datetime') as reporting, patch('app.create_llm') as model:
+            calendar.now.return_value = reporting.now.return_value = now
+            self.assertEqual(complete(current, {}).status_code, 403)
+            self.assertEqual(complete(current, headers).json()['realizado_em'], '2026-11-03')
+            self.assertEqual(complete(current, headers).json()['realizado_em'], '2026-11-03')
+            self.assertEqual(complete(previous, headers).status_code, 200)
+            self.assertEqual(complete(cancelled, headers).status_code, 409)
+            self.assertEqual(complete(future, headers).status_code, 409)
+
+            def ask(question):
+                answer = self.client.post('/api/assistente', headers=headers, json={'pergunta': question})
+                self.assertEqual(answer.status_code, 200)
+                return answer.json()['resposta']
+
+            self.assertIn('1 limpeza(s)', ask('Quantas limpezas nós fizemos ao todo esse mês?'))
+            self.assertIn('1 limpeza(s)', ask('Quantas limpezas fizemos no mês passado?'))
+            self.assertIn('2 limpeza(s)', ask('Quantas limpezas fizemos ao todo?'))
+            self.assertEqual(complete(current, headers, False).status_code, 200)
+            self.assertIn('0 limpeza(s)', ask('Quantas limpezas fizemos este mês?'))
+            model.assert_not_called()
 
     def test_patient_area_is_authenticated_and_uses_integrated_script(self):
         self.assertEqual(self.client.get('/demo',follow_redirects=False).status_code,302)

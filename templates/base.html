@@ -5,14 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}SmartDent AI{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/interface.css">
   <script>
-    (function () {
-      var t = localStorage.getItem('smartdent-theme') || 'hospital';
-      var d = localStorage.getItem('smartdent-dark');
-      if (t === 'hospital') document.documentElement.setAttribute('data-theme', 'hospital');
-      if (d === '1') document.documentElement.classList.add('dark');
-    })();
+    document.documentElement.classList.toggle('dark', localStorage.getItem('smartdent-dark') === '1');
   </script>
 </head>
 <body>
@@ -23,61 +19,55 @@
       <div>
         <div class="logo">
           <div class="logo-brand">
-            <i data-lucide="tooth"></i>
             <h2>Smart<span>Dent</span></h2>
           </div>
-          <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
-            <i data-lucide="moon"></i>
+          <button type="button" class="dark-toggle" id="btn-dark-toggle" aria-label="Modo escuro" aria-pressed="false" title="Modo escuro">
+            Tema
           </button>
         </div>
 
-        <div class="theme-switcher" style="margin-top: 20px;">
-          <button class="theme-btn" id="btn-negocio" onclick="setTheme('business')">Padrão</button>
-          <button class="theme-btn active" id="btn-clinica" onclick="setTheme('hospital')">Clínica</button>
-        </div>
-
-        <nav class="menu">
-          <a href="/" class="{% if pagina == 'dashboard' %}active{% endif %}">
-            <i data-lucide="layout-dashboard"></i> Início
+        <button type="button" class="btn-secondary menu-toggle" aria-controls="workspace-menu" aria-expanded="false">Menu</button>
+        <nav class="menu" id="workspace-menu" aria-label="Área da clínica">
+          <a href="/" {% if pagina == 'dashboard' %}class="active" aria-current="page"{% endif %}>
+            Início
           </a>
-          <a href="/atendimentos" class="{% if pagina == 'atendimentos' %}active{% endif %}">
-            <i data-lucide="message-square"></i> Atendimentos
+          <a href="/atendimentos" {% if pagina == 'atendimentos' %}class="active" aria-current="page"{% endif %}>
+            Atendimentos
           </a>
-          <a href="/pacientes" class="{% if pagina == 'pacientes' %}active{% endif %}">
-            <i data-lucide="users"></i> Pacientes
+          <a href="/pacientes" {% if pagina == 'pacientes' %}class="active" aria-current="page"{% endif %}>
+            Pacientes
           </a>
-          <a href="/profissionais" class="{% if pagina == 'profissionais' %}active{% endif %}">
-            <i data-lucide="stethoscope"></i> Profissionais
+          <a href="/profissionais" {% if pagina == 'profissionais' %}class="active" aria-current="page"{% endif %}>
+            Profissionais
           </a>
-          <a href="/agendamentos" class="{% if pagina == 'agendamentos' %}active{% endif %}">
-            <i data-lucide="calendar"></i> Agendamentos
+          <a href="/agendamentos" {% if pagina == 'agendamentos' %}class="active" aria-current="page"{% endif %}>
+            Agendamentos
           </a>
-          <a href="/estoque" class="{% if pagina == 'estoque' %}active{% endif %}">
-            <i data-lucide="package"></i> Estoque
+          <a href="/estoque" {% if pagina == 'estoque' %}class="active" aria-current="page"{% endif %}>
+            Estoque
           </a>
-          <a href="/base-conhecimento" class="{% if pagina == 'conhecimento' %}active{% endif %}">
-            <i data-lucide="book-open"></i> Base de Conhecimento
+          <a href="/base-conhecimento" {% if pagina == 'conhecimento' %}class="active" aria-current="page"{% endif %}>
+            Base de conhecimento
           </a>
-          <a href="/relatorios" class="{% if pagina == 'relatorios' %}active{% endif %}">
-            <i data-lucide="bar-chart-2"></i> Relatórios & IA
+          <a href="/relatorios" {% if pagina == 'relatorios' %}class="active" aria-current="page"{% endif %}>
+            Relatórios e IA
           </a>
-          <a href="/configuracoes" class="{% if pagina == 'configuracoes' %}active{% endif %}">
-            <i data-lucide="settings"></i> Configurações
+          <a href="/configuracoes" {% if pagina == 'configuracoes' %}class="active" aria-current="page"{% endif %}>
+            Configurações
           </a>
-          <a href="/demo" class="menu-demo-link" onclick="window.open('/demo','_blank');return false;">
-            <i data-lucide="message-circle"></i> Chat do Cliente
+          <a href="/demo" class="menu-demo-link">
+            Portal do paciente
           </a>
         </nav>
       </div>
 
       <div class="user-profile">
-        <div class="avatar">{{ usuario.iniciais if usuario else 'US' }}</div>
         <div class="user-info">
-          <h4>{{ usuario.empresa if usuario else '' }}</h4>
-          <span>{{ usuario.plano if usuario and usuario.plano else usuario.role | capitalize if usuario else '' }}</span>
+          <h4>{{ usuario.empresa_nome or usuario.empresa or usuario.nome }}</h4>
+          <span>{{ usuario.plano if usuario and usuario.plano else 'Responsável' if usuario else '' }}</span>
         </div>
-        <a href="/logout" class="btn-logout" title="Sair">
-          <i data-lucide="log-out"></i>
+        <a href="/logout" class="btn-logout" title="Sair" aria-label="Sair">
+          <span>Sair</span>
         </a>
       </div>
     </aside>
@@ -87,127 +77,30 @@
 
   </div>
 
-  <script>
-    lucide.createIcons();
-
-    function setTheme(theme) {
-      document.getElementById('btn-negocio').classList.toggle('active', theme === 'business');
-      document.getElementById('btn-clinica').classList.toggle('active', theme === 'hospital');
-      const html = document.documentElement;
-      html.removeAttribute('data-theme');
-      if (theme === 'hospital') html.setAttribute('data-theme', 'hospital');
-      localStorage.setItem('smartdent-theme', theme);
-    }
-
-    function spawnParticles(btn, type) {
-      const r = btn.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
-      if (type === 'spark') {
-        const colors = ['#fbbf24','#f97316','#fef08a','#fb923c','#fde047','#ff6b35'];
-        for (let i = 0; i < 9; i++) {
-          const el = document.createElement('div');
-          el.className = 'particle particle-spark';
-          const angle = (i / 9) * 360 + (Math.random() * 20 - 10);
-          const dist = 20 + Math.random() * 30;
-          const rad = angle * Math.PI / 180;
-          const size = 3 + Math.random() * 4;
-          Object.assign(el.style, {
-            width: size + 'px', height: size + 'px',
-            background: colors[Math.floor(Math.random() * colors.length)],
-            left: (cx - size / 2) + 'px', top: (cy - size / 2) + 'px',
-            '--tx': (Math.cos(rad) * dist) + 'px',
-            '--ty': (Math.sin(rad) * dist) + 'px',
-            animationDelay: (Math.random() * 0.07) + 's'
-          });
-          document.body.appendChild(el);
-          el.addEventListener('animationend', () => el.remove());
-        }
-      } else {
-        const grays = ['rgba(148,163,184,0.75)','rgba(100,116,139,0.6)','rgba(203,213,225,0.55)'];
-        for (let i = 0; i < 5; i++) {
-          const el = document.createElement('div');
-          el.className = 'particle particle-smoke';
-          const drift = (Math.random() - 0.5) * 20;
-          const rise = -(26 + Math.random() * 34);
-          const size = 9 + Math.random() * 7;
-          Object.assign(el.style, {
-            width: size + 'px', height: size + 'px',
-            background: grays[Math.floor(Math.random() * grays.length)],
-            left: (cx + (Math.random() - 0.5) * 8 - size / 2) + 'px',
-            top: (cy - size / 2) + 'px',
-            '--tx': drift + 'px',
-            '--ty': rise + 'px',
-            animationDelay: (i * 0.09) + 's'
-          });
-          document.body.appendChild(el);
-          el.addEventListener('animationend', () => el.remove());
-        }
-      }
-    }
-
-    function toggleDark() {
-      const isDark = document.documentElement.classList.toggle('dark');
-      const btn = document.getElementById('btn-dark-toggle');
-      btn.classList.toggle('active', isDark);
-      localStorage.setItem('smartdent-dark', isDark ? '1' : '');
-      spawnParticles(btn, isDark ? 'smoke' : 'spark');
-    }
-
-    const savedTheme = localStorage.getItem('smartdent-theme') || 'hospital';
-    setTheme(savedTheme);
-
-    if (localStorage.getItem('smartdent-dark') === '1') {
-      document.getElementById('btn-dark-toggle').classList.add('active');
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const c = document.querySelector('.app-container');
-      c.classList.add('page-enter');
-      c.addEventListener('animationend', () => c.classList.remove('page-enter'), { once: true });
-    });
-
-    document.querySelectorAll('a[href]').forEach(link => {
-      const href = link.getAttribute('href');
-      if (!href || href.startsWith('#') || href.startsWith('http')) return;
-      link.addEventListener('click', e => {
-        e.preventDefault();
-        const target = link.getAttribute('href');
-        const c = document.querySelector('.app-container');
-        c.classList.add('page-exit');
-        setTimeout(() => { window.location.href = target; }, 300);
-      });
-    });
-  </script>
+  <script src="/static/workspace.js"></script>
 
   {% block extra_scripts %}{% endblock %}
 
-  <!-- ── CHAT WIDGET FLUTUANTE ── -->
-  <button class="chat-widget-btn" id="cwpBtn" onclick="toggleChatWidget()" style="position:fixed;">
-    <i data-lucide="sparkles"></i>
-    Assistente IA
-    <div class="chat-widget-badge" id="cwpBadge" hidden></div>
+  <button class="chat-widget-btn" id="cwpBtn" type="button" aria-controls="cwpPanel" aria-expanded="false" onclick="toggleChatWidget()">
+    Assistente
   </button>
 
-  <div class="chat-widget-panel" id="cwpPanel">
+  <div class="chat-widget-panel" id="cwpPanel" aria-labelledby="cwp-title" hidden>
     <div class="cwp-resize cwp-resize-top" data-dir="n" title="Arraste para redimensionar (duplo clique restaura)"></div>
     <div class="cwp-resize cwp-resize-left" data-dir="w" title="Arraste para redimensionar (duplo clique restaura)"></div>
     <div class="cwp-resize cwp-resize-corner" data-dir="nw" title="Arraste para redimensionar (duplo clique restaura)"></div>
     <div class="cwp-header">
       <div class="cwp-header-info">
-        <div class="cwp-avatar"><i data-lucide="sparkles"></i></div>
         <div>
-          <strong>Assistente SmartDent</strong>
-          <small>Dados reais e conhecimento da clínica</small>
+          <strong id="cwp-title">Assistente da clínica</strong>
         </div>
       </div>
-      <button class="cwp-close" onclick="toggleChatWidget()"><i data-lucide="x"></i></button>
+      <button class="cwp-close" type="button" aria-label="Fechar assistente" onclick="toggleChatWidget()">Fechar</button>
     </div>
 
     <div class="cwp-messages" id="cwpMessages" role="log" aria-live="polite" aria-label="Conversa com o assistente">
       <div class="cwp-msg cwp-msg-ai">
-        <p>Olá! Posso consultar pendências e agenda, preparar respostas em lote e alterações nos cadastros. Para gravar ou enviar, você revisa e confirma. Experimente: quantos clientes estão sem resposta?</p>
-        <span class="cwp-time">agora</span>
+        <p>Escolha um atalho ou escreva sua pergunta.</p>
       </div>
     </div>
 
@@ -225,6 +118,7 @@
       <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais itens do estoque precisam de reposição?')">Reposição</button>
       <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais atendimentos estão pendentes?')">Atendimentos pendentes</button>
       <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais reclamações foram identificadas?')">Reclamações</button>
+      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quantas limpezas fizemos este mês?')">Limpezas no mês</button>
       <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais resumos estão pendentes?')">Resumos pendentes</button>
       <button data-cwp-topic="gestao" hidden onclick="cwpSend('Resumo da semana')">Resumo da semana</button>
       <button data-cwp-topic="clinica" hidden onclick="cwpSend('Quais são os preços dos procedimentos?')">Preços</button>
@@ -234,7 +128,7 @@
     </div>
     <div class="cwp-input-bar">
       <input type="text" id="cwpInput" placeholder="Ex.: agenda de amanhã ou preço da limpeza" maxlength="2000" aria-label="Pergunta para o assistente" onkeydown="if(event.key==='Enter')cwpSend()">
-      <button id="cwpSendButton" aria-label="Enviar pergunta" onclick="cwpSend()"><i data-lucide="send"></i></button>
+      <button id="cwpSendButton" aria-label="Enviar pergunta" onclick="cwpSend()">Enviar</button>
     </div>
   </div>
 
@@ -256,7 +150,7 @@
       const div = document.createElement('div');
       div.className = 'cwp-msg cwp-msg-ai';
       div.id = 'cwpTyping';
-      div.innerHTML = '<p style="display:flex;gap:4px;align-items:center"><span style="width:6px;height:6px;background:var(--text-secondary);border-radius:50%;animation:typingDot 1.2s infinite ease-in-out;display:inline-block"></span><span style="width:6px;height:6px;background:var(--text-secondary);border-radius:50%;animation:typingDot 1.2s 0.2s infinite ease-in-out;display:inline-block"></span><span style="width:6px;height:6px;background:var(--text-secondary);border-radius:50%;animation:typingDot 1.2s 0.4s infinite ease-in-out;display:inline-block"></span></p>';
+      div.textContent = 'Consultando…';
       box.appendChild(div);
       box.scrollTop = box.scrollHeight;
     }
@@ -272,14 +166,15 @@
     }
     function toggleChatWidget() {
       const panel = document.getElementById('cwpPanel');
-      const badge = document.getElementById('cwpBadge');
-      panel.classList.toggle('open');
-      if (panel.classList.contains('open')) {
-        badge.style.display = 'none';
-        window.lucide?.createIcons({ nodes: [panel] });
-        document.getElementById('cwpInput').focus();
-      }
+      const trigger = document.getElementById('cwpBtn');
+      const open = panel.classList.toggle('open');
+      panel.hidden = !open;
+      trigger.setAttribute('aria-expanded', String(open));
+      (open ? document.getElementById('cwpInput') : trigger).focus();
     }
+    document.getElementById('cwpPanel').addEventListener('keydown', event => {
+      if (event.key === 'Escape') toggleChatWidget();
+    });
 
     // ── Redimensionamento do painel (tamanho salvo neste navegador) ──
     (function () {
@@ -287,8 +182,6 @@
       const KEY = 'smartdent.chatWidgetSize';
       const MIN_W = 300, MIN_H = 360, MARGIN = 16;
 
-      // O painel fica a 28px da direita e 100px de baixo; o resto da janela é o limite.
-      // (Calculado pela janela: o painel fechado tem transform: scale, que distorce o getBoundingClientRect.)
       function limits() {
         const cs = getComputedStyle(panel);
         return {
@@ -299,8 +192,8 @@
 
       function apply(w, h) {
         const { maxW, maxH } = limits();
-        w = Math.max(MIN_W, Math.min(w, maxW));
-        h = Math.max(MIN_H, Math.min(h, maxH));
+        w = Math.min(Math.max(MIN_W, w), maxW);
+        h = Math.min(Math.max(MIN_H, h), maxH);
         panel.style.width = w + 'px';
         panel.style.height = h + 'px';
         panel.style.maxHeight = 'none';
@@ -348,7 +241,7 @@
 
       // Se a janela diminuir, mantém o painel dentro da tela.
       window.addEventListener('resize', () => {
-        if (panel.style.width) apply(panel.offsetWidth, panel.offsetHeight);
+        if (panel.style.width) apply(parseFloat(panel.style.width), parseFloat(panel.style.height));
       });
     })();
   </script>

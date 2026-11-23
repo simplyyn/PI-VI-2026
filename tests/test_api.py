@@ -111,7 +111,8 @@ class APITests(unittest.TestCase):
         moved = move(luvas,-5)
         self.assertEqual((moved['status'],moved['alerta']),('esgotado','Luvas esgotou. Solicite reposição ao fornecedor.'))
         page = self.client.get('/estoque').text
-        self.assertIn('1 com estoque baixo · 3 esgotados',page)
+        self.assertRegex(page, r'<h3>1</h3>\s*<p>Itens com estoque baixo</p>')
+        self.assertRegex(page, r'<h3>3</h3>\s*<p>Itens esgotados</p>')
         self.assertIn('4 itens precisam de reposição',page)
         start = page.index('class="stock-alerts"')
         alerts = page[start:page.index('</ul>',start)]

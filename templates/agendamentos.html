@@ -1,8 +1,8 @@
-﻿{% extends "base.html" %}
-{% block title %}SmartDent AI — Agendamentos{% endblock %}
+{% extends "base.html" %}
+{% block title %}Agendamentos · SmartDent{% endblock %}
 {% block content %}
 <div class="page-container">
-  <div class="page-header"><div><h1>Agendamentos</h1><p class="page-subtitle">{{ total }} consultas cadastradas</p></div><div class="kb-actions"><button class="btn-secondary" data-action="filter" title="Ir para os filtros"><i data-lucide="sliders-horizontal"></i>Filtrar</button><button class="btn-primary" data-action="create"><i data-lucide="plus"></i>Novo Agendamento</button></div></div>
+  <div class="page-header"><div><h1>Agendamentos</h1><p class="page-subtitle">{{ total }} consultas cadastradas</p></div><div class="kb-actions"><button class="btn-secondary" data-action="filter" title="Ir para os filtros">Filtrar</button><button class="btn-primary" data-action="create">Novo agendamento</button></div></div>
   <div class="page-body"><details class="chart-card"><summary>Profissionais e expediente</summary><div id="professional-overview"></div></details>
     <section class="metrics-grid" style="margin-bottom:24px">
       <div class="card metric"><div class="metric-info"><h3>{{ agendamentos | selectattr('status','eq','confirmado') | list | length }}</h3><p>Confirmados</p></div></div>
@@ -11,14 +11,14 @@
     </section>
     <div class="agenda-toolbar">
       <label class="toolbar-field toolbar-select"><select id="agenda-professional" aria-label="Filtrar profissional"><option value="">Todos os profissionais</option>{% for p in profissionais %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}</select></label>
-      <label class="toolbar-field toolbar-search"><i data-lucide="search"></i><input id="records-search" type="search" placeholder="Buscar paciente, dentista ou procedimento" aria-label="Buscar"></label>
-      <label class="toolbar-field"><i data-lucide="calendar-days"></i><input type="date" id="agenda-date" aria-label="Filtrar por data"></label>
-      <label class="toolbar-field toolbar-select"><i data-lucide="list-filter"></i><select id="records-filter" aria-label="Filtrar status"><option value="todos">Todos os status</option><option value="pendente">Pendentes</option><option value="confirmado">Confirmados</option><option value="cancelado">Cancelados</option></select><i data-lucide="chevron-down" class="toolbar-chevron"></i></label>
-      <button class="btn-secondary" data-action="clear-filter"><i data-lucide="x"></i>Limpar</button>
+      <label class="toolbar-field toolbar-search"><input id="records-search" type="search" placeholder="Buscar paciente, dentista ou procedimento" aria-label="Buscar"></label>
+      <label class="toolbar-field"><input type="date" id="agenda-date" aria-label="Filtrar por data"></label>
+      <label class="toolbar-field toolbar-select"><select id="records-filter" aria-label="Filtrar status"><option value="todos">Todos os status</option><option value="pendente">Pendentes</option><option value="confirmado">Confirmados</option><option value="cancelado">Cancelados</option>{% if permite_realizacao %}<option value="realizado">Realizados</option>{% endif %}</select></label>
+      <button class="btn-secondary" data-action="clear-filter">Limpar</button>
     </div>
     <div class="agenda-layout">
       <div class="agenda-calendar-panel">
-        <div class="cal-header"><button class="cal-nav-btn" data-action="previous-month" aria-label="Mês anterior"><i data-lucide="chevron-left"></i></button><h4 id="calendar-title"></h4><button class="cal-nav-btn" data-action="next-month" aria-label="Próximo mês"><i data-lucide="chevron-right"></i></button></div>
+        <div class="cal-header"><button class="cal-nav-btn" data-action="previous-month" aria-label="Mês anterior">‹</button><h4 id="calendar-title"></h4><button class="cal-nav-btn" data-action="next-month" aria-label="Próximo mês">›</button></div>
         <div class="cal-weekdays"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
         <div class="cal-days" id="calDays"></div>
         <div class="cal-legend"><span><i class="cal-legend-dot"></i>Com consultas</span><span><i class="cal-legend-today"></i>Hoje</span></div>
@@ -28,11 +28,19 @@
         <div class="appt-card" data-id="{{ appt.id }}" style="border-left:3px solid {{ appt.cor }}">
           <div class="appt-time">{{ appt.horario[:5] }}<small>{{ appt.data.split('-') | reverse | join('/') }} · {{ appt.duracao }}min</small></div><div class="appt-divider"></div>
           <div class="appt-info"><div class="appt-patient">{{ appt.paciente }} <small>#{{ appt.id }}</small></div><div class="appt-proc">{{ appt.procedimento }}</div></div>
-          <div class="appt-meta"><span class="badge-appt-{{ appt.status }}">{{ appt.status | capitalize }}</span><span class="appt-dentista">{{ appt.dentista }}</span></div>
-          <div class="kb-actions"><button class="btn-icon" data-action="confirm" title="Confirmar" aria-label="Confirmar"><i data-lucide="check"></i></button><button class="btn-icon" data-action="edit" title="Editar" aria-label="Editar"><i data-lucide="pencil"></i></button><button class="btn-icon" data-action="cancel" title="Cancelar consulta" aria-label="Cancelar consulta"><i data-lucide="ban"></i></button><button class="btn-icon danger" data-action="delete" title="Excluir" aria-label="Excluir"><i data-lucide="trash-2"></i></button></div>
+          {% set situacao = 'realizado' if appt.realizado_em else appt.status %}
+          <div class="appt-meta"><span class="badge-appt-{{ situacao }}">{{ situacao | capitalize }}</span><span class="appt-dentista">{{ appt.dentista }}</span></div>
+          <div class="kb-actions">
+            {% if appt.realizado_em %}
+            <button class="btn-secondary" data-action="undo-completion">Desfazer realizado</button>
+            {% else %}
+            {% if permite_realizacao and appt.status != 'cancelado' %}<button class="btn-secondary" data-action="mark-completed">Marcar realizado</button>{% endif %}
+            <button class="btn-icon workspace-action" data-action="confirm" title="Confirmar" aria-label="Confirmar">Confirmar</button><button class="btn-icon workspace-action" data-action="edit" title="Editar" aria-label="Editar">Editar</button><button class="btn-icon workspace-action" data-action="cancel" title="Cancelar consulta" aria-label="Cancelar consulta">Cancelar</button><button class="btn-icon workspace-action danger" data-action="delete" title="Excluir" aria-label="Excluir">Excluir</button>
+            {% endif %}
+          </div>
         </div>
-        {% else %}<div class="agenda-empty"><i data-lucide="calendar-plus"></i><p>Nenhum agendamento cadastrado.</p><small>Cadastre um paciente antes de agendar.</small></div>{% endfor %}
-        {% if agendamentos %}<div class="agenda-empty" id="records-empty" hidden><i data-lucide="search-x"></i><p>Nenhum agendamento para este filtro.</p><small>Ajuste a busca ou clique em Limpar.</small></div>{% endif %}
+        {% else %}<div class="agenda-empty"><p>Nenhum agendamento cadastrado.</p><small>Cadastre um paciente antes de agendar.</small></div>{% endfor %}
+        {% if agendamentos %}<div class="agenda-empty" id="records-empty" hidden><p>Nenhum agendamento para este filtro.</p><small>Ajuste a busca ou clique em Limpar.</small></div>{% endif %}
       </div>
     </div>
   </div>

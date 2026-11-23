@@ -100,11 +100,12 @@ class PatientBooking:
         from workflows import customer_patient,record
         from scheduling import SchedulingAgent
         m=normalized(text);state=self.session.get('patient_booking')
-        intent=bool(re.search(r'\b(agend|marc|horarios|disponive)',m)) and any(w in m for w in ('consulta','limpeza','cirurg','avaliacao','horario','agend','marc'))
+        intent = re.search(r'\b(?:agendar|agende|marcar|marque|reservar|reserve|horarios? (?:livres?|disponiveis?)|'
+                           r'(?:quero|preciso de|gostaria de) (?:um |novo )?agendamento)\b', m)
         if not state and not intent: return None
         if m in ('cancelar','desistir'):
             self.session.pop('patient_booking',None);self.session.pop('booking',None)
-            return self.result('Pedido descartado. Nenhuma consulta existente foi cancelada.')
+            return dict(self.result('Pedido descartado. Nenhuma consulta existente foi cancelada.'), estado='cancelado')
         patient=customer_patient(self.repo,self.user)
         professionals=[p for p in self.repo.list('professionals',self.user['empresa_id']) if p['ativo']]
         if not professionals: return self.result('A equipe precisa cadastrar a disponibilidade dos profissionais antes de reservar. Sua mensagem está registrada.')
@@ -125,13 +126,16 @@ class PatientBooking:
             dates=[]
             for offset in range(1,8):
                 day=(today+timedelta(days=offset)).isoformat();slots=available(self.repo,self.user['empresa_id'],p['id'],day,p['duracao_padrao'],patient['id'])
-                if slots: dates.append(datetime.strptime(day,'%Y-%m-%d').strftime('%d/%m/%Y')+' — '+', '.join(slots[:5]))
+                if slots: dates.append(dict(data=day, horarios=slots[:5]))
             prefix='Para avaliar a necessidade de cirurgia, ' if surgical else ''
             intro=prefix+f"posso preparar {procedure.lower()} com {p['nome']}. Não confirmo indicação de cirurgia pelo chat. " if surgical else f"Posso preparar {procedure.lower()} com {p['nome']}. "
-            if not dates:return self.result('Não encontrei horários livres nos próximos sete dias. A equipe verificará outras datas.')
-            prompt=intro+'Horários livres cadastrados (confirmação sujeita a nova verificação):\n'+'\n'.join(dates)+'\nEscolha uma data e um único horário. Depois da prévia, confirme para salvar na agenda.'
+            if not dates:
+                self.session.pop('patient_booking', None)
+                return self.result('Não encontrei horários livres nos próximos sete dias. Você pode consultar outras datas com a recepção.')
+            prompt=intro+'Escolha um horário nas opções de agendamento ou escreva a data e o horário desejados.'
             # Accept a full initial request too, but never skip its confirmation.
-            if not re.search(r'\d{1,2}(?:h|:)',m):return self.result(prompt)
+            if not re.search(r'\d{1,2}(?:h|:)',m):
+                return dict(self.result(prompt), estado='escolher_horario', opcoes=dates)
         p=record(self.repo,'professionals',self.user['empresa_id'],state['professional_id'])
         booking=SchedulingAgent(self.repo,self.user,self.session)
         if m not in ('confirmar','confirmo','sim','pode agendar'):
@@ -143,15 +147,19 @@ class PatientBooking:
             try: choice=patient_datetime(m)
             except ValueError as error:
                 current=self.session.get('booking',{});current.pop('ready',None);self.session['booking']=current
-                return self.result(str(error))
-            if not choice:return self.result('Informe somente a data e o horário desejados, ou diga cancelar. Exemplo: amanhã às 10h.')
+                return dict(self.result(str(error)), estado='coletando')
+            if not choice:
+                return dict(self.result('Informe uma data e um horário. Por exemplo, amanhã às 10h.'), estado='coletando')
             result=booking.respond(choice)
         else: result=booking.respond(m)
-        if result is None:return self.result('O pedido expirou. Peça novamente para agendar.')
+        if result is None:
+            self.session.pop('patient_booking', None)
+            return dict(self.result('O pedido expirou. Use Agendar consulta para começar novamente.'), estado='cancelado')
         if result.get('estado')=='erro':
             current=self.session.get('booking',{}).get('data',{});day=current.get('data')
             slots=available(self.repo,self.user['empresa_id'],p['id'],day,p['duracao_padrao'],patient['id']) if day else []
-            if slots: result['resposta']+=' Horários livres nessa data: '+', '.join(slots[:8])+'.'
+            if slots:
+                result['opcoes'] = [dict(data=day, horarios=slots[:8])]
         if result.get('estado')=='concluido':self.session.pop('patient_booking',None)
         return result
 

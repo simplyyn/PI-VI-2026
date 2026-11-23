@@ -99,7 +99,7 @@ class CustomerChat:
         appointments=[a for a in ClinicRecords(self.repo,self.user['empresa_id']).list('appointments')
                       if a['paciente_id']==customer_patient(self.repo,self.user)['id']]
         messages=item.get('mensagens',[])
-        action=messages[-1].get('acao') if messages and messages[-1]['autor']=='ai' else None
+        action = next((message['acao'] for message in reversed(messages) if message.get('acao')), None)
         return dict(atendimento_id=item['id'],mensagens=messages,status=item['status'],agendamentos=appointments,acao=action)
 
     def send(self,text,key,agent,automatic=True):
@@ -136,7 +136,7 @@ class CustomerChat:
             elif answer:
                 escalated=human or answer.get('tipo')=='orientacao_urgente'
                 substantive=not escalated and answer.get('tipo')!='sem_contexto'
-                action={k:answer[k] for k in ('estado','agendamento_id') if k in answer} or None
+                action={k:answer[k] for k in ('estado','agendamento_id','opcoes') if k in answer} or None
                 tx.append_message(self.user['empresa_id'],item['id'],dict(id=uuid4().hex,autor='ai',texto=answer['resposta'],
                     criado_em=now(),responde=substantive,gerado_por_llm=answer.get('gerado_por_llm',False),acao=action))
                 if escalated:

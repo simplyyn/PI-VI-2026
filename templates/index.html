@@ -1,49 +1,59 @@
-﻿{% extends "base.html" %}
-{% block title %}SmartDent AI — Início{% endblock %}
+{% extends "base.html" %}
+{% block title %}Início · SmartDent{% endblock %}
 {% block content %}
-<main class="main-content">
-<header class="top-header"><div class="welcome-text"><h1>Olá, {{ usuario.nome }}!</h1><p>{{ metricas.total_hoje }} atendimentos cadastrados hoje · últimos {{ periodo_dias }} dias no painel.</p></div><span class="status-badge">Dados da sua clínica</span></header>
-<section class="ai-assistant-card"><h3>Análise e Gestão</h3><p>Consulte os atendimentos, gere resumos e acompanhe as reclamações classificadas.</p><a href="/atendimentos" class="link-more">Analisar atendimentos</a> · <a href="/relatorios" class="link-more">Abrir relatórios</a></section>
-<section class="cliente-chat-section">
-  <div class="card cliente-chat-card">
-    <div class="cliente-chat-header">
-      <div class="cliente-chat-title">
-        <i data-lucide="smartphone"></i>
-        <div>
-          <h3>Chat do Paciente</h3>
-          <span>Visualize como o paciente vê o assistente</span>
-        </div>
-      </div>
-      <a href="/demo" target="_blank" class="btn-abrir-chat">
-        <i data-lucide="external-link"></i>
-        Abrir chat
-      </a>
+<main class="page-container workspace-home">
+  <header class="page-header">
+    <div>
+      <h1>Painel da clínica</h1>
+      <p class="page-subtitle">{{ usuario.empresa_nome or usuario.empresa or usuario.nome }}</p>
     </div>
-    <div class="cliente-chat-preview" onclick="window.open('/demo','_blank')">
-      <div class="preview-msg preview-ai">
-        <div class="preview-bubble">Olá! Sou o assistente da SmartDent. Como posso te ajudar? 👋</div>
+    <a href="/agendamentos" class="btn-primary">Abrir agenda</a>
+  </header>
+
+  <div class="page-body">
+    <section aria-labelledby="overview-title">
+      <header class="workspace-section-heading">
+        <div><h2 id="overview-title">Últimos {{ periodo_dias }} dias</h2><p>{{ metricas.total_hoje }} {{ 'atendimento cadastrado' if metricas.total_hoje == 1 else 'atendimentos cadastrados' }} hoje</p></div>
+        <a href="/relatorios">Ver relatórios</a>
+      </header>
+      <div class="metrics-grid">
+        <div class="card metric"><div class="metric-info"><strong>{{ metricas.atendimentos_semana }}</strong><p>Atendimentos</p></div></div>
+        <div class="card metric"><div class="metric-info"><strong>{{ metricas.resumos }}</strong><p>Resumos atualizados</p></div></div>
+        <div class="card metric"><div class="metric-info"><strong>{{ reclamacoes.reclamacoes }}</strong><p>Reclamações identificadas</p></div></div>
       </div>
-      <div class="preview-msg preview-user">
-        <div class="preview-bubble">Quero agendar uma consulta</div>
-      </div>
-      <div class="preview-msg preview-ai">
-        <div class="preview-bubble">Claro! Temos horários de segunda a sexta das 08h às 18h...</div>
-      </div>
-      <div class="preview-overlay">
-        <i data-lucide="mouse-pointer-click"></i>
-        Clique para abrir o chat completo
-      </div>
+    </section>
+
+    <section class="workspace-shortcuts" aria-label="Acessos">
+      <div><h2>Portal do paciente</h2><p>Acesso ao chat e aos agendamentos com a conta do paciente.</p></div>
+      <a href="/demo" class="btn-secondary">Acessar portal</a>
+    </section>
+
+    <div class="dashboard-grid">
+      <section class="card dashboard-card" aria-labelledby="recent-title">
+        <header class="card-header"><h2 id="recent-title">Atendimentos recentes</h2><a href="/atendimentos">Ver todos</a></header>
+        <ul class="recent-list">
+          {% for at in atendimentos %}
+          <li class="chat-item">
+            <div class="chat-info"><strong>{{ at.cliente }}</strong><p>{{ at.preview }}</p></div>
+            <span class="badge badge-{{ at.status }}">{{ {'resolved': 'Resolvido', 'pending': 'Pendente', 'escalated': 'Escalado'}[at.status] }}</span>
+          </li>
+          {% else %}
+          <li>Nenhum atendimento registrado no período.</li>
+          {% endfor %}
+        </ul>
+      </section>
+      <section class="card dashboard-card" aria-labelledby="complaints-title">
+        <header class="card-header"><h2 id="complaints-title">Reclamações por motivo</h2></header>
+        <div class="insights-container">
+          {% for categoria in reclamacoes.categorias %}
+          <div class="insight-item"><div><h3>{{ categoria.rotulo }}</h3><p>{{ categoria.total }} registro(s) · {{ categoria.percentual }}%</p></div></div>
+          {% else %}
+          <p>Nenhuma reclamação classificada no período.</p>
+          {% endfor %}
+          <p>{{ reclamacoes.analisados }} analisado(s) · {{ reclamacoes.pendentes }} pendente(s)</p>
+        </div>
+      </section>
     </div>
   </div>
-</section>
-<section class="metrics-grid">
-<div class="card metric"><div class="metric-info"><h3>{{ metricas.atendimentos_semana }}</h3><p>Atendimentos no período</p></div></div>
-<div class="card metric"><div class="metric-info"><h3>{{ metricas.resumos }}</h3><p>Resumos atualizados</p></div></div>
-<div class="card metric"><div class="metric-info"><h3>{{ reclamacoes.reclamacoes }}</h3><p>Reclamações identificadas</p></div></div>
-</section>
-<section class="dashboard-grid">
-<div class="card dashboard-card"><div class="card-header"><h3>Atendimentos recentes</h3><a href="/atendimentos" class="link-more">Ver todos</a></div><ul class="recent-list">{% for at in atendimentos %}<li class="chat-item"><div class="chat-info"><strong>{{ at.cliente }}</strong><p>{{ at.preview }}</p></div><span class="badge badge-{{ at.status }}">{{ {'resolved':'Resolvido','pending':'Pendente','escalated':'Escalado'}[at.status] }}</span></li>{% else %}<li>Nenhum atendimento neste período.</li>{% endfor %}</ul></div>
-<div class="card dashboard-card"><div class="card-header"><h3>Motivos de reclamação</h3></div><div class="insights-container">{% for c in reclamacoes.categorias %}<div class="insight-item"><div><h4>{{ c.rotulo }}</h4><p>{{ c.total }} reclamação(ões) · {{ c.percentual }}%</p></div></div>{% else %}<p>Nenhuma reclamação classificada no período. Isso não significa que todos os atendimentos foram analisados.</p>{% endfor %}<p>{{ reclamacoes.analisados }} analisados · {{ reclamacoes.pendentes }} ainda não analisados.</p></div></div>
-</section>
 </main>
 {% endblock %}

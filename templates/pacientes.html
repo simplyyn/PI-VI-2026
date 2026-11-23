@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}SmartDent AI — Pacientes{% endblock %}
+{% block title %}Pacientes · SmartDent{% endblock %}
 
 {% block content %}
 <div class="page-container">
@@ -7,14 +7,13 @@
   <div class="page-header">
     <div>
       <h1>Pacientes</h1>
-      <p class="page-subtitle">{{ pacientes | length }} pacientes cadastrados</p>
     </div>
-    <div style="display:flex;gap:10px;">
-      <button class="btn-primary" data-action="export" style="background:var(--bg-color);color:var(--text-primary);border:1px solid var(--border-color);">
-        <i data-lucide="download"></i> Exportar
+    <div class="kb-actions">
+      <button class="btn-secondary" data-action="export">
+        Exportar
       </button>
       <button class="btn-primary" data-action="create">
-        <i data-lucide="user-plus"></i> Novo Paciente
+        Novo paciente
       </button>
     </div>
   </div>
@@ -23,21 +22,18 @@
 
     <section class="metrics-grid" style="margin-bottom:24px;">
       <div class="card metric">
-        <div class="card-icon blue"><i data-lucide="users"></i></div>
         <div class="metric-info">
           <h3>{{ pacientes | length }}</h3>
           <p>Total de pacientes</p>
         </div>
       </div>
       <div class="card metric">
-        <div class="card-icon green"><i data-lucide="user-check"></i></div>
         <div class="metric-info">
           <h3>{{ pacientes | selectattr('status','eq','ativo') | list | length }}</h3>
           <p>Pacientes ativos</p>
         </div>
       </div>
       <div class="card metric">
-        <div class="card-icon orange"><i data-lucide="user-plus"></i></div>
         <div class="metric-info">
           <h3>{{ pacientes | selectattr('status','eq','novo') | list | length }}</h3>
           <p>Com status novo</p>
@@ -46,7 +42,7 @@
     </section>
 
     <div class="kb-filters">
-      <input type="text" class="search-input kb-search" id="searchPacientes" placeholder="Buscar por nome ou telefone..." >
+      <input type="text" class="search-input kb-search" id="searchPacientes" placeholder="Nome ou telefone" aria-label="Buscar paciente" >
       <div class="filter-tabs" style="flex-shrink:0;">
         <button class="filter-tab active" data-filter="todos">Todos</button>
         <button class="filter-tab" data-filter="ativo">Ativos</button>
@@ -75,7 +71,7 @@
           </div>
           <div class="patient-row">
             <span>Próxima consulta</span>
-            <span>{{ p.proxima_consulta if p.proxima_consulta else '—' }}</span>
+            <span>{{ p.proxima_consulta if p.proxima_consulta else 'Sem agendamento' }}</span>
           </div>
           <div class="patient-row">
             <span>Plano / Convênio</span>
@@ -88,12 +84,12 @@
         </div>
         <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" data-action="history" title="Ver histórico">
-            <i data-lucide="clock"></i> Histórico
+            Histórico
           </button>
           <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" data-action="schedule" title="Agendar consulta">
-            <i data-lucide="calendar-plus"></i> Agendar
+            Agendar
           </button>
-<button class="btn-icon" data-action="conversation" style="width:auto;padding:0 10px;font-size:12px" title="Abrir conversa">Conversa</button><button class="btn-icon" data-action="edit" title="Editar">✎</button><button class="btn-icon danger" data-action="delete" title="Excluir">×</button>
+<button class="btn-icon workspace-action" data-action="conversation" style="width:auto;padding:0 10px;font-size:12px" title="Abrir conversa">Conversa</button><button class="btn-icon workspace-action" data-action="edit" title="Editar">Editar</button><button class="btn-icon workspace-action danger" data-action="delete" title="Excluir">Excluir</button>
         </div>
       </div>
       {% endfor %}

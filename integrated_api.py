@@ -6,6 +6,8 @@ from typing import Literal
 from security import require_user, csrf_check
 from workflows import CustomerChat, BatchReplies, pending, record, deliver, require_workflows
 from rag import AttendanceAgent,create_retriever
+from guidance import initial_guidance
+from patient_scope import booking_reply, patient_response
 
 router=APIRouter()
 
@@ -13,11 +15,22 @@ router=APIRouter()
 def generation(request,user):
     from app import request_llm
     def answer(text,item):
+        guidance = initial_guidance(text)
+        if guidance and guidance['tipo'] == 'orientacao_urgente':
+            return guidance
+        active = user['role'] == 'customer' and bool(request.session.get('patient_booking'))
+        local_reply = patient_response(text, booking_active=active)
+        if local_reply is not None:
+            return local_reply
         if user['role']=='customer':
             from professionals import PatientBooking
-            booking=PatientBooking(request.app.state.repository,user,request.session).answer(text)
-            if booking is not None:return booking
-        return AttendanceAgent(create_retriever(request.app.state.repository),request_llm(request)).answer(user['empresa_id'],text,item.get('mensagens',[]))
+            if not active or booking_reply(text):
+                booking=PatientBooking(request.app.state.repository,user,request.session).answer(text)
+                if booking is not None:return booking
+        history = [message for message in item.get('mensagens', [])
+                   if message.get('autor') != 'client' or patient_response(message['texto']) is None]
+        agent = AttendanceAgent(create_retriever(request.app.state.repository),request_llm(request))
+        return agent.answer(user['empresa_id'], text, history, patient_facing=True)
     return answer
 
 
@@ -31,7 +44,7 @@ class CustomerMessage(BaseModel):
 @router.get('/api/cliente/conversa')
 def customer_conversation(request:Request):
     user=require_user(request,{'customer'})
-    return CustomerChat(request.app.state.repository,user).get()
+    return customer_view(request, CustomerChat(request.app.state.repository,user).get())
 
 
 @router.post('/api/cliente/retomar')
@@ -44,14 +57,22 @@ def resume_customer_ai(request:Request):
         item.update(status='pending',canal='ai')
         tx.save('attendance',user['empresa_id'],item,identifier)
         audit(tx,user,'resume_automatic_assistant',identifier)
-    return CustomerChat(repo,user).get()
+    return customer_view(request, CustomerChat(repo,user).get())
 
 
 @router.post('/api/cliente/mensagens')
 def customer_send(request:Request,data:CustomerMessage):
     user=require_user(request,{'customer'});csrf_check(request)
     generator=generation(request,user)
-    return CustomerChat(request.app.state.repository,user).send(data.texto,data.request_id,generator,data.resposta_automatica)
+    result = CustomerChat(request.app.state.repository,user).send(data.texto,data.request_id,generator,data.resposta_automatica)
+    return customer_view(request, result)
+
+
+def customer_view(request, result):
+    action = result.get('acao')
+    if action and action.get('estado') not in {'concluido', 'cancelado'} and not request.session.get('patient_booking'):
+        return dict(result, acao=None)
+    return result
 
 
 @router.get('/api/pendencias')

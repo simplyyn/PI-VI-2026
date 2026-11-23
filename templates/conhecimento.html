@@ -1,23 +1,23 @@
 {% extends "base.html" %}
-{% block title %}SmartDent AI — Base de Conhecimento{% endblock %}
+{% block title %}Base de conhecimento · SmartDent{% endblock %}
 
 {% block content %}
 <div class="page-container">
 
   <div class="page-header">
     <div>
-      <h1>Base de Conhecimento</h1>
-      <p class="page-subtitle">{{ artigos | length }} artigos cadastrados · usados pela IA para responder pacientes</p>
+      <h1>Base de conhecimento</h1>
+      <p class="page-subtitle">{{ artigos | length }} artigos cadastrados</p>
     </div>
     <button class="btn-primary" data-action="create">
-      <i data-lucide="plus"></i> Novo Artigo
+      Novo artigo
     </button>
   </div>
 
-  <div class="page-body"><section class="chart-card"><h3>Preços próprios da clínica</h3><p>Valores definidos pelo responsável, separados das referências de mercado dos artigos.</p><div id="clinic-price-list"></div></section>
+  <div class="page-body"><section class="chart-card"><h3>Preços próprios da clínica</h3><div id="clinic-price-list"></div></section>
 
     <div class="kb-filters">
-      <input type="text" class="search-input kb-search" placeholder="Buscar artigo ou procedimento...">
+      <input type="text" class="search-input kb-search" placeholder="Artigo ou procedimento" aria-label="Buscar artigo">
       <div class="filter-tabs" style="flex-shrink: 0;">
         <button class="filter-tab active">Todos</button>
         <button class="filter-tab">Procedimentos</button>
@@ -28,6 +28,7 @@
       </div>
     </div>
 
+    <div class="workspace-table" role="region" aria-label="Artigos" tabindex="0">
     <table class="kb-table">
       <thead>
         <tr>
@@ -44,14 +45,14 @@
         <tr data-id="{{ artigo.id }}">
           <td>
             <div class="kb-title-cell">
-              <i data-lucide="file-text"></i>
+
               {{ artigo.titulo }}
             </div>
           </td>
           <td><span class="badge-category">{{ artigo.categoria }}</span></td>
           <td>
             <span class="views-count">
-              <i data-lucide="eye"></i> {{ artigo.views }}
+              {{ artigo.views }}
             </span>
           </td>
           <td style="color: var(--text-secondary); font-size: 12px;">{{ artigo.atualizado }}</td>
@@ -63,14 +64,17 @@
           </td>
           <td>
             <div class="kb-actions">
-              <button class="btn-icon" data-action="edit" title="Editar"><i data-lucide="pencil"></i></button>
-              <button class="btn-icon danger" data-action="delete" title="Excluir"><i data-lucide="trash-2"></i></button>
+              <button class="btn-icon workspace-action" data-action="edit" title="Editar">Editar</button>
+              <button class="btn-icon workspace-action danger" data-action="delete" title="Excluir">Excluir</button>
             </div>
           </td>
         </tr>
+        {% else %}
+        <tr><td colspan="6">Nenhum artigo cadastrado.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
 
   </div>
 </div>

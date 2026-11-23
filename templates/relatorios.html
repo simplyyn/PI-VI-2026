@@ -1,10 +1,48 @@
 {% extends "base.html" %}
-{% block title %}SmartDent AI — Relatórios & IA{% endblock %}
+{% block title %}Relatórios e IA · SmartDent{% endblock %}
 {% block content %}
 <div class="page-container">
-<div class="page-header"><div><h1>Relatórios & IA</h1><p class="page-subtitle">{{ inicio }} a {{ fim }} · dados persistidos da sua clínica</p></div><div class="date-filter">{% for period in [7,30,90] %}<a class="date-btn {% if periodo_dias == period %}active{% endif %}" href="/relatorios?dias={{ period }}">{{ period }} dias</a>{% endfor %}</div></div>
-<div class="page-body"><section class="analysis-card" id="complaint-review-panel" aria-labelledby="complaint-heading">
-  <header class="analysis-card-header"><div><span class="analysis-eyebrow">Qualidade do atendimento</span><h3 id="complaint-heading">Reclamações e oportunidades de melhoria</h3></div><button type="button" class="btn-primary" data-action="classify">Analisar com IA</button></header>
+<div class="page-header"><div><h1>Relatórios e IA</h1><p class="page-subtitle">{{ inicio }} a {{ fim }}</p></div><div class="date-filter">{% for period in [7,30,90] %}<a class="date-btn {% if periodo_dias == period %}active{% endif %}" href="/relatorios?dias={{ period }}">{{ period }} dias</a>{% endfor %}</div></div>
+<div class="page-body"><section class="metrics-grid" style="margin-bottom:24px">
+<div class="card metric"><div class="metric-info"><h3>{{ metricas.atendimentos_semana }}</h3><p>Atendimentos no período</p></div></div>
+<div class="card metric"><div class="metric-info"><h3>{{ metricas.resolvidos }}</h3><p>Resolvidos</p></div></div>
+<div class="card metric"><div class="metric-info"><h3>{{ metricas.resumos }}</h3><p>Resumos atualizados</p></div></div>
+</section>
+{% set daily_max = (grafico.ia + grafico.humano + [1]) | max %}
+{% set channel_total = [1, metricas.canal_ia + metricas.canal_humano] | max %}
+<div class="chart-grid">
+  <section class="chart-card" aria-labelledby="daily-title">
+    <h3 id="daily-title">Atendimentos por dia</h3>
+    <div class="workspace-table report-data" role="region" aria-label="Atendimentos por dia" tabindex="0">
+      <table class="kb-table">
+        <thead><tr><th scope="col">Dia</th><th scope="col">IA</th><th scope="col">Humano</th></tr></thead>
+        <tbody>
+          {% for day in grafico.labels %}
+          <tr>
+            <th scope="row">{{ day }}</th>
+            <td><span>{{ grafico.ia[loop.index0] }}</span><meter max="{{ daily_max }}" value="{{ grafico.ia[loop.index0] }}" aria-hidden="true"></meter></td>
+            <td><span>{{ grafico.humano[loop.index0] }}</span><meter class="report-human" max="{{ daily_max }}" value="{{ grafico.humano[loop.index0] }}" aria-hidden="true"></meter></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="chart-card" aria-labelledby="channel-title">
+    <h3 id="channel-title">Canal registrado</h3>
+    <dl class="report-channels">
+      <dt>IA</dt><dd>{{ metricas.canal_ia }}<meter max="{{ channel_total }}" value="{{ metricas.canal_ia }}" aria-hidden="true"></meter></dd>
+      <dt>Humano</dt><dd>{{ metricas.canal_humano }}<meter class="report-human" max="{{ channel_total }}" value="{{ metricas.canal_humano }}" aria-hidden="true"></meter></dd>
+    </dl>
+  </section>
+</div>
+<p>O canal é o valor cadastrado no atendimento; não comprova uma resposta gerada automaticamente. Satisfação e tempo de resposta ainda não são medidos.</p>
+<div class="chart-card"><h3>Motivos de reclamação</h3><p>{{ reclamacoes.reclamacoes }} reclamações · {{ reclamacoes.analisados }} atendimentos analisados · {{ reclamacoes.pendentes }} pendentes de análise.</p>
+<button class="btn-primary" id="classify-pending">Analisar pendentes com IA (até 10)</button><p id="analysis-feedback" role="status"></p>
+{% if not reclamacoes.categorias %}<p>Nenhuma reclamação classificada neste período.</p>{% endif %}
+<div class="workspace-table" role="region" aria-label="Motivos de reclamação" tabindex="0"><table class="kb-table"><thead><tr><th>Categoria</th><th>Total</th><th>Percentual</th><th>Motivos registrados</th></tr></thead><tbody>{% for c in reclamacoes.categorias %}<tr><td>{{ c.rotulo }}</td><td>{{ c.total }}</td><td>{{ c.percentual }}%<meter max="100" value="{{ c.percentual }}" aria-hidden="true"></meter></td><td>{% for example in c.exemplos %}<p>{{ example }}</p>{% endfor %}</td></tr>{% endfor %}</tbody></table></div></div>
+<section class="analysis-card" id="complaint-review-panel" aria-labelledby="complaint-heading">
+  <header class="analysis-card-header"><div><h3 id="complaint-heading">Reclamações e oportunidades de melhoria</h3></div><button type="button" class="btn-primary" data-action="classify">Analisar com IA</button></header>
   <label class="analysis-field">Atendimento<select id="complaint-attendance"><option value="">Selecione uma conversa</option></select></label><p class="analysis-description">Identifica insatisfação com a clínica, como atraso, cobrança ou atendimento. Relatar dor, por si só, não significa uma reclamação.</p>
   <p id="complaint-status" role="status" class="analysis-result"></p>
   <details class="analysis-review"><summary>Revisar classificação manualmente</summary>
@@ -12,118 +50,16 @@
       <label class="complaint-toggle"><input type="checkbox" name="reclamacao"><span><strong>Há uma reclamação sobre a clínica</strong><small>Marque apenas quando houver insatisfação registrada.</small></span></label>
       <label class="analysis-field">Categoria<select name="categoria" aria-label="Categoria de reclamação"></select></label>
       <label class="analysis-field">Motivo<textarea name="motivo" maxlength="300" rows="3" aria-label="Motivo da reclamação" placeholder="Descreva brevemente a insatisfação registrada"></textarea></label>
-      <div class="analysis-form-actions"><span>A classificação alimenta os relatórios da clínica.</span><button class="btn-primary" type="submit">Salvar revisão</button></div>
+      <div class="analysis-form-actions"><button class="btn-primary" type="submit">Salvar revisão</button></div>
     </form>
   </details>
 </section>
 
-<section class="chart-card" aria-labelledby="usage-title"><h3 id="usage-title">Uso da IA nesta aplicação</h3><p id="llm-usage" role="status">Consultando consumo registrado...</p><p>Não representa tokens restantes nem o custo da conta. Chamadas antigas, feitas por outros sistemas ou sem contagem do provedor podem não estar incluídas.</p><a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Consultar uso, limites e faturamento no Google AI Studio</a></section>
-<section class="metrics-grid" style="margin-bottom:24px">
-<div class="card metric"><div class="metric-info"><h3>{{ metricas.atendimentos_semana }}</h3><p>Atendimentos no período</p></div></div>
-<div class="card metric"><div class="metric-info"><h3>{{ metricas.resolvidos }}</h3><p>Resolvidos</p></div></div>
-<div class="card metric"><div class="metric-info"><h3>{{ metricas.resumos }}</h3><p>Resumos atualizados</p></div></div>
-</section>
-<div class="chart-grid"><div class="chart-card"><h3>Atendimentos cadastrados por dia</h3><canvas id="chartLine" height="110"></canvas></div><div class="chart-card"><h3>Canal registrado</h3><canvas id="chartDoughnut"></canvas></div></div>
-<p>O canal é o valor cadastrado no atendimento; não comprova uma resposta gerada automaticamente. Satisfação e tempo de resposta ainda não são medidos.</p>
-<div class="chart-card"><h3>Motivos de reclamação</h3><canvas id="chartBar" height="80"></canvas><p>{{ reclamacoes.reclamacoes }} reclamações · {{ reclamacoes.analisados }} atendimentos analisados · {{ reclamacoes.pendentes }} pendentes de análise.</p>
-<button class="btn-primary" id="classify-pending">Analisar pendentes com IA (até 10)</button><p id="analysis-feedback" role="status"></p>
-{% if not reclamacoes.categorias %}<p>Nenhuma reclamação classificada neste período.</p>{% endif %}
-<table class="kb-table"><thead><tr><th>Categoria</th><th>Total</th><th>Percentual</th><th>Motivos registrados</th></tr></thead><tbody>{% for c in reclamacoes.categorias %}<tr><td>{{ c.rotulo }}</td><td>{{ c.total }}</td><td>{{ c.percentual }}%</td><td>{% for example in c.exemplos %}<p>{{ example }}</p>{% endfor %}</td></tr>{% endfor %}</tbody></table></div>
+<section class="chart-card" aria-labelledby="usage-title"><h3 id="usage-title">Uso registrado da IA</h3><p id="llm-usage" role="status">Consultando consumo registrado...</p><p>Total registrado pelo SmartDent. Consulte a cota e a cobrança na conta do provedor.</p><a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Consultar uso, limites e faturamento no Google AI Studio</a></section>
 </div></div>
 {% endblock %}
 {% block extra_scripts %}
 <link rel="stylesheet" href="/static/attendance-analysis.css">
 <script src="/static/complaint-review.js"></script>
 <script src="/static/management.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  const isDark      = document.documentElement.classList.contains('dark');
-  const textColor   = isDark ? '#64748b' : '#94a3b8';
-  const gridColor   = isDark ? '#1e2235' : '#e2e8f0';
-  const isClinica   = document.documentElement.getAttribute('data-theme') === 'hospital';
-  const primary     = isDark ? '#818cf8' : (isClinica ? '#0284c7' : '#4f46e5');
-  const accent      = isDark ? '#fb923c' : (isClinica ? '#059669' : '#f97316');
-
-  Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
-  Chart.defaults.font.size   = 12;
-
-  new Chart(document.getElementById('chartLine'), {
-    type: 'line',
-    data: {
-      labels: {{ grafico.labels | tojson }},
-      datasets: [
-        {
-          label: 'IA',
-          data: {{ grafico.ia | tojson }},
-          borderColor: primary,
-          backgroundColor: primary + '1a',
-          borderWidth: 2.5,
-          tension: 0.45,
-          fill: true,
-          pointRadius: 4,
-          pointBackgroundColor: primary,
-        },
-        {
-          label: 'Humano',
-          data: {{ grafico.humano | tojson }},
-          borderColor: accent,
-          backgroundColor: accent + '1a',
-          borderWidth: 2,
-          tension: 0.45,
-          fill: true,
-          pointRadius: 3,
-          pointBackgroundColor: accent,
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { color: textColor } } },
-      scales: {
-        x: { ticks: { color: textColor }, grid: { color: gridColor } },
-        y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
-      }
-    }
-  });
-
-  new Chart(document.getElementById('chartDoughnut'), {
-    type: 'doughnut',
-    data: {
-      labels: ['Canal IA', 'Canal Humano'],
-      datasets: [{
-        data: [{{ metricas.canal_ia }}, {{ metricas.canal_humano }}],
-        backgroundColor: [primary, accent],
-        borderWidth: 0,
-        hoverOffset: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      cutout: '72%',
-      plugins: { legend: { position: 'bottom', labels: { color: textColor, padding: 16 } } }
-    }
-  });
-
-  new Chart(document.getElementById('chartBar'), {
-    type: 'bar',
-    data: {
-      labels: {{ grafico.topicos.labels | tojson }},
-      datasets: [{
-        label: 'Reclamações',
-        data: {{ grafico.topicos.valores | tojson }},
-        backgroundColor: primary + 'cc',
-        borderRadius: 8,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: textColor }, grid: { display: false } },
-        y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
-      }
-    }
-  });
-</script>
 {% endblock %}

@@ -1,78 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartDent AI — Entrar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · SmartDent</title>
   <link rel="stylesheet" href="/static/style.css">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    (function () {
-      document.documentElement.setAttribute('data-theme', 'hospital');
-      var d = localStorage.getItem('smartdent-dark');
-      if (d === '1') document.documentElement.classList.add('dark');
-    })();
-  </script>
+  <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/interface.css">
+  <script>document.documentElement.classList.toggle('dark', localStorage.getItem('smartdent-dark') === '1');</script>
 </head>
 <body class="login-body">
-
-  <div class="login-card">
-
-    <div class="login-logo">
-      <i data-lucide="tooth"></i>
-      <h1>Smart<span>Dent</span></h1>
-    </div>
-
-    <p class="login-subtitle">Plataforma de atendimento inteligente para clínicas odontológicas</p>
-
-    {% if erro %}
-    <div class="login-erro">
-      <i data-lucide="alert-circle"></i>
-      {{ erro }}
-    </div>
-    {% endif %}
-
-    <form method="POST" action="/login" class="login-form">
+  <main class="login-card">
+    <p class="workspace-wordmark">SmartDent</p>
+    <h1>Entrar</h1>
+    {% if erro %}<p class="login-erro" role="alert">{{ erro }}</p>{% endif %}
+    <form method="post" action="/login" class="login-form">
       <input type="hidden" name="csrf_token" value="{{ request.session.get('csrf', '') }}">
-
       <div class="login-field">
-        <label>E-mail</label>
-        <div class="login-input-wrap">
-          <i data-lucide="mail"></i>
-          <input
-            type="email"
-            name="email"
-            placeholder="seu@email.com"
-            value="{{ email if email else '' }}"
-            required
-            autofocus
-          >
-        </div>
+        <label for="login-email">E-mail</label>
+        <input id="login-email" type="email" name="email" value="{{ email or '' }}" autocomplete="username" required>
       </div>
-
       <div class="login-field">
-        <label>Senha</label>
-        <div class="login-input-wrap">
-          <i data-lucide="lock"></i>
-          <input
-            type="password"
-            name="senha"
-            placeholder="••••••••"
-            required
-          >
-        </div>
+        <label for="login-password">Senha</label>
+        <input id="login-password" type="password" name="senha" autocomplete="current-password" required>
       </div>
-
-      <button type="submit" class="login-btn">
-        Entrar <i data-lucide="arrow-right"></i>
-      </button>
-
+      <button type="submit" class="btn-primary">Entrar</button>
     </form>
-
-    <div class="login-hint">Use uma conta cadastrada pelo administrador.</div>
-
-  </div>
-
-  <script>lucide.createIcons();</script>
+  </main>
 </body>
 </html>

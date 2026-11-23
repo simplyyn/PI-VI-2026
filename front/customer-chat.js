@@ -1,31 +1,204 @@
 'use strict';
-let customerBusy=false,customerVersion='',retryMessage=null,customerInitialized=false;
-const customerFeedback=document.getElementById('customer-feedback');
-async function customerApi(path,method='GET',data){
- const headers={};if(method!=='GET'){const r=await fetch('/api/session');if(!r.ok)throw Error('Entre novamente no sistema.');headers['X-CSRF-Token']=(await r.json()).csrf_token;headers['Content-Type']='application/json';}
- const r=await fetch(path,{method,headers,...(data?{body:JSON.stringify(data)}:{})});const body=await r.json().catch(()=>({}));if(!r.ok)throw Error(typeof body.detail==='string'?body.detail:'Não foi possível concluir.');return body;
+
+const log = document.getElementById('demo-messages');
+const compose = document.getElementById('portal-message-form');
+const input = document.getElementById('demo-input');
+const automatic = document.getElementById('customer-auto');
+const feedback = document.getElementById('customer-feedback');
+const startBooking = document.getElementById('start-booking');
+const bookingOptions = document.getElementById('booking-options');
+const bookingDate = document.getElementById('booking-date');
+const bookingTimes = document.getElementById('booking-times');
+const confirmation = document.getElementById('booking-confirmation');
+const messageTime = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+
+let busy = false;
+let initialized = false;
+let version = '';
+let retry;
+let options = [];
+let lastBookingId;
+
+async function customerApi(path, method = 'GET', data) {
+  const headers = {};
+  if (method !== 'GET') {
+    const session = await fetch('/api/session');
+    if (!session.ok) throw Error('Entre novamente no sistema.');
+    headers['X-CSRF-Token'] = (await session.json()).csrf_token;
+    headers['Content-Type'] = 'application/json';
+  }
+  const response = await fetch(path, { method, headers, ...(data ? { body: JSON.stringify(data) } : {}) });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw Error(typeof body.detail === 'string' ? body.detail : 'Não foi possível concluir.');
+  }
+  return body;
 }
-function renderCustomer(data){
- const confirmation=document.getElementById('booking-confirmation');confirmation.hidden=data.acao?.estado!=='aguardando_confirmacao';
- if(!customerInitialized){document.getElementById('customer-auto').checked=data.status!=='escalated';customerInitialized=true;}
- const signature=JSON.stringify(data);if(signature===customerVersion)return;customerVersion=signature;
- const area=document.getElementById('demo-messages'),nearBottom=area.scrollHeight-area.scrollTop-area.clientHeight<100;area.replaceChildren();
- if(!data.mensagens.length){const p=document.createElement('p');p.textContent='Olá! Pergunte sobre procedimentos, preços e horários, ou peça para agendar uma avaliação.';area.append(p);}
- for(const m of data.mensagens){const group=document.createElement('div');group.className='demo-msg-group';const bubble=document.createElement('div');bubble.className='demo-msg '+(m.autor==='client'?'user-msg':'ai-msg');const text=document.createElement('div');text.className='demo-msg-bubble';text.style.whiteSpace='pre-wrap';text.textContent=m.texto;const when=document.createElement('small');when.className='demo-msg-time';when.textContent=({client:'Você',human:'Equipe da clínica',ai:'Assistente'}[m.autor]||'Sistema')+' · '+new Date(m.criado_em).toLocaleString('pt-BR');bubble.append(text,when);group.append(bubble);area.append(group);}
- if(nearBottom||customerBusy)area.scrollTop=area.scrollHeight;
- const appointments=document.getElementById('customer-appointments');appointments.replaceChildren();for(const a of data.agendamentos||[]){const p=document.createElement('p');p.textContent=`${a.data} ${a.horario.slice(0,5)} — ${a.procedimento} — ${a.dentista} (${a.status})`;appointments.append(p);}if(!data.agendamentos?.length)appointments.textContent='Nenhum agendamento registrado.';
+
+function displayDate(isoDate) {
+  return isoDate.split('-').reverse().join('/');
 }
-async function refreshCustomer(){if(customerBusy||document.hidden)return;try{renderCustomer(await customerApi('/api/cliente/conversa'));}catch(error){customerFeedback.textContent=error.message;}}
-async function enviarMensagem(){
- const input=document.getElementById('demo-input'),text=input.value.trim();if(!text||customerBusy)return;
- if(!retryMessage||retryMessage.texto!==text)retryMessage={texto:text,request_id:crypto.randomUUID(),resposta_automatica:document.getElementById('customer-auto').checked};
- customerBusy=true;const button=document.querySelector('.demo-input-bar button');button.disabled=true;input.disabled=true;customerFeedback.textContent='Registrando mensagem...';
- try{const data=await customerApi('/api/cliente/mensagens','POST',retryMessage);renderCustomer(data);input.value='';retryMessage=null;customerFeedback.textContent=data.aviso||'Mensagem registrada.';}
- catch(error){customerFeedback.textContent=error.message+' Seu texto foi preservado. Se tentar novamente, o envio não será duplicado.';}
- finally{customerBusy=false;button.disabled=false;input.disabled=false;input.focus();}
+
+function renderTimes() {
+  const day = options.find(option => option.data === bookingDate.value);
+  bookingTimes.replaceChildren();
+  for (const time of day?.horarios ?? []) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'portal-secondary';
+    button.textContent = time;
+    button.addEventListener('click', () => sendBooking(`${day.data} às ${time}`));
+    bookingTimes.append(button);
+  }
 }
-function toggleDark(){document.documentElement.classList.toggle('dark');localStorage.setItem('smartdent-dark',document.documentElement.classList.contains('dark')?'1':'0');}
-document.getElementById('confirm-booking').onclick=()=>{if(customerBusy)return;document.getElementById('demo-input').value='confirmar';enviarMensagem();};
-document.getElementById('cancel-booking').onclick=()=>{if(customerBusy)return;document.getElementById('demo-input').value='cancelar';enviarMensagem();};
-document.getElementById('customer-auto').addEventListener('change',async event=>{if(!event.target.checked)return;try{renderCustomer(await customerApi('/api/cliente/retomar','POST',{}));customerFeedback.textContent='Assistente automático retomado. Você pode enviar sua próxima pergunta.';}catch(error){event.target.checked=false;customerFeedback.textContent=error.message;}});
-window.lucide?.createIcons();refreshCustomer();setInterval(refreshCustomer,4000);
+
+function renderBooking(action) {
+  const previousDate = bookingDate.value;
+  options = action?.opcoes || [];
+  const recovering = action?.estado === 'erro' || action?.estado === 'coletando';
+  bookingOptions.hidden = !options.length && !recovering;
+  document.getElementById('booking-choices').hidden = !options.length;
+  document.getElementById('options-title').textContent = options.length ? 'Escolha um horário' : 'Informe uma data e um horário';
+  confirmation.hidden = action?.estado !== 'aguardando_confirmacao';
+  startBooking.hidden = !confirmation.hidden || !bookingOptions.hidden;
+  bookingDate.replaceChildren(...options.map(day => new Option(displayDate(day.data), day.data)));
+  if (options.some(day => day.data === previousDate)) bookingDate.value = previousDate;
+  renderTimes();
+}
+
+function renderCustomer(data) {
+  if (!initialized) {
+    automatic.checked = data.status !== 'escalated';
+    initialized = true;
+  }
+  const signature = JSON.stringify(data);
+  if (signature === version) return;
+  version = signature;
+  lastBookingId = data.acao?.agendamento_id;
+  renderBooking(data.acao);
+  const review = confirmation.hidden ? null : data.mensagens.findLast(message =>
+    message.acao?.estado === 'aguardando_confirmacao');
+  document.getElementById('booking-review').textContent = review?.texto ?? '';
+  const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 100;
+  const names = { client: 'Você', human: 'Equipe da clínica', ai: 'Assistente' };
+
+  log.replaceChildren();
+  if (!data.mensagens.length) {
+    const intro = document.createElement('p');
+    intro.textContent = 'Envie sua dúvida sobre preços, convênios ou procedimentos.';
+    log.append(intro);
+  }
+  for (const message of data.mensagens) {
+    if (message === review) continue;
+    const row = document.createElement('div');
+    row.className = message.autor === 'client' ? 'portal-message is-patient' : 'portal-message';
+    const content = document.createElement('p');
+    content.textContent = message.texto;
+    const author = document.createElement('small');
+    const date = new Date(message.criado_em);
+    author.textContent = Number.isNaN(date.getTime()) ? names[message.autor] || 'Sistema' :
+      `${names[message.autor] || 'Sistema'} · ${messageTime.format(date)}`;
+    row.append(content, author);
+    log.append(row);
+  }
+  if (nearBottom || busy) log.scrollTop = log.scrollHeight;
+
+  const appointments = document.getElementById('customer-appointments');
+  appointments.replaceChildren();
+  if (!data.agendamentos?.length) appointments.textContent = 'Nenhum agendamento registrado.';
+  for (const appointment of data.agendamentos || []) {
+    const row = document.createElement('p');
+    const status = appointment.realizado_em ? 'realizado' : appointment.status;
+    row.textContent = `${displayDate(appointment.data)} às ${appointment.horario.slice(0, 5)} · ${appointment.procedimento} · ${appointment.dentista} (${status})`;
+    appointments.append(row);
+  }
+}
+
+async function refreshCustomer() {
+  if (busy || document.hidden) return;
+  try {
+    const data = await customerApi('/api/cliente/conversa');
+    if (!busy) renderCustomer(data);
+  } catch (error) {
+    if (!busy) feedback.textContent = error.message;
+  }
+}
+
+async function send(text) {
+  text = text.trim();
+  if (!text || busy) return;
+  if (!retry || retry.texto !== text) {
+    retry = { texto: text, request_id: crypto.randomUUID(), resposta_automatica: automatic.checked };
+  }
+
+  busy = true;
+  input.disabled = document.getElementById('send-message').disabled = true;
+  const previousBookingId = lastBookingId;
+  feedback.textContent = 'Registrando mensagem…';
+  try {
+    const data = await customerApi('/api/cliente/mensagens', 'POST', retry);
+    renderCustomer(data);
+    input.value = '';
+    retry = undefined;
+    const justBooked = data.acao?.estado === 'concluido' && previousBookingId !== lastBookingId;
+    feedback.textContent = data.aviso || (justBooked ? 'Agendamento confirmado.' : '');
+    if (!confirmation.hidden) document.getElementById('confirm-booking').focus();
+    else if (options.length) bookingDate.focus();
+    else {
+      input.disabled = false;
+      input.focus();
+    }
+  } catch (error) {
+    input.value = text;
+    feedback.textContent = error.message + ' Você pode tentar enviar novamente.';
+  } finally {
+    busy = false;
+    input.disabled = document.getElementById('send-message').disabled = false;
+  }
+}
+
+async function enableAutomatic() {
+  busy = true;
+  try {
+    const data = await customerApi('/api/cliente/retomar', 'POST', {});
+    automatic.checked = true;
+    renderCustomer(data);
+    return true;
+  } catch (error) {
+    automatic.checked = false;
+    feedback.textContent = error.message;
+    return false;
+  } finally {
+    busy = false;
+  }
+}
+
+async function sendBooking(text) {
+  if (busy) return;
+  if (automatic.checked || await enableAutomatic()) await send(text);
+}
+
+compose.addEventListener('submit', event => {
+  event.preventDefault();
+  send(input.value);
+});
+bookingDate.addEventListener('change', renderTimes);
+startBooking.addEventListener('click', () => sendBooking('Quero agendar uma consulta'));
+document.getElementById('confirm-booking').addEventListener('click', () => sendBooking('confirmar'));
+for (const id of ['cancel-booking', 'discard-options']) {
+  document.getElementById(id).addEventListener('click', () => sendBooking('cancelar'));
+}
+automatic.addEventListener('change', () => {
+  if (automatic.checked && !busy) enableAutomatic();
+});
+
+const appearance = document.getElementById('btn-dark-toggle');
+appearance.setAttribute('aria-pressed', String(document.documentElement.classList.contains('dark')));
+appearance.addEventListener('click', () => {
+  const dark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('smartdent-dark', dark ? '1' : '0');
+  appearance.setAttribute('aria-pressed', String(dark));
+});
+
+refreshCustomer();
+setInterval(refreshCustomer, 4000);

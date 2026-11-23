@@ -196,6 +196,7 @@ async def pagina_agendamentos(request: Request):
     if ctx is None:
         return RedirectResponse("/login", status_code=302)
     ctx['profissionais']=request.app.state.repository.list('professionals',ctx['usuario']['empresa_id']) if getattr(request.app.state.repository,'supports_workflows',False) else []
+    ctx['permite_realizacao'] = hasattr(request.app.state.repository, 'set_appointment_completion')
     return templates.TemplateResponse("agendamentos.html", ctx)
 
 @app.get("/estoque", response_class=HTMLResponse)
@@ -502,6 +503,22 @@ def create_appointment(request: Request,data: Appointment):
 def update_appointment(identifier: int,request: Request,data: Appointment):
     csrf_check(request)
     return records_service(request).save('appointments',data,identifier)
+
+class AppointmentCompletion(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    realizado: bool
+
+
+@app.put('/api/agendamentos/{identifier}/realizacao')
+def set_appointment_completion(identifier: int, request: Request, data: AppointmentCompletion):
+    user = require_user(request, {'owner'})
+    csrf_check(request)
+    repository = request.app.state.repository
+    mark = getattr(repository, 'set_appointment_completion', None)
+    if mark is None:
+        raise HTTPException(409, 'O registro de realização está disponível no SQLite local.')
+    from management import LOCAL_ZONE
+    return mark(user['empresa_id'], identifier, data.realizado, datetime.now(LOCAL_ZONE))
 
 @app.delete('/api/agendamentos/{identifier}',status_code=204)
 def delete_appointment(identifier: int,request: Request):

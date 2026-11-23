@@ -75,6 +75,8 @@ class PostgresTests(unittest.TestCase):
         self.assertEqual(self.repo.reindex(force=True),1)
 
     def test_stock_history_and_cross_clinic_foreign_keys(self):
+        from psycopg.errors import ForeignKeyViolation
+
         item = self.repo.save('stock','a',dict(nome='Luvas',categoria='EPI',unidade='cx',quantidade=2,minimo=1))
         self.repo.move('a',item['id'],3)
         self.repo.move('a',item['id'],-1)
@@ -82,8 +84,21 @@ class PostgresTests(unittest.TestCase):
             history = conn.execute('SELECT delta, saldo FROM stock_movements WHERE stock_item_id = %s ORDER BY id',(item['id'],)).fetchall()
         self.assertEqual([(h['delta'],h['saldo']) for h in history],[(3,5),(-1,4)])
         patient_b = self.repo.save('patients','b',dict(nome='Paciente B'))
-        with self.assertRaises(ValueError):
-            self.repo.save('appointments','a',dict(paciente_id=patient_b['id'],data='2026-10-14',horario='10:00:00',duracao=30,procedimento='x',dentista='y'))
+        appointment = dict(
+            paciente_id=patient_b['id'], data='2026-10-14', horario='10:00:00',
+            duracao=30, procedimento='Avaliação', dentista='Profissional de teste', status='pendente',
+        )
+        with self.assertRaises(LookupError):
+            self.repo.save('appointments', 'a', appointment)
+        with self.assertRaises(ValueError) as rejected:
+            with self.repo._transaction() as conn:
+                conn.execute('''
+                    INSERT INTO appointments (clinic_id, paciente_id, data, horario, duracao, procedimento, dentista, status)
+                    VALUES (%(clinic_id)s, %(paciente_id)s, %(data)s, %(horario)s,
+                            %(duracao)s, %(procedimento)s, %(dentista)s, %(status)s)
+                ''', dict(appointment, clinic_id='a'))
+        self.assertIsInstance(rejected.exception.__cause__, ForeignKeyViolation)
+        self.assertEqual(self.repo.list('appointments', 'a'), [])
         with self.assertRaises(TypeError):
             self.repo.save('stock','a',dict(item,campo_inexistente=1))
 

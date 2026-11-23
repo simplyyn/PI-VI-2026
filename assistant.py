@@ -20,6 +20,8 @@ class ClinicAssistant:
 
     def reply(self,question,context=None):
         m=normalize(question)
+        if re.search(r'\b(?:quant[oa]s|total|numero|contagem)\b', m) and re.search(r'\b(?:limpezas?|profilaxias?)\b', m):
+            return self.cleaning_count(m)
         if re.fullmatch(r'(e )?(hoje|amanha|na semana|na proxima semana|os ativos|os novos|os esgotados|os baixos)',m):
             valid=(context=='agenda' and any(t in m for t in ('hoje','amanha','semana'))) or (context=='pacientes' and any(t in m for t in ('ativos','novos'))) or (context=='estoque' and any(t in m for t in ('esgotados','baixos')))
             prefix={'agenda':'agendamentos','pacientes':'pacientes','estoque':'estoque'}.get(context) if valid else None
@@ -73,6 +75,26 @@ class ClinicAssistant:
             v=r['metricas']
             return result(f"Aqui está o panorama dos últimos 7 dias:\n• {v['atendimentos_semana']} atendimentos cadastrados; {v['resolvidos']} marcados como resolvidos.\n• {v['resumos']} resumos atualizados.\n• {r['reclamacoes']['reclamacoes']} reclamações identificadas; {r['reclamacoes']['pendentes']} atendimentos ainda não analisados.\nOs números vêm dos registros da sua clínica. Não há medição de satisfação ou de tempo de resposta.",('Detalhar relatórios','/relatorios'))
         return None
+
+    def cleaning_count(self, question):
+        if not hasattr(self.repository, 'set_appointment_completion'):
+            return result('O registro de limpezas realizadas está disponível no SQLite local.', ('Abrir agenda', '/agendamentos'))
+        today = datetime.now(LOCAL_ZONE).date()
+        end = today
+        start = today.replace(day=1)
+        if 'mes passado' in question or 'mes anterior' in question:
+            end = start - timedelta(days=1)
+            start = end.replace(day=1)
+        elif 'mes' not in question and re.search(r'\b(?:ao todo|desde o inicio|total geral)\b', question):
+            start = None
+        count = sum(1 for appointment in self.repository.list('appointments', self.clinic)
+                    if (performed := appointment.get('realizado_em')) and performed <= end.isoformat()
+                    and (start is None or performed >= start.isoformat())
+                    and re.search(r'\b(?:limpeza|profilaxia)\b', normalize(appointment['procedimento'])))
+        period = ('Até '+end.strftime('%d/%m/%Y') if start is None else
+                  f"De {start.strftime('%d/%m/%Y')} a {end.strftime('%d/%m/%Y')}")
+        return result(f'{period}, {count} limpeza(s) marcada(s) como realizada(s). A contagem usa a data da consulta.',
+                      ('Abrir agenda', '/agendamentos'))
 
     def agenda(self,question):
         today=datetime.now(LOCAL_ZONE).date()

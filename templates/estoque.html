@@ -1,39 +1,34 @@
 {% extends "base.html" %}
-{% block title %}SmartDent AI — Estoque{% endblock %}
+{% block title %}Estoque · SmartDent{% endblock %}
 
 {% block content %}
 <div class="page-container">
 
   <div class="page-header">
     <div>
-      <h1>Estoque de Insumos</h1>
-      <p class="page-subtitle">{{ total }} itens cadastrados · {{ baixo }} com estoque baixo · {{ esgotado }} esgotados</p>
+      <h1>Estoque</h1>
     </div>
     <button class="btn-primary" data-action="create">
-      <i data-lucide="plus"></i> Adicionar Item
+      Adicionar item
     </button>
   </div>
 
   <div class="page-body">
 
-    <!-- Métricas rápidas de estoque -->
     <section class="metrics-grid" style="margin-bottom: 24px;">
       <div class="card metric">
-        <div class="card-icon blue"><i data-lucide="package"></i></div>
         <div class="metric-info">
           <h3>{{ total }}</h3>
           <p>Itens no cadastro</p>
         </div>
       </div>
       <div class="card metric">
-        <div class="card-icon orange"><i data-lucide="alert-triangle"></i></div>
         <div class="metric-info">
           <h3>{{ baixo }}</h3>
           <p>Itens com estoque baixo</p>
         </div>
       </div>
       <div class="card metric">
-        <div class="card-icon" style="background:#fee2e2; color:#dc2626;"><i data-lucide="x-circle"></i></div>
         <div class="metric-info">
           <h3>{{ esgotado }}</h3>
           <p>Itens esgotados</p>
@@ -42,8 +37,8 @@
     </section>
 
     {% if alertas %}
-    <div class="insight-item warning" style="margin-bottom: 20px; border-radius: 12px;">
-      <i data-lucide="alert-triangle"></i>
+    <div class="insight-item warning" >
+
       <div>
         <h4>Atenção: {{ alertas | length }} {{ 'item precisa' if alertas | length == 1 else 'itens precisam' }} de reposição</h4>
         <ul class="stock-alerts">
@@ -59,7 +54,7 @@
     {% endif %}
 
     <div class="kb-filters">
-      <input type="text" class="search-input kb-search" placeholder="Buscar insumo...">
+      <input type="text" class="search-input kb-search" placeholder="Nome do insumo" aria-label="Buscar insumo">
       <div class="filter-tabs" style="flex-shrink: 0;">
         <button class="filter-tab active">Todos</button>
         <button class="filter-tab">EPI</button>
@@ -70,6 +65,7 @@
       </div>
     </div>
 
+    <div class="workspace-table" role="region" aria-label="Itens de estoque" tabindex="0">
     <table class="kb-table">
       <thead>
         <tr>
@@ -87,7 +83,7 @@
         <tr data-id="{{ item.id }}">
           <td>
             <div class="kb-title-cell">
-              <i data-lucide="package-2"></i>
+
               {{ item.nome }}
             </div>
           </td>
@@ -110,15 +106,18 @@
           </td>
           <td>
             <div class="kb-actions">
-              <button class="btn-icon" data-action="move" title="Movimentar unidades" aria-label="Movimentar unidades"><i data-lucide="plus-circle"></i></button>
-              <button class="btn-icon" data-action="edit" title="Editar"><i data-lucide="pencil"></i></button>
-              <button class="btn-icon danger" data-action="delete" title="Excluir"><i data-lucide="trash-2"></i></button>
+              <button class="btn-icon workspace-action" data-action="move" title="Movimentar unidades" aria-label="Movimentar unidades">Movimentar</button>
+              <button class="btn-icon workspace-action" data-action="edit" title="Editar">Editar</button>
+              <button class="btn-icon workspace-action danger" data-action="delete" title="Excluir">Excluir</button>
             </div>
           </td>
         </tr>
+        {% else %}
+        <tr><td colspan="7">Nenhum item cadastrado.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
 
   </div>
 </div>

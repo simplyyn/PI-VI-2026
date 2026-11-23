@@ -120,9 +120,12 @@ class SQLiteRepository:
             appointments=[dict(json.loads(raw),id=i) for i,raw in rows]
             from professionals import validate_professional
             professionals=[dict(json.loads(raw),id=i) for i,raw in db.execute("SELECT id,data FROM records WHERE kind='professionals' AND clinic=?",(clinic,)).fetchall()]
-            data=validate_professional(professionals,data)
-            if identifier is not None and not any(a['id']==identifier for a in appointments):
+            existing = next((appointment for appointment in appointments if appointment['id'] == identifier), None)
+            if identifier is not None and existing is None:
                 raise LookupError('Registro não encontrado')
+            if existing and existing.get('realizado_em'):
+                raise ValueError('Desfaça a marcação de realizado antes de editar a consulta.')
+            data=validate_professional(professionals,data)
             check_conflict(appointments,data,identifier)
             if identifier is None:
                 identifier=db.execute("INSERT INTO records(kind,clinic,data) VALUES ('appointments',?,?)",(clinic,json.dumps(data))).lastrowid
@@ -131,6 +134,31 @@ class SQLiteRepository:
             if operation_key:
                 db.execute("INSERT INTO records(kind,clinic,data) VALUES ('booking_receipts',?,?)",(clinic,json.dumps(dict(key=operation_key,appointment_id=identifier))))
         return dict(data,id=identifier)
+
+    def set_appointment_completion(self, clinic, identifier, completed, now):
+        from datetime import datetime, timedelta
+        from scheduling import AppointmentConflict
+
+        with self.connect() as db:
+            if not db.in_transaction:
+                db.execute('BEGIN IMMEDIATE')
+            row = db.execute(
+                "SELECT data FROM records WHERE clinic=? AND kind='appointments' AND id=?", (clinic, identifier)
+            ).fetchone()
+            if row is None:
+                raise LookupError('Agendamento não encontrado')
+            appointment = json.loads(row[0])
+            if completed and not appointment.get('realizado_em'):
+                end = datetime.fromisoformat(f"{appointment['data']}T{appointment['horario']}").replace(tzinfo=now.tzinfo)
+                end += timedelta(minutes=appointment['duracao'])
+                if appointment['status'] == 'cancelado' or end > now:
+                    raise AppointmentConflict('Só é possível marcar como realizada uma consulta não cancelada após seu horário.')
+                appointment['realizado_em'] = appointment['data']
+            elif not completed:
+                appointment.pop('realizado_em', None)
+            db.execute("UPDATE records SET data=? WHERE clinic=? AND kind='appointments' AND id=?",
+                       (json.dumps(appointment), clinic, identifier))
+            return dict(appointment, id=identifier)
 
     def sync_professional_name(self,clinic,professional_id):
         with self.connect() as db:
@@ -161,6 +189,15 @@ class SQLiteRepository:
 
     def delete(self, kind, clinic, identifier):
         with self.connect() as db:
+            if kind == 'appointments':
+                if not db.in_transaction:
+                    db.execute('BEGIN IMMEDIATE')
+                completion = db.execute(
+                    "SELECT json_extract(data,'$.realizado_em') FROM records WHERE kind=? AND clinic=? AND id=?",
+                    (kind, clinic, identifier),
+                ).fetchone()
+                if completion and completion[0]:
+                    raise ValueError('Desfaça a marcação de realizado antes de excluir a consulta.')
             if not db.execute('DELETE FROM records WHERE id=? AND kind=? AND clinic=?', (identifier,kind,clinic)).rowcount:
                 raise LookupError('Registro não encontrado')
             if kind == 'attendance':

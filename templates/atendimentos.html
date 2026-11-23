@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}SmartDent AI — Atendimentos
+{% block title %}Atendimentos · SmartDent
 {% endblock %}
 {% block content %}
 <div class="atend-container">
   <div class="conv-list-panel">
-    <div class="conv-list-header"><a href="/respostas" class="pending-link">Mensagens sem resposta e lote</a><div class="conv-list-top"><h2>Atendimentos <span class="count-badge">{{ atendimentos | length }}</span></h2><button class="btn-primary" data-action="create">Novo</button></div><input class="search-input" id="records-search" placeholder="Buscar paciente ou assunto"><div class="filter-tabs"><button class="filter-tab active" data-filter="todos">Todos</button><button class="filter-tab" data-filter="pending">Pendentes</button><button class="filter-tab" data-filter="resolved">Resolvidos</button><button class="filter-tab" data-filter="escalated">Escalados</button></div></div>
+    <div class="conv-list-header"><a href="/respostas" class="pending-link">Respostas pendentes</a><div class="conv-list-top"><h1>Atendimentos</h1><button class="btn-primary" data-action="create">Novo</button></div><input class="search-input" id="records-search" placeholder="Paciente ou assunto" aria-label="Buscar atendimento"><div class="filter-tabs"><button class="filter-tab active" data-filter="todos">Todos</button><button class="filter-tab" data-filter="pending">Pendentes</button><button class="filter-tab" data-filter="resolved">Resolvidos</button><button class="filter-tab" data-filter="escalated">Escalados</button></div></div>
     <div class="conv-list">
     {% for at in atendimentos %}
       <button type="button" class="conv-item" data-id="{{ at.id }}" data-action="select" style="width:100%;text-align:left;color:inherit;background:inherit;border:0">
@@ -14,11 +14,11 @@
     </div>
   </div>
   <div class="conv-detail-panel" id="attendance-detail" hidden>
-    <div class="conv-detail-header"><div class="conv-detail-info"><div><h3 id="attendance-name"></h3><p id="attendance-subject"></p></div></div><div class="kb-actions"><button class="btn-summary" data-action="summary">Resumo da IA</button><button class="btn-escalate" data-action="escalate">Escalar</button><button class="btn-icon" data-action="resolve">Resolver</button><button class="btn-icon" data-action="edit" title="Editar">✎</button><button class="btn-icon danger" data-action="delete" title="Excluir">×</button></div></div>
+    <div class="conv-detail-header"><div class="conv-detail-info"><div><h3 id="attendance-name"></h3><p id="attendance-subject"></p></div></div><div class="kb-actions"><button class="btn-summary" data-action="summary">Resumo da IA</button><button class="btn-escalate" data-action="escalate">Escalar</button><button class="btn-icon workspace-action" data-action="resolve">Resolver</button><button class="btn-icon workspace-action" data-action="edit" title="Editar">Editar</button><button class="btn-icon workspace-action danger" data-action="delete" title="Excluir">Excluir</button></div></div>
 <div class="messages-area" id="attendance-messages"></div>
-    <form class="chat-input-bar" id="human-message-form"><label class="attendance-draft">Mensagem para revisar e enviar<textarea name="texto" required maxlength="4000" rows="5" placeholder="Escreva uma mensagem ou solicite uma sugestão da IA..." aria-label="Mensagem para revisar antes de enviar"></textarea></label><button type="button" class="btn-suggest" data-action="suggest-ai">Sugestão IA</button><button type="submit" class="btn-send">Enviar</button></form>
+    <form class="chat-input-bar" id="human-message-form"><label class="attendance-draft">Resposta ao paciente<textarea name="texto" required maxlength="4000" rows="5" placeholder="Escreva uma resposta" aria-label="Mensagem para revisar antes de enviar"></textarea></label><button type="button" class="btn-suggest" data-action="suggest-ai">Sugestão IA</button><button type="submit" class="btn-send">Enviar</button></form>
     <p id="suggestion-feedback" class="suggestion-feedback" role="status" aria-live="polite"></p>
-    <p>A mensagem fica registrada neste sistema. Não é enviada por WhatsApp ou e-mail.</p>
+    <p class="workspace-channel-note">Envio pelo portal do paciente.</p>
   </div>
 </div>
 <dialog id="summary-dialog" class="summary-dialog" aria-labelledby="summary-title">
