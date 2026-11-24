@@ -1,83 +1,77 @@
 {% extends "base.html" %}
-{% block title %}Relatórios e IA · SmartDent{% endblock %}
-{% block content %}
-<div class="page-container">
-<div class="page-header"><div><h1>Relatórios e IA</h1><p class="page-subtitle">{{ inicio }} a {{ fim }}</p></div><div class="date-filter">{% for period in [7,30,90] %}<a class="date-btn {% if periodo_dias == period %}active{% endif %}" href="/relatorios?dias={{ period }}">{{ period }} dias</a>{% endfor %}</div></div>
-<div class="page-body"><section class="metrics-grid" style="margin-bottom:24px">
-<div class="card metric"><div class="metric-info"><h3>{{ metricas.atendimentos_semana }}</h3><p>Atendimentos no período</p></div></div>
-<div class="card metric"><div class="metric-info"><h3>{{ metricas.resolvidos }}</h3><p>Resolvidos</p></div></div>
-<div class="card metric"><div class="metric-info"><h3>{{ metricas.resumos }}</h3><p>Resumos atualizados</p></div></div>
-</section>
-{% set daily_max = (grafico.ia + grafico.humano + [1]) | max %}
-{% set channel_total = [1, metricas.canal_ia + metricas.canal_humano] | max %}
-<div class="chart-grid">
-  <section class="chart-card" aria-labelledby="daily-title">
-    <h3 id="daily-title">Atendimentos por dia</h3>
-    <div class="workspace-table report-data" role="region" aria-label="Atendimentos por dia" tabindex="0">
-      <table class="kb-table">
-        <thead><tr><th scope="col">Dia</th><th scope="col">IA</th><th scope="col">Humano</th></tr></thead>
-        <tbody>
-          {% for day in grafico.labels %}
-          <tr>
-            <th scope="row">{{ day }}</th>
-            <td><span>{{ grafico.ia[loop.index0] }}</span><meter max="{{ daily_max }}" value="{{ grafico.ia[loop.index0] }}" aria-hidden="true"></meter></td>
-            <td><span>{{ grafico.humano[loop.index0] }}</span><meter class="report-human" max="{{ daily_max }}" value="{{ grafico.humano[loop.index0] }}" aria-hidden="true"></meter></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
-  <section class="chart-card" aria-labelledby="channel-title">
-    <h3 id="channel-title">Canal registrado</h3>
-    <dl class="report-channels">
-      <dt>IA</dt><dd>{{ metricas.canal_ia }}<meter max="{{ channel_total }}" value="{{ metricas.canal_ia }}" aria-hidden="true"></meter></dd>
-      <dt>Humano</dt><dd>{{ metricas.canal_humano }}<meter class="report-human" max="{{ channel_total }}" value="{{ metricas.canal_humano }}" aria-hidden="true"></meter></dd>
-    </dl>
-  </section>
-</div>
-<div class="chart-grid">
-  <section class="chart-card">
-    <h3>Tempo médio de resposta</h3>
-    {% if metricas.tempo_resposta is not none %}
-    <p>{{ metricas.tempo_resposta }} s · {{ metricas.amostras_tempo_resposta }} intervalos medidos</p>
-    {% else %}<p>Nenhuma resposta com intervalo mensurável no período.</p>{% endif %}
-    <p>Da primeira mensagem do paciente até a próxima resposta válida.</p>
-    <h3>Avaliações das respostas da IA</h3>
-    {% if avaliacoes.total %}<p>{{ avaliacoes.uteis }} de {{ avaliacoes.total }} avaliações marcaram a resposta como útil ({{ metricas.satisfacao }}%).</p>
-    {% else %}<p>Nenhuma avaliação registrada no período.</p>{% endif %}
-  </section>
-  <section class="chart-card">
-    <h3>Principais dúvidas</h3>
-    {% if principais_duvidas %}<dl class="report-channels">{% for item in principais_duvidas %}<dt>{{ item.tema }}</dt><dd>{{ item.total }}</dd>{% endfor %}</dl>
-    {% else %}<p>Nenhuma pergunta reconhecida no período.</p>{% endif %}
-    <p>Contagem por assunto das perguntas reconhecidas no período.</p>
-  </section>
-</div>
-<p>O canal mostra o valor registrado no atendimento.</p>
-<div class="chart-card"><h3>Motivos de reclamação</h3><p>{{ reclamacoes.reclamacoes }} reclamações · {{ reclamacoes.analisados }} atendimentos analisados · {{ reclamacoes.pendentes }} pendentes de análise.</p>
-<button class="btn-primary" id="classify-pending">Analisar pendentes com IA (até 10)</button><p id="analysis-feedback" role="status"></p>
-{% if not reclamacoes.categorias %}<p>Nenhuma reclamação classificada neste período.</p>{% endif %}
-<div class="workspace-table" role="region" aria-label="Motivos de reclamação" tabindex="0"><table class="kb-table"><thead><tr><th>Categoria</th><th>Total</th><th>Percentual</th><th>Motivos registrados</th></tr></thead><tbody>{% for c in reclamacoes.categorias %}<tr><td>{{ c.rotulo }}</td><td>{{ c.total }}</td><td>{{ c.percentual }}%<meter max="100" value="{{ c.percentual }}" aria-hidden="true"></meter></td><td>{% for example in c.exemplos %}<p>{{ example }}</p>{% endfor %}</td></tr>{% endfor %}</tbody></table></div></div>
-<section class="analysis-card" id="complaint-review-panel" aria-labelledby="complaint-heading">
-  <header class="analysis-card-header"><div><h3 id="complaint-heading">Reclamações e oportunidades de melhoria</h3></div><button type="button" class="btn-primary" data-action="classify">Analisar com IA</button></header>
-  <label class="analysis-field">Atendimento<select id="complaint-attendance"><option value="">Selecione uma conversa</option></select></label><p class="analysis-description">Identifica insatisfação com a clínica, como atraso, cobrança ou atendimento. Relatar dor, por si só, não significa uma reclamação.</p>
-  <p id="complaint-status" role="status" class="analysis-result"></p>
-  <details class="analysis-review"><summary>Revisar classificação manualmente</summary>
-    <form id="complaint-form" class="complaint-form">
-      <label class="complaint-toggle"><input type="checkbox" name="reclamacao"><span><strong>Há uma reclamação sobre a clínica</strong><small>Marque apenas quando houver insatisfação registrada.</small></span></label>
-      <label class="analysis-field">Categoria<select name="categoria" aria-label="Categoria de reclamação"></select></label>
-      <label class="analysis-field">Motivo<textarea name="motivo" maxlength="300" rows="3" aria-label="Motivo da reclamação" placeholder="Descreva brevemente a insatisfação registrada"></textarea></label>
-      <div class="analysis-form-actions"><button class="btn-primary" type="submit">Salvar revisão</button></div>
-    </form>
-  </details>
-</section>
-
-<section class="chart-card" aria-labelledby="usage-title"><h3 id="usage-title">Uso registrado da IA</h3><p id="llm-usage" role="status">Consultando consumo registrado...</p><p>Total registrado pelo SmartDent. Consulte a cota e a cobrança na conta do provedor.</p><a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Consultar uso, limites e faturamento no Google AI Studio</a></section>
-</div></div>
+{% block title %}Relatórios · SmartDent{% endblock %}
+{% block topnav %}<nav class="topnav"><a href="#" class="active">Desempenho</a></nav>{% endblock %}
+{% block head_extra %}
+<style>
+  .rel-grid{grid-template-columns:1.6fr 1fr}
+  .y-axis{display:flex;flex-direction:column;justify-content:space-between;font-size:.72rem;color:var(--muted-fg);text-align:right;padding-bottom:22px;flex:none}
+  .chart{display:flex;gap:12px;height:240px}
+  .plot{flex:1;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:0 6px}
+  .rank{display:flex;flex-direction:column;gap:16px}
+  .rank .row{display:flex;align-items:center;gap:12px}
+  .rank .lbl{width:150px;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rank .track{flex:1;height:8px;border-radius:8px;background:var(--muted-bg);overflow:hidden}
+  .rank .track i{display:block;height:100%;border-radius:8px;background:var(--info)}
+  .rank .n{width:40px;text-align:right;font-weight:700;font-size:.85rem}
+</style>
 {% endblock %}
-{% block extra_scripts %}
-<link rel="stylesheet" href="/static/attendance-analysis.css">
-<script src="/static/complaint-review.js"></script>
-<script src="/static/management.js"></script>
+{% block content %}
+<div class="content">
+  <div class="page-head">
+    <div><h1>Relatórios</h1><div class="sub">Período: últimos {{ periodo_dias }} dias</div></div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="k-top"><span>Atendimentos</span><i data-lucide="message-circle"></i></div><div class="val num">{{ metricas.atendimentos_semana }}</div><div class="foot mut">no período</div></div>
+    <div class="kpi"><div class="k-top"><span>Automação (IA)</span><i data-lucide="sparkles"></i></div><div class="val num">{{ metricas.taxa_automatizacao }}%</div><div class="foot pos">{{ metricas.canal_ia }} pela IA</div></div>
+    <div class="kpi"><div class="k-top"><span>Resolvidos</span><i data-lucide="check-circle"></i></div><div class="val num">{{ metricas.resolvidos }}</div><div class="foot mut">de {{ metricas.atendimentos_semana }}</div></div>
+    <div class="kpi"><div class="k-top"><span>Reclamações</span><i data-lucide="alert-octagon"></i></div><div class="val num">{{ reclamacoes.reclamacoes }}</div><div class="foot neg">{{ reclamacoes.pendentes }} pendentes</div></div>
+  </div>
+
+  <div class="grid rel-grid" style="margin-bottom:16px">
+    <div class="card">
+      <h3>Atendimentos por dia</h3><div class="desc">IA e atendimento humano</div>
+      <div class="chart"><div class="y-axis" id="yax"></div><div class="plot" id="plot"></div></div>
+    </div>
+    <div class="card">
+      <h3>Principais dúvidas</h3><div class="desc">Temas mais perguntados</div>
+      <div class="rank">
+        {% set maxd = (principais_duvidas|map(attribute='total')|max) if principais_duvidas else 1 %}
+        {% for d in principais_duvidas %}
+        <div class="row"><span class="lbl">{{ d.tema }}</span><div class="track"><i style="width:{{ (100 * d.total / maxd)|round }}%"></i></div><span class="n num">{{ d.total }}</span></div>
+        {% else %}
+        <p class="muted">Sem dúvidas no período.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card pad0">
+    <div class="card-head"><h3>Reclamações por motivo</h3><div class="sub">{{ reclamacoes.analisados }} analisados · {{ reclamacoes.pendentes }} pendentes</div></div>
+    <table>
+      <thead><tr><th>Motivo</th><th class="r">Registros</th><th class="r">%</th></tr></thead>
+      <tbody>
+        {% for c in reclamacoes.categorias %}
+        <tr><td>{{ c.rotulo }}</td><td class="r num">{{ c.total }}</td><td class="r num muted">{{ c.percentual }}%</td></tr>
+        {% else %}
+        <tr><td colspan="3" class="muted">Nenhuma reclamação classificada no período.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script id="grafico-data" type="application/json">{{ grafico|tojson }}</script>
+<script>
+  (function(){
+    const g=JSON.parse(document.getElementById('grafico-data').textContent);
+    const totals=g.labels.map((_,i)=>(g.ia[i]||0)+(g.humano[i]||0));
+    const max=Math.max(1,...totals), reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const short=iso=>{try{return ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][new Date(iso+'T00:00:00').getDay()];}catch(e){return '';}};
+    document.getElementById('yax').innerHTML=[max,Math.round(max*.66),Math.round(max*.33),0].map(v=>`<span>${v}</span>`).join('');
+    const el=document.getElementById('plot');
+    el.innerHTML=g.labels.map((lb,i)=>`<div class="b"><div class="col ${totals[i]===max?'hot':''}" style="height:${totals[i]/max*100}%"><b>${totals[i]}</b></div><div class="cap">${short(lb)}</div></div>`).join('');
+    if(!reduce) el.querySelectorAll('.col').forEach((c,i)=>{const h=c.style.height;c.style.height='0%';setTimeout(()=>c.style.height=h,60+i*50);});
+  })();
+</script>
 {% endblock %}

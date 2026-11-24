@@ -26,6 +26,13 @@ if not defined PY (
   set "PY=.venv\Scripts\python.exe"
 )
 
+rem ── Garante as dependencias (um .venv reaproveitado pode estar incompleto) ──
+"%PY%" -c "import fastapi, uvicorn, jinja2, multipart, itsdangerous, psycopg" >nul 2>&1
+if errorlevel 1 (
+  echo Instalando dependencias no ambiente Python...
+  "%PY%" -m pip install -q -r requirements-dev.txt || goto :erro_pip
+)
+
 rem ── Se ja estiver rodando, so abre o navegador ──
 "%PY%" -c "import socket,sys; s=socket.socket(); s.settimeout(0.5); sys.exit(0 if s.connect_ex(('127.0.0.1',%SMARTDENT_PORT%))==0 else 1)"
 if not errorlevel 1 (

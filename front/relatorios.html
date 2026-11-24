@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDent — Relatórios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesque:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="app.css">
+  <style>
+    .rel-grid{grid-template-columns:1.6fr 1fr}
+    .area-wrap{position:relative}
+    .rank{display:flex;flex-direction:column;gap:16px}
+    .rank .row{display:flex;align-items:center;gap:12px}
+    .rank .lbl{width:120px;font-size:.85rem}
+    .rank .track{flex:1;height:8px;border-radius:8px;background:var(--muted-bg);overflow:hidden}
+    .rank .track i{display:block;height:100%;border-radius:8px;background:var(--info)}
+    .rank .n{width:54px;text-align:right;font-weight:700;font-size:.85rem}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="side">
+      <div class="org"><div class="logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2c-1.6 0-2.5.9-4.3.9-1.2 0-2-.3-3-.3C2.5 2.8 1.6 4.4 1.6 6.6c0 1.9.6 3.3 1.2 5.4.3 1 .4 1.6.6 3 .4 2.6.6 5.4 1.9 5.4 1.2 0 1.3-3.3 1.6-5 .2-1.1.6-1.8 1.5-1.8s1.3.7 1.5 1.8c.3 1.7.4 5 1.6 5 1.3 0 1.5-2.8 1.9-5.4.2-1.4.3-2 .6-3 .6-2.1 1.2-3.5 1.2-5.4 0-2.2-.9-3.8-3.1-3.8-1 0-1.8.3-3 .3-1.8 0-2.7-.9-4.3-.9z"/></svg></div><div><b>Clínica Sorriso</b><small>SmartDent AI · Pro</small></div></div>
+      <div class="grp"><div class="gt">Geral</div>
+        <a class="nav" href="index.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a class="nav" href="agendamentos.html"><i data-lucide="calendar-days"></i> Agendamentos</a>
+        <a class="nav" href="atendimentos.html"><i data-lucide="message-circle"></i> Atendimentos <span class="pill">6</span></a>
+        <a class="nav" href="pacientes.html"><i data-lucide="users"></i> Pacientes</a>
+        <a class="nav" href="estoque.html"><i data-lucide="package"></i> Estoque</a>
+      </div>
+      <div class="grp"><div class="gt">Conteúdo</div>
+        <a class="nav" href="conhecimento.html"><i data-lucide="book-open"></i> Base de Conhecimento</a>
+        <a class="nav active" href="relatorios.html"><i data-lucide="bar-chart-2"></i> Relatórios</a>
+      </div>
+      <div class="grp"><div class="gt">Outros</div>
+        <a class="nav" href="configuracoes.html"><i data-lucide="settings"></i> Configurações</a>
+        <a class="nav" href="ajuda.html"><i data-lucide="life-buoy"></i> Ajuda</a>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <nav class="topnav"><a href="#" class="active">Desempenho</a><a href="#">Financeiro</a><a href="#">IA</a></nav>
+        <div class="right"><div class="search"><i data-lucide="search"></i><input placeholder="Buscar..."></div>
+          <button class="iconbtn" id="themeBtn" title="Alternar tema"><i data-lucide="moon" id="themeIcon"></i></button>
+          <button class="iconbtn"><i data-lucide="settings"></i></button><div class="avatar">CS</div></div>
+      </div>
+
+      <div class="content">
+        <div class="page-head"><div><h1>Relatórios</h1><div class="sub">Período: últimos 30 dias</div></div><button class="btn-ghost"><i data-lucide="download"></i> Exportar CSV</button></div>
+
+        <div class="kpis">
+          <div class="kpi"><div class="k-top"><span>Receita</span><i data-lucide="dollar-sign"></i></div><div class="val num">R$ 128.940</div><div class="delta pos"><i data-lucide="trending-up"></i> +14,2%</div></div>
+          <div class="kpi"><div class="k-top"><span>Consultas realizadas</span><i data-lucide="calendar-check"></i></div><div class="val num">612</div><div class="delta pos"><i data-lucide="trending-up"></i> +9,1%</div></div>
+          <div class="kpi"><div class="k-top"><span>Taxa de falta</span><i data-lucide="user-x"></i></div><div class="val num">6,4%</div><div class="delta neg"><i data-lucide="trending-up"></i> +1,2 pts</div></div>
+          <div class="kpi"><div class="k-top"><span>Resolução pela IA</span><i data-lucide="sparkles"></i></div><div class="val num">91%</div><div class="delta pos"><i data-lucide="trending-up"></i> +4 pts</div></div>
+        </div>
+
+        <div class="grid rel-grid" style="margin-bottom:16px">
+          <div class="card">
+            <h3>Receita diária</h3><div class="desc">Últimos 14 dias (R$)</div>
+            <div class="area-wrap"><svg id="area" viewBox="0 0 680 240" class="chart-svg"></svg></div>
+          </div>
+          <div class="card">
+            <h3>Procedimentos mais realizados</h3><div class="desc">No período</div>
+            <div class="rank">
+              <div class="row"><span class="lbl">Limpeza</span><div class="track"><i style="width:100%"></i></div><span class="n num">182</span></div>
+              <div class="row"><span class="lbl">Restauração</span><div class="track"><i style="width:72%"></i></div><span class="n num">131</span></div>
+              <div class="row"><span class="lbl">Clareamento</span><div class="track"><i style="width:54%"></i></div><span class="n num">98</span></div>
+              <div class="row"><span class="lbl">Ortodontia</span><div class="track"><i style="width:41%"></i></div><span class="n num">74</span></div>
+              <div class="row"><span class="lbl">Implante</span><div class="track"><i style="width:26%"></i></div><span class="n num">47</span></div>
+              <div class="row"><span class="lbl">Extração</span><div class="track"><i style="width:17%"></i></div><span class="n num">31</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card pad0">
+          <div class="card-head"><h3>Desempenho por profissional</h3></div>
+          <table>
+            <thead><tr><th>Profissional</th><th class="r">Consultas</th><th class="r">Receita</th><th class="r">Satisfação</th><th>Tendência</th></tr></thead>
+            <tbody>
+              <tr><td><div class="cell"><div class="av">AP</div><div><b>Dra. Ana Paula</b><small>Clínica geral</small></div></div></td><td class="r num">214</td><td class="r num">R$ 48.200</td><td class="r num">4,9</td><td><span class="badge ok">↑ +12%</span></td></tr>
+              <tr><td><div class="cell"><div class="av">FS</div><div><b>Dr. Felipe Souza</b><small>Implantodontia</small></div></div></td><td class="r num">168</td><td class="r num">R$ 39.800</td><td class="r num">4,7</td><td><span class="badge ok">↑ +8%</span></td></tr>
+              <tr><td><div class="cell"><div class="av">JM</div><div><b>Dra. Júlia Martins</b><small>Ortodontia</small></div></div></td><td class="r num">142</td><td class="r num">R$ 28.600</td><td class="r num">4,8</td><td><span class="badge neg">↓ −3%</span></td></tr>
+              <tr><td><div class="cell"><div class="av">RC</div><div><b>Dr. Rafael Costa</b><small>Endodontia</small></div></div></td><td class="r num">88</td><td class="r num">R$ 12.340</td><td class="r num">4,6</td><td><span class="badge ok">↑ +5%</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function smooth(pts){let d=`M${pts[0][0]},${pts[0][1]}`;for(let i=0;i<pts.length-1;i++){const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;const c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6,c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6;d+=` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;}return d;}
+    (function(){
+      const data=[3.2,4.1,3.8,4.6,4.2,5.1,4.8,5.6,5.0,6.1,5.4,6.4,5.9,6.8];
+      const days=['','','S','','','Q','','','S','','','T','','Hoje'];
+      const svg=document.getElementById('area'),W=680,H=240,pl=36,pr=12,pt=16,pb=28,mx=Math.max(...data)*1.12;
+      const X=i=>pl+i*(W-pl-pr)/(data.length-1),Y=v=>H-pb-v/mx*(H-pt-pb);
+      const pts=data.map((v,i)=>[X(i),Y(v)]),line=smooth(pts);
+      let grid='';for(let s=0;s<=4;s++){const val=(mx/4*s),y=Y(val);grid+=`<line class="grid-line" x1="${pl}" y1="${y.toFixed(1)}" x2="${W-pr}" y2="${y.toFixed(1)}"/><text class="axis-txt" x="${pl-8}" y="${(y+3).toFixed(1)}" text-anchor="end">${val.toFixed(0)}k</text>`;}
+      let xl='';days.forEach((d,i)=>{if(d)xl+=`<text class="axis-txt" x="${X(i).toFixed(1)}" y="${H-8}" text-anchor="middle">${d}</text>`;});
+      const dots=pts.map(p=>`<circle class="area-dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.2"/>`).join('');
+      svg.innerHTML=`<defs><linearGradient id="af" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--info)" stop-opacity=".25"/><stop offset="1" stop-color="var(--info)" stop-opacity="0"/></linearGradient></defs>${grid}<path d="${line} L${X(data.length-1)},${Y(0)} L${X(0)},${Y(0)} Z" fill="url(#af)"/><path class="area-line" d="${line}"/>${dots}${xl}`;
+      if(!reduce){const lp=svg.querySelector('.area-line'),len=lp.getTotalLength();lp.style.strokeDasharray=len;lp.style.strokeDashoffset=len;lp.animate([{strokeDashoffset:len},{strokeDashoffset:0}],{duration:1100,easing:'ease-out',fill:'forwards'});}
+    })();
+  </script>
+</body>
+</html>

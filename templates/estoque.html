@@ -1,132 +1,63 @@
 {% extends "base.html" %}
 {% block title %}Estoque · SmartDent{% endblock %}
-
+{% block topnav %}<nav class="topnav"><a href="#" class="active">Itens</a></nav>{% endblock %}
 {% block content %}
-<div class="page-container">
-
-  <div class="page-header">
-    <div>
-      <h1>Estoque</h1>
-    </div>
-    <button class="btn-primary" data-action="create">
-      Adicionar item
-    </button>
+<div class="content">
+  <div class="page-head">
+    <div><h1>Estoque</h1><div class="sub">Controle de insumos e alertas de reposição (RF009)</div></div>
+    <button class="btn-primary" id="novo"><i data-lucide="plus"></i> Novo item</button>
   </div>
 
-  <div class="page-body">
+  <div class="kpis">
+    <div class="kpi"><div class="k-top"><span>Itens cadastrados</span><i data-lucide="package"></i></div><div class="val num">{{ total }}</div><div class="foot mut">no inventário</div></div>
+    <div class="kpi"><div class="k-top"><span>Esgotados</span><i data-lucide="alert-triangle"></i></div><div class="val num">{{ esgotado }}</div><div class="foot neg">repor com urgência</div></div>
+    <div class="kpi"><div class="k-top"><span>Nível baixo</span><i data-lucide="alert-circle"></i></div><div class="val num">{{ baixo }}</div><div class="foot warn-c">monitorar</div></div>
+    <div class="kpi"><div class="k-top"><span>Saudáveis</span><i data-lucide="check-circle"></i></div><div class="val num">{{ total - baixo - esgotado }}</div><div class="foot pos">nível OK</div></div>
+  </div>
 
-    <section class="metrics-grid" style="margin-bottom: 24px;">
-      <div class="card metric">
-        <div class="metric-info">
-          <h3>{{ total }}</h3>
-          <p>Itens no cadastro</p>
-        </div>
-      </div>
-      <div class="card metric">
-        <div class="metric-info">
-          <h3>{{ baixo }}</h3>
-          <p>Itens com estoque baixo</p>
-        </div>
-      </div>
-      <div class="card metric">
-        <div class="metric-info">
-          <h3>{{ esgotado }}</h3>
-          <p>Itens esgotados</p>
-        </div>
-      </div>
-    </section>
-
-    {% if alertas %}
-    <div class="insight-item warning" >
-
-      <div>
-        <h4>Atenção: {{ alertas | length }} {{ 'item precisa' if alertas | length == 1 else 'itens precisam' }} de reposição</h4>
-        <ul class="stock-alerts">
-          {% for item in alertas[:5] %}
-          <li><strong>{{ item.nome }}</strong>:
-            {% if item.status == 'esgotado' %}esgotado{% else %}{{ item.quantidade }} em estoque, mínimo {{ item.minimo }}{% if item.faltam %} (faltam {{ item.faltam }}){% else %} (no limite){% endif %}{% endif %}
-          </li>
-          {% endfor %}
-        </ul>
-        {% if alertas | length > 5 %}<p>E mais {{ alertas | length - 5 }} na tabela abaixo.</p>{% endif %}
-      </div>
-    </div>
-    {% endif %}
-
-    <div class="kb-filters">
-      <input type="text" class="search-input kb-search" placeholder="Nome do insumo" aria-label="Buscar insumo">
-      <div class="filter-tabs" style="flex-shrink: 0;">
-        <button class="filter-tab active">Todos</button>
-        <button class="filter-tab">EPI</button>
-        <button class="filter-tab">Anestésicos</button>
-        <button class="filter-tab">Instrumental</button>
-        <button class="filter-tab">Restauração</button>
-        <button class="filter-tab">Endodontia</button>
-      </div>
-    </div>
-
-    <div class="workspace-table" role="region" aria-label="Itens de estoque" tabindex="0">
-    <table class="kb-table">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Categoria</th>
-          <th>Unidade</th>
-          <th>Quantidade</th>
-          <th>Mínimo</th>
-          <th>Status</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
+  <div class="card pad0">
+    <div class="card-head"><h3>Itens</h3><div class="sub">{{ alertas|length }} com alerta</div></div>
+    <table>
+      <thead><tr><th>Item</th><th>Categoria</th><th class="r">Qtd.</th><th class="r">Mínimo</th><th>Nível</th><th class="r"></th></tr></thead>
       <tbody>
-        {% for item in estoque %}
-        <tr data-id="{{ item.id }}">
-          <td>
-            <div class="kb-title-cell">
-
-              {{ item.nome }}
-            </div>
-          </td>
-          <td><span class="badge-category">{{ item.categoria }}</span></td>
-          <td style="color: var(--text-secondary); font-size: 13px;">{{ item.unidade }}</td>
-          <td>
-            <span class="stock-qty {% if item.status != 'ok' %}{{ item.status }}{% endif %}">
-              {{ item.quantidade }}
-            </span>
-          </td>
-          <td style="color: var(--text-secondary); font-size: 13px;">{{ item.minimo }}</td>
-          <td>
-            {% if item.status == 'ok' %}
-              <span class="badge badge-stock-ok">OK</span>
-            {% elif item.status == 'baixo' %}
-              <span class="badge badge-stock-baixo">Baixo</span>
-            {% else %}
-              <span class="badge badge-stock-esgotado">Esgotado</span>
-            {% endif %}
-          </td>
-          <td>
-            <div class="kb-actions">
-              <button class="btn-icon workspace-action" data-action="move" title="Movimentar unidades" aria-label="Movimentar unidades">Movimentar</button>
-              <button class="btn-icon workspace-action" data-action="edit" title="Editar">Editar</button>
-              <button class="btn-icon workspace-action danger" data-action="delete" title="Excluir">Excluir</button>
-            </div>
-          </td>
+        {% for i in estoque %}
+        <tr>
+          <td><div class="cell"><div class="ic"><i data-lucide="box"></i></div><div><b>{{ i.nome }}</b><small>{{ i.unidade }}</small></div></div></td>
+          <td class="muted">{{ i.categoria }}</td>
+          <td class="r num" style="font-weight:700">{{ i.quantidade }}</td>
+          <td class="r num muted">{{ i.minimo }}</td>
+          <td><span class="badge dot {{ {'ok':'ok','baixo':'warn','esgotado':'neg'}[i.status] }}">{{ {'ok':'OK','baixo':'Baixo','esgotado':'Esgotado'}[i.status] }}</span></td>
+          <td class="r"><div class="row-actions"><button class="icon-sm" data-edit="{{ i.id }}"><i data-lucide="pencil"></i></button><button class="icon-sm danger" data-del="{{ i.id }}"><i data-lucide="trash-2"></i></button></div></td>
         </tr>
         {% else %}
-        <tr><td colspan="7">Nenhum item cadastrado.</td></tr>
+        <tr><td colspan="6" class="muted">Nenhum item cadastrado.</td></tr>
         {% endfor %}
       </tbody>
     </table>
-    </div>
-
   </div>
 </div>
+<script id="est-data" type="application/json">{{ estoque|tojson }}</script>
 {% endblock %}
-
 {% block extra_scripts %}
-<script id="crud-records" type="application/json">{{ estoque | tojson }}</script>
-<div id="crud-root" data-resource="estoque"></div>
-{% include "crud_dialog.html" %}
-<link rel="stylesheet" href="/static/crud.css">
-<script src="/static/crud.js"></script>
+<script>
+  (function(){
+    const data=JSON.parse(document.getElementById('est-data').textContent);
+    function form(i){
+      return {
+        title:i?'Editar item':'Novo item',
+        fields:[
+          {name:'nome',label:'Nome',type:'text',required:true,value:i&&i.nome},
+          {name:'categoria',label:'Categoria',type:'text',required:true,value:i&&i.categoria},
+          {name:'unidade',label:'Unidade',type:'text',required:true,value:i&&i.unidade,placeholder:'Ex.: Caixa (100 un)'},
+          {name:'quantidade',label:'Quantidade',type:'number',value:i?i.quantidade:0},
+          {name:'minimo',label:'Mínimo (ponto de reposição)',type:'number',value:i?i.minimo:0},
+        ],
+        submit:i?{method:'PUT',url:'/api/estoque/'+i.id}:{method:'POST',url:'/api/estoque'}
+      };
+    }
+    document.getElementById('novo').onclick=()=>SmartDent.openForm(form(null));
+    document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>SmartDent.openForm(form(data.find(i=>String(i.id)===b.dataset.edit))));
+    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>SmartDent.del('/api/estoque/'+b.dataset.del,'Excluir este item?'));
+  })();
+</script>
 {% endblock %}

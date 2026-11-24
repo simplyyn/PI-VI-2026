@@ -1,106 +1,68 @@
 {% extends "base.html" %}
 {% block title %}Pacientes · SmartDent{% endblock %}
-
+{% block topnav %}<nav class="topnav"><a href="#" class="active">Todos</a></nav>{% endblock %}
 {% block content %}
-<div class="page-container">
-
-  <div class="page-header">
-    <div>
-      <h1>Pacientes</h1>
-    </div>
-    <div class="kb-actions">
-      <button class="btn-secondary" data-action="export">
-        Exportar
-      </button>
-      <button class="btn-primary" data-action="create">
-        Novo paciente
-      </button>
-    </div>
+<div class="content">
+  <div class="page-head">
+    <div><h1>Pacientes</h1><div class="sub">{{ pacientes|length }} paciente(s) cadastrado(s)</div></div>
+    <button class="btn-primary" id="novo"><i data-lucide="user-plus"></i> Novo paciente</button>
   </div>
 
-  <div class="page-body">
+  <div class="kpis">
+    <div class="kpi"><div class="k-top"><span>Total</span><i data-lucide="users"></i></div><div class="val num">{{ pacientes|length }}</div><div class="foot mut">na base</div></div>
+    <div class="kpi"><div class="k-top"><span>Ativos</span><i data-lucide="user-check"></i></div><div class="val num">{{ pacientes|selectattr('status','equalto','ativo')|list|length }}</div><div class="foot pos">em acompanhamento</div></div>
+    <div class="kpi"><div class="k-top"><span>Novos</span><i data-lucide="user-plus"></i></div><div class="val num">{{ pacientes|selectattr('status','equalto','novo')|list|length }}</div><div class="foot mut">recém-cadastrados</div></div>
+    <div class="kpi"><div class="k-top"><span>Inativos</span><i data-lucide="user-minus"></i></div><div class="val num">{{ pacientes|selectattr('status','equalto','inativo')|list|length }}</div><div class="foot neg">reengajar</div></div>
+  </div>
 
-    <section class="metrics-grid" style="margin-bottom:24px;">
-      <div class="card metric">
-        <div class="metric-info">
-          <h3>{{ pacientes | length }}</h3>
-          <p>Total de pacientes</p>
-        </div>
-      </div>
-      <div class="card metric">
-        <div class="metric-info">
-          <h3>{{ pacientes | selectattr('status','eq','ativo') | list | length }}</h3>
-          <p>Pacientes ativos</p>
-        </div>
-      </div>
-      <div class="card metric">
-        <div class="metric-info">
-          <h3>{{ pacientes | selectattr('status','eq','novo') | list | length }}</h3>
-          <p>Com status novo</p>
-        </div>
-      </div>
-    </section>
-
-    <div class="kb-filters">
-      <input type="text" class="search-input kb-search" id="searchPacientes" placeholder="Nome ou telefone" aria-label="Buscar paciente" >
-      <div class="filter-tabs" style="flex-shrink:0;">
-        <button class="filter-tab active" data-filter="todos">Todos</button>
-        <button class="filter-tab" data-filter="ativo">Ativos</button>
-        <button class="filter-tab" data-filter="novo">Novos</button>
-        <button class="filter-tab" data-filter="inativo">Inativos</button>
-      </div>
-    </div>
-
-    <div class="patients-grid" id="patientGrid">
-      {% for p in pacientes %}
-      <div class="patient-card" data-id="{{ p.id }}" data-status="{{ p.status }}" data-nome="{{ p.nome | lower }}">
-        <div class="patient-card-top">
-          <div class="patient-avatar" style="background: {{ p.cor }};">{{ p.iniciais }}</div>
-          <div>
-            <div class="patient-name">{{ p.nome }}</div>
-            <div class="patient-phone">{{ p.telefone }}</div>
-          </div>
-          <span class="badge-status-{{ p.status }}" style="margin-left:auto;">
-            {{ p.status | capitalize }}
-          </span>
-        </div>
-        <div class="patient-card-body">
-          <div class="patient-row">
-            <span>Última consulta</span>
-            <span>{{ p.ultima_consulta }}</span>
-          </div>
-          <div class="patient-row">
-            <span>Próxima consulta</span>
-            <span>{{ p.proxima_consulta if p.proxima_consulta else 'Sem agendamento' }}</span>
-          </div>
-          <div class="patient-row">
-            <span>Plano / Convênio</span>
-            <span>{{ p.plano }}</span>
-          </div>
-          <div class="patient-row">
-            <span>Procedimentos</span>
-            <span>{{ p.procedimentos }}</span>
-          </div>
-        </div>
-        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" data-action="history" title="Ver histórico">
-            Histórico
-          </button>
-          <button class="btn-icon" style="flex:1;border-radius:10px;font-size:12px;font-weight:600;height:34px;gap:6px;" data-action="schedule" title="Agendar consulta">
-            Agendar
-          </button>
-<button class="btn-icon workspace-action" data-action="conversation" style="width:auto;padding:0 10px;font-size:12px" title="Abrir conversa">Conversa</button><button class="btn-icon workspace-action" data-action="edit" title="Editar">Editar</button><button class="btn-icon workspace-action danger" data-action="delete" title="Excluir">Excluir</button>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-
+  <div class="card pad0">
+    <div class="card-head"><h3>Lista de pacientes</h3></div>
+    <table>
+      <thead><tr><th>Paciente</th><th>Telefone</th><th>Plano</th><th>Última consulta</th><th>Próxima</th><th>Status</th><th class="r"></th></tr></thead>
+      <tbody>
+        {% for p in pacientes %}
+        <tr>
+          <td><div class="cell"><div class="av">{{ p.iniciais or (p.nome[:2]|upper) }}</div><div><b>{{ p.nome }}</b><small>{{ p.email or '—' }}</small></div></div></td>
+          <td class="muted">{{ p.telefone or '—' }}</td>
+          <td class="muted">{{ p.plano or '—' }}</td>
+          <td class="muted">{{ p.ultima_consulta or '—' }}</td>
+          <td class="{% if not p.proxima_consulta %}muted{% endif %}">{{ p.proxima_consulta or '—' }}</td>
+          <td><span class="badge {{ {'ativo':'ok','novo':'info','inativo':'neg'}[p.status] }}">{{ {'ativo':'Ativo','novo':'Novo','inativo':'Inativo'}[p.status] }}</span></td>
+          <td class="r"><div class="row-actions"><button class="icon-sm" data-edit="{{ p.id }}"><i data-lucide="pencil"></i></button><button class="icon-sm danger" data-del="{{ p.id }}"><i data-lucide="trash-2"></i></button></div></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="muted">Nenhum paciente cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
+<script id="pac-data" type="application/json">{{ pacientes|tojson }}</script>
 {% endblock %}
-
 {% block extra_scripts %}
-<script id="records-data" type="application/json">{{ pacientes | tojson }}</script>
-<div id="records-root" data-resource="pacientes"></div>
-{% include "records_scripts.html" %}
+<script>
+  (function(){
+    const data=JSON.parse(document.getElementById('pac-data').textContent);
+    const statusOpts=[{value:'ativo',label:'Ativo'},{value:'novo',label:'Novo'},{value:'inativo',label:'Inativo'}];
+    function form(p){
+      return {
+        title: p?'Editar paciente':'Novo paciente',
+        fields:[
+          {name:'nome',label:'Nome',type:'text',required:true,value:p&&p.nome},
+          {name:'telefone',label:'Telefone',type:'text',value:p&&p.telefone},
+          {name:'email',label:'E-mail',type:'email',value:p&&p.email},
+          {name:'plano',label:'Plano',type:'text',value:p&&p.plano},
+          {name:'status',label:'Status',type:'select',value:(p&&p.status)||'novo',options:statusOpts},
+          {name:'ultima_consulta',label:'Última consulta',type:'date',value:p&&p.ultima_consulta},
+          {name:'proxima_consulta',label:'Próxima consulta',type:'date',value:p&&p.proxima_consulta},
+          {name:'procedimentos',label:'Nº de procedimentos',type:'number',value:(p&&p.procedimentos)||0},
+        ],
+        submit: p?{method:'PUT',url:'/api/pacientes/'+p.id}:{method:'POST',url:'/api/pacientes'}
+      };
+    }
+    document.getElementById('novo').onclick=()=>SmartDent.openForm(form(null));
+    document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>SmartDent.openForm(form(data.find(p=>String(p.id)===b.dataset.edit))));
+    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>SmartDent.del('/api/pacientes/'+b.dataset.del,'Excluir este paciente?'));
+  })();
+</script>
 {% endblock %}

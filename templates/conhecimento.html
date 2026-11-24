@@ -1,89 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Base de conhecimento · SmartDent{% endblock %}
-
+{% block title %}Base de Conhecimento · SmartDent{% endblock %}
+{% block topnav %}<nav class="topnav"><a href="#" class="active">Artigos</a></nav>{% endblock %}
+{% block head_extra %}
+<style>
+  .kb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .kb{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:20px;position:relative}
+  .kb .ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:var(--muted-bg);color:var(--info);margin-bottom:14px}
+  .kb .ic svg{width:20px;height:20px}
+  .kb h4{font-size:1rem;font-weight:700;margin-bottom:6px;padding-right:60px}
+  .kb p{font-size:.86rem;color:var(--muted-fg);line-height:1.5;margin-bottom:16px;min-height:38px}
+  .kb .meta{display:flex;align-items:center;justify-content:space-between;font-size:.76rem;color:var(--muted-fg)}
+  .kb .acts{position:absolute;top:16px;right:16px;display:flex;gap:6px}
+</style>
+{% endblock %}
 {% block content %}
-<div class="page-container">
-
-  <div class="page-header">
-    <div>
-      <h1>Base de conhecimento</h1>
-      <p class="page-subtitle">{{ artigos | length }} artigos cadastrados</p>
-    </div>
-    <button class="btn-primary" data-action="create">
-      Novo artigo
-    </button>
+<div class="content">
+  <div class="page-head">
+    <div><h1>Base de Conhecimento</h1><div class="sub">{{ artigos|length }} artigo(s) que alimentam as respostas da IA</div></div>
+    <button class="btn-primary" id="novo"><i data-lucide="plus"></i> Novo artigo</button>
   </div>
 
-  <div class="page-body"><section class="chart-card"><h3>Preços próprios da clínica</h3><div id="clinic-price-list"></div></section>
-
-    <div class="kb-filters">
-      <input type="text" class="search-input kb-search" placeholder="Artigo ou procedimento" aria-label="Buscar artigo">
-      <div class="filter-tabs" style="flex-shrink: 0;">
-        <button class="filter-tab active">Todos</button>
-        <button class="filter-tab">Procedimentos</button>
-        <button class="filter-tab">Estética</button>
-        <button class="filter-tab">Cirurgia</button>
-        <button class="filter-tab">Ortodontia</button>
-        <button class="filter-tab">Financeiro</button>
+  <div class="kb-grid">
+    {% for a in artigos %}
+    <div class="kb">
+      <div class="acts"><button class="icon-sm" data-edit="{{ a.id }}"><i data-lucide="pencil"></i></button><button class="icon-sm danger" data-del="{{ a.id }}"><i data-lucide="trash-2"></i></button></div>
+      <div class="ic"><i data-lucide="file-text"></i></div>
+      <h4>{{ a.titulo }}</h4>
+      <p>{{ a.conteudo|truncate(110) if a.conteudo else '' }}</p>
+      <div class="meta">
+        <span class="badge info">{{ a.categoria }}</span>
+        <span>{% if a.status %}Ativo{% else %}Inativo{% endif %}{% if a.atualizado %} · {{ a.atualizado }}{% endif %}</span>
       </div>
     </div>
-
-    <div class="workspace-table" role="region" aria-label="Artigos" tabindex="0">
-    <table class="kb-table">
-      <thead>
-        <tr>
-          <th>Título</th>
-          <th>Categoria</th>
-          <th>Consultas pela IA</th>
-          <th>Última atualização</th>
-          <th>Status</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for artigo in artigos %}
-        <tr data-id="{{ artigo.id }}">
-          <td>
-            <div class="kb-title-cell">
-
-              {{ artigo.titulo }}
-            </div>
-          </td>
-          <td><span class="badge-category">{{ artigo.categoria }}</span></td>
-          <td>
-            <span class="views-count">
-              {{ artigo.views }}
-            </span>
-          </td>
-          <td style="color: var(--text-secondary); font-size: 12px;">{{ artigo.atualizado }}</td>
-          <td>
-            <label class="toggle">
-              <input type="checkbox" data-action="status" aria-label="Ativar artigo {{ artigo.titulo }}" {% if artigo.status %}checked{% endif %}>
-              <span class="toggle-slider"></span>
-            </label>
-          </td>
-          <td>
-            <div class="kb-actions">
-              <button class="btn-icon workspace-action" data-action="edit" title="Editar">Editar</button>
-              <button class="btn-icon workspace-action danger" data-action="delete" title="Excluir">Excluir</button>
-            </div>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="6">Nenhum artigo cadastrado.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    </div>
-
+    {% else %}
+    <p class="muted">Nenhum artigo cadastrado.</p>
+    {% endfor %}
   </div>
 </div>
+<script id="kb-data" type="application/json">{{ artigos|tojson }}</script>
 {% endblock %}
-
 {% block extra_scripts %}
-<script id="crud-records" type="application/json">{{ artigos | tojson }}</script>
-<div id="crud-root" data-resource="base-conhecimento"></div>
-{% include "crud_dialog.html" %}
-<link rel="stylesheet" href="/static/crud.css">
-<script src="/static/crud.js"></script>
+<script>
+  (function(){
+    const data=JSON.parse(document.getElementById('kb-data').textContent);
+    function form(a){
+      return {
+        title:a?'Editar artigo':'Novo artigo',
+        fields:[
+          {name:'titulo',label:'Título',type:'text',required:true,value:a&&a.titulo},
+          {name:'categoria',label:'Categoria',type:'text',required:true,value:a&&a.categoria},
+          {name:'conteudo',label:'Conteúdo',type:'textarea',value:a&&a.conteudo,placeholder:'Texto que a IA usa como referência...'},
+          {name:'status',label:'Status',type:'checkbox',value:a?a.status:true,checkLabel:'Ativo (disponível para a IA)'},
+        ],
+        submit:a?{method:'PUT',url:'/api/base-conhecimento/'+a.id}:{method:'POST',url:'/api/base-conhecimento'}
+      };
+    }
+    document.getElementById('novo').onclick=()=>SmartDent.openForm(form(null));
+    document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>SmartDent.openForm(form(data.find(a=>String(a.id)===b.dataset.edit))));
+    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>SmartDent.del('/api/base-conhecimento/'+b.dataset.del,'Excluir este artigo?'));
+  })();
+</script>
 {% endblock %}

@@ -1,348 +1,147 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="hospital">
+<html lang="pt-BR" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartDent AI — Atendimentos</title>
-  <link rel="stylesheet" href="style.css">
+  <title>SmartDent — Atendimentos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesque:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="app.css">
+  <style>
+    .work{flex:1;display:grid;grid-template-columns:384px 1fr;min-height:0}
+    .list-col{border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+    .list-top{padding:22px 20px 14px}
+    .list-top h1{font-size:1.4rem;font-weight:800;letter-spacing:-.02em;margin-bottom:2px}
+    .list-top .sub{font-size:.82rem;color:var(--muted-fg);margin-bottom:16px}
+    .l-search{position:relative;margin-bottom:16px}
+    .l-search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted-fg)}
+    .l-search input{width:100%;height:40px;padding:0 12px 0 38px;background:var(--muted-bg);border:1px solid transparent;border-radius:9px;font-family:var(--font);font-size:.88rem;color:var(--fg)}
+    .l-search input:focus{outline:none;background:var(--bg);border-color:var(--border)}
+    .filters{display:inline-flex;gap:3px;background:var(--muted-bg);border-radius:9px;padding:3px}
+    .filters button{background:none;border:none;font-size:.8rem;font-weight:500;color:var(--muted-fg);padding:6px 12px;border-radius:7px}
+    .filters button.active{background:var(--card);color:var(--fg);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+    .list{flex:1;overflow-y:auto;padding:8px 12px 12px;display:flex;flex-direction:column;gap:6px}
+    .item{display:flex;gap:12px;padding:13px;border-radius:11px;cursor:pointer;border:1px solid var(--border);background:var(--card);transition:border-color .14s,background .14s}
+    .item:hover{background:var(--muted-bg)}
+    .item.active{border-color:var(--ring);background:var(--muted-bg)}
+    .item .av{width:40px;height:40px;flex:none;border-radius:50%;background:var(--muted-bg);color:var(--muted-fg);display:grid;place-items:center;font-weight:700;font-size:.82rem;border:1px solid var(--border)}
+    .it-body{flex:1;min-width:0}
+    .it-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:1px}
+    .it-name{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .it-time{font-size:.72rem;color:var(--muted-fg);flex:none}
+    .it-prev{font-size:.84rem;color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:9px}
+    .it-tags{display:flex;gap:6px}
+    .chat{display:flex;flex-direction:column;min-height:0;background:var(--bg)}
+    .chat-top{padding:18px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border)}
+    .who{display:flex;align-items:center;gap:13px}
+    .who .av{width:44px;height:44px;border-radius:50%;background:var(--muted-bg);border:1px solid var(--border);display:grid;place-items:center;font-weight:700;font-size:.9rem}
+    .who h2{font-size:1.1rem;font-weight:700;letter-spacing:-.01em}
+    .who .status{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted-fg);margin-top:4px}
+    .top-actions{display:flex;gap:9px}
+    .scroll{flex:1;overflow-y:auto;padding:26px 28px}
+    .thread{max-width:680px;margin:0 auto}
+    .summary{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--info);border-radius:11px;padding:16px 20px;margin-bottom:30px}
+    .summary .h{display:flex;align-items:center;gap:8px;font-size:.78rem;font-weight:600;color:var(--info);margin-bottom:9px}
+    .summary .h svg{width:15px;height:15px}
+    .summary p{font-size:.92rem;line-height:1.6;color:var(--muted-fg)}
+    .summary p strong{color:var(--fg);font-weight:600}
+    .msg{margin-bottom:20px;max-width:76%}
+    .msg.them{margin-right:auto} .msg.us{margin-left:auto}
+    .msg .label{font-size:.73rem;color:var(--muted-fg);margin:0 4px 6px}
+    .msg.us .label{text-align:right}
+    .bubble{padding:12px 16px;border-radius:14px;font-size:.92rem;line-height:1.55;border:1px solid var(--border)}
+    .msg.them .bubble{background:var(--muted-bg);border-top-left-radius:4px}
+    .msg.us .bubble{background:var(--info-bg);border-color:transparent;border-top-right-radius:4px}
+    .bubble strong{font-weight:600} .msg.us .bubble strong{color:var(--info)}
+    .composer{padding:16px 28px 22px;border-top:1px solid var(--border)}
+    .composer .box{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:10px;background:var(--muted-bg);border:1px solid transparent;border-radius:12px;padding:6px 6px 6px 18px}
+    .composer .box:focus-within{background:var(--bg);border-color:var(--border)}
+    .composer input{flex:1;border:none;background:none;font-family:var(--font);font-size:.92rem;color:var(--fg);padding:9px 0}
+    .composer input:focus{outline:none}
+    .composer input::placeholder{color:var(--muted-fg)}
+    .suggest{background:none;border:none;color:var(--info);font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:6px;padding:0 6px;white-space:nowrap}
+    .suggest svg{width:15px;height:15px}
+    .send{width:40px;height:40px;flex:none;border-radius:10px;border:none;background:var(--primary);color:var(--primary-fg);display:grid;place-items:center}
+    .send svg{width:17px;height:17px}
+  </style>
 </head>
 <body>
-
-  <div class="app-container">
-
-    <aside class="sidebar">
-      <div>
-        <div class="logo">
-          <div class="logo-brand">
-            <i data-lucide="tooth"></i>
-            <h2>Smart<span>Dent</span></h2>
-          </div>
-          <button class="dark-toggle" id="btn-dark-toggle" onclick="toggleDark()" title="Modo noturno">
-            <i data-lucide="moon"></i>
-          </button>
-        </div>
-
-        <div class="theme-switcher" style="margin-top: 20px;">
-          <button class="theme-btn" id="btn-negocio" onclick="setTheme('business')">Padrão</button>
-          <button class="theme-btn active" id="btn-clinica" onclick="setTheme('hospital')">Clínica</button>
-        </div>
-
-        <nav class="menu">
-          <a href="index.html"><i data-lucide="layout-dashboard"></i> Início</a>
-          <a href="atendimentos.html" class="active"><i data-lucide="message-square"></i> Atendimentos</a>
-          <a href="estoque.html"><i data-lucide="package"></i> Estoque</a>
-          <a href="#"><i data-lucide="book-open"></i> Base de Conhecimento</a>
-          <a href="#"><i data-lucide="bar-chart-2"></i> Relatórios & IA</a>
-          <a href="#"><i data-lucide="settings"></i> Configurações</a>
-        </nav>
+  <div class="layout">
+    <aside class="side">
+      <div class="org">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2c-1.6 0-2.5.9-4.3.9-1.2 0-2-.3-3-.3C2.5 2.8 1.6 4.4 1.6 6.6c0 1.9.6 3.3 1.2 5.4.3 1 .4 1.6.6 3 .4 2.6.6 5.4 1.9 5.4 1.2 0 1.3-3.3 1.6-5 .2-1.1.6-1.8 1.5-1.8s1.3.7 1.5 1.8c.3 1.7.4 5 1.6 5 1.3 0 1.5-2.8 1.9-5.4.2-1.4.3-2 .6-3 .6-2.1 1.2-3.5 1.2-5.4 0-2.2-.9-3.8-3.1-3.8-1 0-1.8.3-3 .3-1.8 0-2.7-.9-4.3-.9z"/></svg></div>
+        <div><b>Clínica Sorriso</b><small>SmartDent AI · Pro</small></div>
       </div>
-
-      <div class="user-profile">
-        <div class="avatar">AP</div>
-        <div class="user-info">
-          <h4>Clínica Sorriso</h4>
-          <span>Plano Pro</span>
-        </div>
+      <div class="grp">
+        <div class="gt">Geral</div>
+        <a class="nav" href="index.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a class="nav" href="agendamentos.html"><i data-lucide="calendar-days"></i> Agendamentos</a>
+        <a class="nav active" href="atendimentos.html"><i data-lucide="message-circle"></i> Atendimentos <span class="pill">6</span></a>
+        <a class="nav" href="pacientes.html"><i data-lucide="users"></i> Pacientes</a>
+        <a class="nav" href="estoque.html"><i data-lucide="package"></i> Estoque</a>
+      </div>
+      <div class="grp">
+        <div class="gt">Conteúdo</div>
+        <a class="nav" href="conhecimento.html"><i data-lucide="book-open"></i> Base de Conhecimento</a>
+        <a class="nav" href="relatorios.html"><i data-lucide="bar-chart-2"></i> Relatórios</a>
+      </div>
+      <div class="grp">
+        <div class="gt">Outros</div>
+        <a class="nav" href="configuracoes.html"><i data-lucide="settings"></i> Configurações</a>
+        <a class="nav" href="ajuda.html"><i data-lucide="life-buoy"></i> Ajuda</a>
       </div>
     </aside>
 
-    <div class="atend-container">
-
-      <div class="conv-list-panel">
-        <div class="conv-list-header">
-          <div class="conv-list-top">
-            <div class="conv-list-title">
-              <h2>Atendimentos</h2>
-              <span class="count-badge">6</span>
-            </div>
-          </div>
-          <input type="text" class="search-input" placeholder="Buscar paciente ou assunto...">
-          <div class="filter-tabs">
-            <button class="filter-tab active">Todos</button>
-            <button class="filter-tab">Pendentes</button>
-            <button class="filter-tab">Resolvidos</button>
-            <button class="filter-tab">Escalados</button>
-          </div>
-        </div>
-
-        <div class="conv-list">
-
-          <div class="conv-item active">
-            <div class="conv-avatar">MS</div>
-            <div class="conv-body">
-              <div class="conv-row">
-                <span class="conv-name">Maria Santos</span>
-                <span class="conv-time">09:15</span>
-              </div>
-              <p class="conv-preview">Quero agendar uma consulta de rotina</p>
-              <div class="conv-tags">
-                <span class="badge badge-resolved">Resolvido</span>
-                <span class="badge badge-ai">IA</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="conv-item">
-            <div class="conv-avatar red">CO</div>
-            <div class="conv-body">
-              <div class="conv-row">
-                <span class="conv-name">Carlos Oliveira</span>
-                <span class="conv-time">09:45</span>
-              </div>
-              <p class="conv-preview">Tenho dor de dente forte desde ontem</p>
-              <div class="conv-tags">
-                <span class="badge badge-escalated">Escalado</span>
-                <span class="badge badge-human">Humano</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="conv-item">
-            <div class="conv-avatar">AC</div>
-            <div class="conv-body">
-              <div class="conv-row">
-                <span class="conv-name">Ana Costa</span>
-                <span class="conv-time">10:20</span>
-              </div>
-              <p class="conv-preview">Quanto custa um clareamento dental?</p>
-              <div class="conv-tags">
-                <span class="badge badge-resolved">Resolvido</span>
-                <span class="badge badge-ai">IA</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="conv-item">
-            <div class="conv-avatar orange">PL</div>
-            <div class="conv-body">
-              <div class="conv-row">
-                <span class="conv-name">Pedro Lima</span>
-                <span class="conv-time">10:55</span>
-              </div>
-              <p class="conv-preview">Preciso remarcar minha consulta de amanhã</p>
-              <div class="conv-tags">
-                <span class="badge badge-pending">Pendente</span>
-                <span class="badge badge-human">Humano</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="conv-item">
-            <div class="conv-avatar">JF</div>
-            <div class="conv-body">
-              <div class="conv-row">
-                <span class="conv-name">Julia Ferreira</span>
-                <span class="conv-time">11:30</span>
-              </div>
-              <p class="conv-preview">Vocês atendem pelo plano Unimed?</p>
-              <div class="conv-tags">
-                <span class="badge badge-resolved">Resolvido</span>
-                <span class="badge badge-ai">IA</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="conv-item">
-            <div class="conv-avatar">RM</div>
-            <div class="conv-body">
-              <div class="conv-row">
-                <span class="conv-name">Roberto Mendes</span>
-                <span class="conv-time">11:50</span>
-              </div>
-              <p class="conv-preview">Quero informações sobre implantes dentários</p>
-              <div class="conv-tags">
-                <span class="badge badge-pending">Pendente</span>
-                <span class="badge badge-ai">IA</span>
-              </div>
-            </div>
-          </div>
-
+    <div class="main">
+      <div class="topbar">
+        <nav class="topnav"><a href="#" class="active">Caixa de entrada</a><a href="#">Atribuídos a mim</a><a href="#">Arquivados</a></nav>
+        <div class="right">
+          <div class="search"><i data-lucide="search"></i><input placeholder="Buscar..."></div>
+          <button class="iconbtn" id="themeBtn" title="Alternar tema"><i data-lucide="moon" id="themeIcon"></i></button>
+          <button class="iconbtn" title="Configurações"><i data-lucide="settings"></i></button>
+          <div class="avatar">CS</div>
         </div>
       </div>
 
-      <div class="conv-detail-panel">
+      <div class="work">
+        <section class="list-col">
+          <div class="list-top">
+            <h1>Atendimentos</h1>
+            <div class="sub">6 conversas hoje</div>
+            <div class="l-search"><i data-lucide="search"></i><input placeholder="Buscar paciente..."></div>
+            <div class="filters"><button class="active">Todos</button><button>Pendentes</button><button>Resolvidos</button><button>Escalados</button></div>
+          </div>
+          <div class="list" data-select-group>
+            <div class="item active" data-select><div class="av">MS</div><div class="it-body"><div class="it-row"><span class="it-name">Maria Santos</span><span class="it-time">09:15</span></div><div class="it-prev">Quero agendar uma consulta de rotina</div><div class="it-tags"><span class="badge ok">Resolvido</span><span class="badge info">IA</span></div></div></div>
+            <div class="item" data-select><div class="av">CO</div><div class="it-body"><div class="it-row"><span class="it-name">Carlos Oliveira</span><span class="it-time">09:45</span></div><div class="it-prev">Tenho dor de dente forte desde ontem</div><div class="it-tags"><span class="badge neg">Escalado</span><span class="badge ghost">Humano</span></div></div></div>
+            <div class="item" data-select><div class="av">AC</div><div class="it-body"><div class="it-row"><span class="it-name">Ana Costa</span><span class="it-time">10:20</span></div><div class="it-prev">Quanto custa um clareamento dental?</div><div class="it-tags"><span class="badge ok">Resolvido</span><span class="badge info">IA</span></div></div></div>
+            <div class="item" data-select><div class="av">PL</div><div class="it-body"><div class="it-row"><span class="it-name">Pedro Lima</span><span class="it-time">10:55</span></div><div class="it-prev">Preciso remarcar minha consulta de amanhã</div><div class="it-tags"><span class="badge warn">Pendente</span><span class="badge ghost">Humano</span></div></div></div>
+            <div class="item" data-select><div class="av">JF</div><div class="it-body"><div class="it-row"><span class="it-name">Julia Ferreira</span><span class="it-time">11:30</span></div><div class="it-prev">Vocês atendem pelo plano Unimed?</div><div class="it-tags"><span class="badge ok">Resolvido</span><span class="badge info">IA</span></div></div></div>
+            <div class="item" data-select><div class="av">RM</div><div class="it-body"><div class="it-row"><span class="it-name">Roberto Mendes</span><span class="it-time">11:50</span></div><div class="it-prev">Quero informações sobre implantes dentários</div><div class="it-tags"><span class="badge warn">Pendente</span><span class="badge info">IA</span></div></div></div>
+          </div>
+        </section>
 
-        <div class="conv-detail-header">
-          <div class="conv-detail-info">
-            <div class="conv-detail-avatar">MS</div>
-            <div>
-              <div class="conv-detail-name">Maria Santos</div>
-              <div class="conv-detail-sub">
-                <span class="badge badge-resolved">Resolvido</span>
-                <span>09:12 — 09:15 · 4 mensagens · respondido pela IA</span>
-              </div>
+        <section class="chat">
+          <div class="chat-top">
+            <div class="who"><div class="av">MS</div><div><h2>Maria Santos</h2><div class="status"><span class="badge ok">Resolvido</span> 09:12–09:15 · 4 mensagens · IA</div></div></div>
+            <div class="top-actions"><button class="iconbtn"><i data-lucide="sparkles"></i></button><button class="iconbtn"><i data-lucide="arrow-up-right"></i></button><button class="iconbtn"><i data-lucide="more-horizontal"></i></button></div>
+          </div>
+          <div class="scroll">
+            <div class="thread">
+              <div class="summary"><div class="h"><i data-lucide="sparkles"></i> Resumo da IA</div><p>Paciente pediu <strong>agendamento de consulta de rotina</strong> e informações sobre <strong>limpeza dental</strong>. Consulta marcada para <strong>quinta-feira às 10h</strong> com a Dra. Ana Paula — sem intervenção humana.</p></div>
+              <div class="msg them"><div class="label">Maria · 09:12</div><div class="bubble">Olá! Gostaria de agendar uma consulta de rotina. Quais horários estão disponíveis?</div></div>
+              <div class="msg us"><div class="label">IA · 09:12</div><div class="bubble">Olá, Maria! Temos <strong>quinta às 10h ou 14h</strong> e <strong>sexta às 09h</strong>, todos com a Dra. Ana Paula. Qual prefere?</div></div>
+              <div class="msg them"><div class="label">Maria · 09:14</div><div class="bubble">Quinta às 10h fica ótimo! Vocês fazem limpeza na mesma consulta?</div></div>
+              <div class="msg us"><div class="label">IA · 09:15</div><div class="bubble">Sim! Já incluímos a <strong>profilaxia</strong> na consulta de rotina. Agendado para <strong>quinta às 10h</strong>. Você receberá a confirmação por WhatsApp.</div></div>
             </div>
           </div>
-          <div class="conv-detail-actions">
-            <button class="btn-summary">
-              <i data-lucide="sparkles"></i> Resumo da IA
-            </button>
-            <button class="btn-escalate">Escalar</button>
-          </div>
-        </div>
-
-        <div class="ai-summary-card">
-          <div class="ai-summary-header">
-            <i data-lucide="sparkles"></i>
-            Resumo gerado pela IA
-          </div>
-          <p class="ai-summary-text">
-            Paciente solicitou <strong>agendamento de consulta de rotina</strong> e informações sobre <strong>limpeza dental</strong>.
-            A IA forneceu os horários disponíveis e explicou o procedimento de profilaxia.
-            Consulta agendada para quinta-feira às 10h com a Dra. Ana Paula.
-            Conversa encerrada com sucesso — nenhuma intervenção humana necessária.
-          </p>
-        </div>
-
-        <div class="messages-area">
-
-          <div class="message-row client">
-            <div class="msg-badge client-badge">MS</div>
-            <div class="message-content">
-              <div class="message-bubble">Olá! Gostaria de agendar uma consulta de rotina. Quais horários estão disponíveis?</div>
-              <span class="msg-time">09:12</span>
-            </div>
-          </div>
-
-          <div class="message-row ai">
-            <div class="msg-badge">IA</div>
-            <div class="message-content">
-              <div class="message-bubble">
-                Olá, Maria! Temos os seguintes horários disponíveis essa semana: <strong>Quinta-feira às 10h ou 14h</strong>, e <strong>Sexta-feira às 09h</strong>. Todos com a Dra. Ana Paula. Qual prefere?
-              </div>
-              <span class="msg-time">09:12</span>
-            </div>
-          </div>
-
-          <div class="message-row client">
-            <div class="msg-badge client-badge">MS</div>
-            <div class="message-content">
-              <div class="message-bubble">Quinta às 10h fica ótimo! Vocês fazem limpeza na mesma consulta?</div>
-              <span class="msg-time">09:14</span>
-            </div>
-          </div>
-
-          <div class="message-row ai">
-            <div class="msg-badge">IA</div>
-            <div class="message-content">
-              <div class="message-bubble">
-                Sim! Na consulta de rotina já incluímos a <strong>profilaxia (limpeza dental)</strong>. Consulta agendada para <strong>quinta-feira às 10h</strong>. Você receberá uma confirmação por WhatsApp. Até lá!
-              </div>
-              <span class="msg-time">09:15</span>
-            </div>
-          </div>
-
-        </div>
-
-        <div class="chat-input-bar">
-          <input type="text" placeholder="Responder como atendente humano...">
-          <button class="btn-suggest">
-            <i data-lucide="sparkles"></i> Sugestão IA
-          </button>
-          <button class="btn-send">
-            <i data-lucide="send"></i> Enviar
-          </button>
-        </div>
-
+          <div class="composer"><div class="box"><input placeholder="Escreva uma resposta..."><button class="suggest"><i data-lucide="sparkles"></i> Sugestão</button><button class="send"><i data-lucide="arrow-up"></i></button></div></div>
+        </section>
       </div>
     </div>
   </div>
-
-  <script>
-    lucide.createIcons();
-
-    function setTheme(theme) {
-      document.getElementById('btn-negocio').classList.toggle('active', theme === 'business');
-      document.getElementById('btn-clinica').classList.toggle('active', theme === 'hospital');
-      const html = document.documentElement;
-      html.removeAttribute('data-theme');
-      if (theme === 'hospital') html.setAttribute('data-theme', 'hospital');
-      localStorage.setItem('smartdent-theme', theme);
-    }
-
-    function spawnParticles(btn, type) {
-      const r = btn.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
-      if (type === 'spark') {
-        const colors = ['#fbbf24','#f97316','#fef08a','#fb923c'];
-        for (let i = 0; i < 9; i++) {
-          const el = document.createElement('div');
-          el.className = 'particle particle-spark';
-          const angle = (i / 9) * 360 + (Math.random() * 20 - 10);
-          const dist = 20 + Math.random() * 30;
-          const rad = angle * Math.PI / 180;
-          const size = 3 + Math.random() * 4;
-          Object.assign(el.style, {
-            width: size + 'px', height: size + 'px',
-            background: colors[Math.floor(Math.random() * colors.length)],
-            left: (cx - size / 2) + 'px', top: (cy - size / 2) + 'px',
-            '--tx': (Math.cos(rad) * dist) + 'px',
-            '--ty': (Math.sin(rad) * dist) + 'px',
-            animationDelay: (Math.random() * 0.07) + 's'
-          });
-          document.body.appendChild(el);
-          el.addEventListener('animationend', () => el.remove());
-        }
-      } else {
-        const grays = ['rgba(148,163,184,0.75)','rgba(100,116,139,0.6)'];
-        for (let i = 0; i < 5; i++) {
-          const el = document.createElement('div');
-          el.className = 'particle particle-smoke';
-          const drift = (Math.random() - 0.5) * 20;
-          const rise = -(26 + Math.random() * 34);
-          const size = 9 + Math.random() * 7;
-          Object.assign(el.style, {
-            width: size + 'px', height: size + 'px',
-            background: grays[Math.floor(Math.random() * grays.length)],
-            left: (cx + (Math.random() - 0.5) * 8 - size / 2) + 'px',
-            top: (cy - size / 2) + 'px',
-            '--tx': drift + 'px',
-            '--ty': rise + 'px',
-            animationDelay: (i * 0.09) + 's'
-          });
-          document.body.appendChild(el);
-          el.addEventListener('animationend', () => el.remove());
-        }
-      }
-    }
-
-    function toggleDark() {
-      const html = document.documentElement;
-      const isDark = html.classList.toggle('dark');
-      const btn = document.getElementById('btn-dark-toggle');
-      btn.classList.toggle('active', isDark);
-      localStorage.setItem('smartdent-dark', isDark ? '1' : '');
-      spawnParticles(btn, isDark ? 'smoke' : 'spark');
-    }
-
-    const savedTheme = localStorage.getItem('smartdent-theme') || 'hospital';
-    setTheme(savedTheme);
-
-    if (localStorage.getItem('smartdent-dark') === '1') {
-      document.documentElement.classList.add('dark');
-      document.getElementById('btn-dark-toggle').classList.add('active');
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const c = document.querySelector('.app-container');
-      c.classList.add('page-enter');
-      c.addEventListener('animationend', () => c.classList.remove('page-enter'), { once: true });
-    });
-
-    document.querySelectorAll('a[href]').forEach(link => {
-      const href = link.getAttribute('href');
-      if (!href || href.startsWith('#') || href.startsWith('http')) return;
-      link.addEventListener('click', e => {
-        e.preventDefault();
-        const target = link.getAttribute('href');
-        const c = document.querySelector('.app-container');
-        c.classList.add('page-exit');
-        setTimeout(() => { window.location.href = target; }, 300);
-      });
-    });
-  </script>
-
+  <script src="app.js"></script>
 </body>
 </html>

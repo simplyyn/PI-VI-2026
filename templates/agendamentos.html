@@ -1,53 +1,78 @@
 {% extends "base.html" %}
 {% block title %}Agendamentos · SmartDent{% endblock %}
+{% block topnav %}<nav class="topnav"><a href="#" class="active">Agenda</a></nav>{% endblock %}
+{% block head_extra %}
+<style>
+  .slot{display:flex;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
+  .slot:last-child{border:none}
+  .slot .time{font-variant-numeric:tabular-nums;font-weight:700;width:56px;flex:none}
+  .slot .bar{width:3px;height:40px;border-radius:3px;flex:none}
+  .slot .info{flex:1;min-width:0}.slot .info b{font-weight:600;display:block}.slot .info small{color:var(--muted-fg);font-size:.8rem;display:block}
+</style>
+{% endblock %}
 {% block content %}
-<div class="page-container">
-  <div class="page-header"><div><h1>Agendamentos</h1><p class="page-subtitle">{{ total }} consultas cadastradas</p></div><div class="kb-actions"><button class="btn-secondary" data-action="filter" title="Ir para os filtros">Filtrar</button><button class="btn-primary" data-action="create">Novo agendamento</button></div></div>
-  <div class="page-body"><details class="chart-card"><summary>Profissionais e expediente</summary><div id="professional-overview"></div></details>
-    <section class="metrics-grid" style="margin-bottom:24px">
-      <div class="card metric"><div class="metric-info"><h3>{{ agendamentos | selectattr('status','eq','confirmado') | list | length }}</h3><p>Confirmados</p></div></div>
-      <div class="card metric"><div class="metric-info"><h3>{{ agendamentos | selectattr('status','eq','pendente') | list | length }}</h3><p>Aguardando confirmação</p></div></div>
-      <div class="card metric"><div class="metric-info"><h3>{{ total }}</h3><p>Total de agendamentos</p></div></div>
-    </section>
-    <div class="agenda-toolbar">
-      <label class="toolbar-field toolbar-select"><select id="agenda-professional" aria-label="Filtrar profissional"><option value="">Todos os profissionais</option>{% for p in profissionais %}<option value="{{ p.id }}">{{ p.nome }}</option>{% endfor %}</select></label>
-      <label class="toolbar-field toolbar-search"><input id="records-search" type="search" placeholder="Buscar paciente, dentista ou procedimento" aria-label="Buscar"></label>
-      <label class="toolbar-field"><input type="date" id="agenda-date" aria-label="Filtrar por data"></label>
-      <label class="toolbar-field toolbar-select"><select id="records-filter" aria-label="Filtrar status"><option value="todos">Todos os status</option><option value="pendente">Pendentes</option><option value="confirmado">Confirmados</option><option value="cancelado">Cancelados</option>{% if permite_realizacao %}<option value="realizado">Realizados</option>{% endif %}</select></label>
-      <button class="btn-secondary" data-action="clear-filter">Limpar</button>
+<div class="content">
+  <div class="page-head">
+    <div><h1>Agendamentos</h1><div class="sub">{{ total }} consulta(s) registrada(s)</div></div>
+    <button class="btn-primary" id="novo"><i data-lucide="plus"></i> Nova consulta</button>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="k-top"><span>Total</span><i data-lucide="calendar-days"></i></div><div class="val num">{{ total }}</div><div class="foot mut">na agenda</div></div>
+    <div class="kpi"><div class="k-top"><span>Confirmados</span><i data-lucide="check-circle"></i></div><div class="val num">{{ agendamentos|selectattr('status','equalto','confirmado')|list|length }}</div><div class="foot pos">confirmados</div></div>
+    <div class="kpi"><div class="k-top"><span>Pendentes</span><i data-lucide="clock"></i></div><div class="val num">{{ agendamentos|selectattr('status','equalto','pendente')|list|length }}</div><div class="foot warn-c">aguardando</div></div>
+    <div class="kpi"><div class="k-top"><span>Cancelados</span><i data-lucide="calendar-x"></i></div><div class="val num">{{ agendamentos|selectattr('status','equalto','cancelado')|list|length }}</div><div class="foot neg">cancelados</div></div>
+  </div>
+
+  <div class="card">
+    <h3>Consultas</h3><div class="desc">Ordenadas por data e horário</div>
+    {% for a in agendamentos|sort(attribute='horario')|sort(attribute='data') %}
+    <div class="slot">
+      <div class="time num">{{ a.horario[:5] if a.horario else '--:--' }}</div>
+      <div class="bar" style="background:{{ {'confirmado':'var(--pos)','pendente':'var(--warn)','cancelado':'var(--neg)'}[a.status] }}"></div>
+      <div class="info"><b>{{ a.paciente }}</b><small>{{ a.procedimento }} · {{ a.dentista }} · {{ a.data }}</small></div>
+      <span class="badge {{ {'confirmado':'ok','pendente':'warn','cancelado':'neg'}[a.status] }}">{{ {'confirmado':'Confirmado','pendente':'Pendente','cancelado':'Cancelado'}[a.status] }}</span>
+      <div class="row-actions"><button class="icon-sm" data-edit="{{ a.id }}"><i data-lucide="pencil"></i></button><button class="icon-sm danger" data-del="{{ a.id }}"><i data-lucide="trash-2"></i></button></div>
     </div>
-    <div class="agenda-layout">
-      <div class="agenda-calendar-panel">
-        <div class="cal-header"><button class="cal-nav-btn" data-action="previous-month" aria-label="Mês anterior">‹</button><h4 id="calendar-title"></h4><button class="cal-nav-btn" data-action="next-month" aria-label="Próximo mês">›</button></div>
-        <div class="cal-weekdays"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
-        <div class="cal-days" id="calDays"></div>
-        <div class="cal-legend"><span><i class="cal-legend-dot"></i>Com consultas</span><span><i class="cal-legend-today"></i>Hoje</span></div>
-      </div>
-      <div class="agenda-list-panel">
-        {% for appt in agendamentos | sort(attribute='data') %}
-        <div class="appt-card" data-id="{{ appt.id }}" style="border-left:3px solid {{ appt.cor }}">
-          <div class="appt-time">{{ appt.horario[:5] }}<small>{{ appt.data.split('-') | reverse | join('/') }} · {{ appt.duracao }}min</small></div><div class="appt-divider"></div>
-          <div class="appt-info"><div class="appt-patient">{{ appt.paciente }} <small>#{{ appt.id }}</small></div><div class="appt-proc">{{ appt.procedimento }}</div></div>
-          {% set situacao = 'realizado' if appt.realizado_em else appt.status %}
-          <div class="appt-meta"><span class="badge-appt-{{ situacao }}">{{ situacao | capitalize }}</span><span class="appt-dentista">{{ appt.dentista }}</span></div>
-          <div class="kb-actions">
-            {% if appt.realizado_em %}
-            <button class="btn-secondary" data-action="undo-completion">Desfazer realizado</button>
-            {% else %}
-            {% if permite_realizacao and appt.status != 'cancelado' %}<button class="btn-secondary" data-action="mark-completed">Marcar realizado</button>{% endif %}
-            <button class="btn-icon workspace-action" data-action="confirm" title="Confirmar" aria-label="Confirmar">Confirmar</button><button class="btn-icon workspace-action" data-action="edit" title="Editar" aria-label="Editar">Editar</button><button class="btn-icon workspace-action" data-action="cancel" title="Cancelar consulta" aria-label="Cancelar consulta">Cancelar</button><button class="btn-icon workspace-action danger" data-action="delete" title="Excluir" aria-label="Excluir">Excluir</button>
-            {% endif %}
-          </div>
-        </div>
-        {% else %}<div class="agenda-empty"><p>Nenhum agendamento cadastrado.</p><small>Cadastre um paciente antes de agendar.</small></div>{% endfor %}
-        {% if agendamentos %}<div class="agenda-empty" id="records-empty" hidden><p>Nenhum agendamento para este filtro.</p><small>Ajuste a busca ou clique em Limpar.</small></div>{% endif %}
-      </div>
-    </div>
+    {% else %}
+    <p class="muted">Nenhuma consulta registrada.</p>
+    {% endfor %}
   </div>
 </div>
+<script id="ag-data" type="application/json">{{ agendamentos|tojson }}</script>
+<script id="prof-data" type="application/json">{{ profissionais|tojson }}</script>
 {% endblock %}
 {% block extra_scripts %}
-<script id="records-data" type="application/json">{{ agendamentos | tojson }}</script>
-<div id="records-root" data-resource="agendamentos"></div>
-{% include "records_scripts.html" %}
+<script>
+  (function(){
+    const data=JSON.parse(document.getElementById('ag-data').textContent);
+    const PROFS=(JSON.parse(document.getElementById('prof-data').textContent)||[]).filter(p=>p.ativo!==false);
+    const statusOpts=[{value:'confirmado',label:'Confirmado'},{value:'pendente',label:'Pendente'},{value:'cancelado',label:'Cancelado'}];
+    let _pat=null;
+    async function patients(){ if(!_pat) _pat=await SmartDent.api('GET','/api/pacientes'); return _pat; }
+    function build(a,pac){
+      const hasProfs=PROFS.length>0;
+      const procs=[...new Set(PROFS.flatMap(p=>p.procedimentos||[]))];
+      const fields=[{name:'paciente_id',label:'Paciente',type:'select',numeric:true,value:a&&a.paciente_id,options:pac.map(p=>({value:p.id,label:p.nome}))}];
+      if(hasProfs){
+        fields.push({name:'profissional_id',label:'Profissional',type:'select',numeric:true,value:a&&a.profissional_id,options:PROFS.map(p=>({value:p.id,label:p.nome}))});
+        fields.push({name:'procedimento',label:'Procedimento',type:'select',value:a&&a.procedimento,options:procs.map(x=>({value:x,label:x}))});
+      }else{
+        fields.push({name:'dentista',label:'Dentista',type:'text',required:true,value:a&&a.dentista});
+        fields.push({name:'procedimento',label:'Procedimento',type:'text',required:true,value:a&&a.procedimento});
+      }
+      fields.push({name:'data',label:'Data',type:'date',required:true,value:a&&a.data});
+      fields.push({name:'horario',label:'Horário',type:'time',required:true,value:a&&(a.horario||'').slice(0,5)});
+      fields.push({name:'duracao',label:'Duração (min)',type:'number',value:a?a.duracao:30});
+      fields.push({name:'status',label:'Status',type:'select',value:(a&&a.status)||'pendente',options:statusOpts});
+      return {title:a?'Editar consulta':'Nova consulta',fields,
+        transform:b=>{ if(hasProfs){const p=PROFS.find(x=>x.id===b.profissional_id); if(p)b.dentista=p.nome;} },
+        submit:a?{method:'PUT',url:'/api/agendamentos/'+a.id}:{method:'POST',url:'/api/agendamentos'}};
+    }
+    async function open(a){ try{ const pac=await patients(); SmartDent.openForm(build(a,pac)); }catch(e){ SmartDent.toast(e.message,'err'); } }
+    document.getElementById('novo').onclick=()=>open(null);
+    document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>open(data.find(a=>String(a.id)===b.dataset.edit)));
+    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>SmartDent.del('/api/agendamentos/'+b.dataset.del,'Excluir esta consulta?'));
+  })();
+</script>
 {% endblock %}

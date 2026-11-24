@@ -4,11 +4,62 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Portal do paciente · SmartDent</title>
-  <script>
-    document.documentElement.classList.toggle('dark', localStorage.getItem('smartdent-dark') === '1');
-  </script>
-  <link rel="stylesheet" href="/static/theme.css">
-  <link rel="stylesheet" href="/static/customer-chat.css">
+  <script>document.documentElement.classList.toggle('dark', localStorage.getItem('smartdent-dark') === '1');</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesque:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/answer-rating.css">
+  <style>
+    html.dark{
+      --bg:#09090b;--fg:#fafafa;--card:#0c0c0f;--muted-bg:#18181b;--muted-fg:#a1a1aa;
+      --border:#27272a;--ring:#3f3f46;--primary:#fafafa;--primary-fg:#18181b;
+      --pos:#4ade80;--pos-bg:rgba(74,222,128,.14);--neg:#f87171;--neg-bg:rgba(248,113,113,.14);
+      --info:#60a5fa;--info-bg:rgba(96,165,250,.14);
+    }
+    body.patient-portal{overflow:auto;background:var(--bg)}
+    .portal-header{border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:5}
+    .portal-header-content{max-width:1080px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 24px}
+    .portal-identity strong{font-weight:800;font-size:1.1rem}
+    .portal-identity span{display:block;font-size:.76rem;color:var(--muted-fg)}
+    .portal-header nav{display:flex;align-items:center;gap:14px;font-size:.86rem}
+    .portal-header nav>span{color:var(--muted-fg)}
+    #btn-dark-toggle{border:1px solid var(--border);background:var(--bg);color:var(--fg);border-radius:8px;padding:7px 12px;font-size:.82rem;font-family:var(--font);cursor:pointer}
+    .portal-header nav a{color:var(--fg);text-decoration:none;font-weight:600}
+    .portal-layout{max-width:1080px;margin:24px auto;padding:0 24px;display:grid;grid-template-columns:330px 1fr;gap:20px;align-items:start}
+    @media(max-width:860px){.portal-layout{grid-template-columns:1fr}}
+    .portal-overview{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px}
+    .portal-overview h2{font-size:1.1rem;font-weight:700;margin-bottom:14px}
+    .portal-primary{width:100%;background:var(--primary);color:var(--primary-fg);border:none;border-radius:10px;padding:11px 16px;font-family:var(--font);font-weight:700;font-size:.9rem;cursor:pointer}
+    .portal-primary:hover{opacity:.92}
+    .portal-secondary{background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:9px;padding:9px 13px;font-family:var(--font);font-weight:600;font-size:.85rem;cursor:pointer}
+    .portal-secondary:hover{background:var(--muted-bg)}
+    .portal-booking{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+    .portal-booking h3{font-size:.95rem;font-weight:700;margin-bottom:12px}
+    .portal-options-row{display:flex;flex-direction:column;gap:12px}
+    .portal-date label{display:block;font-size:.82rem;font-weight:600;margin-bottom:6px}
+    .portal-date select{width:100%;height:40px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--fg);padding:0 10px;font-family:var(--font)}
+    .portal-times{display:flex;flex-wrap:wrap;gap:8px}
+    .portal-actions{display:flex;gap:10px;margin-top:12px}
+    .portal-appointments{margin-top:18px;border-top:1px solid var(--border);padding-top:14px}
+    .portal-appointments summary{cursor:pointer;font-weight:600;font-size:.9rem}
+    #customer-appointments{margin-top:10px;display:flex;flex-direction:column;gap:8px;font-size:.84rem;color:var(--muted-fg)}
+    .portal-chat{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;display:flex;flex-direction:column;min-height:560px}
+    #chat-title{font-size:1.15rem;font-weight:700;margin-bottom:14px}
+    .portal-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:4px 2px;max-height:62vh}
+    .portal-log>p{color:var(--muted-fg);font-size:.9rem}
+    .portal-message{max-width:78%;align-self:flex-start;background:var(--muted-bg);border:1px solid var(--border);border-radius:14px;border-top-left-radius:4px;padding:11px 14px}
+    .portal-message.is-patient{align-self:flex-end;background:var(--info-bg);border-color:transparent;border-top-left-radius:14px;border-top-right-radius:4px}
+    .portal-message p{font-size:.9rem;line-height:1.5}
+    .portal-message small{display:block;margin-top:6px;font-size:.7rem;color:var(--muted-fg)}
+    .portal-feedback{font-size:.82rem;color:var(--info);min-height:18px;margin:10px 0}
+    .portal-compose{border-top:1px solid var(--border);padding-top:14px}
+    .portal-message-row{display:flex;gap:10px}
+    #demo-input{flex:1;height:44px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);padding:0 14px;font-family:var(--font);font-size:.9rem}
+    #demo-input:focus{outline:none;border-color:var(--ring)}
+    .portal-message-row .portal-primary{width:auto;padding:0 20px}
+    .portal-auto{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.82rem;color:var(--muted-fg)}
+  </style>
 </head>
 <body class="patient-portal">
   <header class="portal-header">
@@ -39,14 +90,14 @@
           </div>
           <div id="booking-times" class="portal-times" role="group" aria-label="Horários disponíveis"></div>
         </div>
-        <button type="button" class="portal-secondary" id="discard-options">Cancelar pedido</button>
+        <button type="button" class="portal-secondary" id="discard-options" style="margin-top:12px">Cancelar pedido</button>
       </section>
 
       <section class="portal-booking" id="booking-confirmation" aria-labelledby="confirmation-title" hidden>
         <h3 id="confirmation-title">Revise seu agendamento</h3>
-        <p id="booking-review"></p>
+        <p id="booking-review" style="font-size:.88rem;color:var(--muted-fg)"></p>
         <div class="portal-actions">
-          <button type="button" class="portal-primary" id="confirm-booking">Confirmar agendamento</button>
+          <button type="button" class="portal-primary" id="confirm-booking" style="width:auto">Confirmar agendamento</button>
           <button type="button" class="portal-secondary" id="cancel-booking">Cancelar pedido</button>
         </div>
       </section>
@@ -72,9 +123,9 @@
       </form>
     </section>
   </main>
-  <link rel="stylesheet" href="/static/answer-rating.css">
-<script src="/static/answer-rating.js"></script>
-<script src="/static/customer-chat.js"></script>
+
+  <script src="/static/answer-rating.js"></script>
+  <script src="/static/customer-chat.js"></script>
   <script src="/static/session.js"></script>
 </body>
 </html>

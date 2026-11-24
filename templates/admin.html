@@ -1,53 +1,74 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Clínicas · SmartDent</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <link rel="stylesheet" href="/static/theme.css">
-  <link rel="stylesheet" href="/static/interface.css">
-  <script>document.documentElement.classList.toggle('dark', localStorage.getItem('smartdent-dark') === '1');</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesque:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/static/app.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('smartdent-tema')||'light');</script>
 </head>
 <body>
-  <div class="app-container">
-    <aside class="sidebar">
-      <div>
-        <div class="logo">
-          <h2>SmartDent</h2>
-          <button type="button" class="btn-secondary" id="btn-dark-toggle" aria-label="Modo escuro" aria-pressed="false">Tema</button>
-        </div>
-        <button type="button" class="btn-secondary menu-toggle" aria-controls="workspace-menu" aria-expanded="false">Menu</button>
-        <nav class="menu" id="workspace-menu" aria-label="Administração">
-          <a href="/admin" class="active" aria-current="page">Clínicas</a>
-        </nav>
+  <div class="layout">
+    <aside class="side">
+      <div class="org">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2c-1.6 0-2.5.9-4.3.9-1.2 0-2-.3-3-.3C2.5 2.8 1.6 4.4 1.6 6.6c0 1.9.6 3.3 1.2 5.4.3 1 .4 1.6.6 3 .4 2.6.6 5.4 1.9 5.4 1.2 0 1.3-3.3 1.6-5 .2-1.1.6-1.8 1.5-1.8s1.3.7 1.5 1.8c.3 1.7.4 5 1.6 5 1.3 0 1.5-2.8 1.9-5.4.2-1.4.3-2 .6-3 .6-2.1 1.2-3.5 1.2-5.4 0-2.2-.9-3.8-3.1-3.8-1 0-1.8.3-3 .3-1.8 0-2.7-.9-4.3-.9z"/></svg></div>
+        <div><b>SmartDent</b><small>Administração</small></div>
       </div>
-      <div class="user-profile">
-        <div class="user-info"><h4>{{ usuario.nome }}</h4><span>Administrador</span></div>
-        <a href="/logout" class="btn-logout">Sair</a>
+      <div class="grp">
+        <div class="gt">Plataforma</div>
+        <a class="nav active" href="/admin"><i data-lucide="building-2"></i> Clínicas</a>
       </div>
     </aside>
-    <main class="page-container">
-      <header class="page-header">
-        <div><h1>Clínicas</h1><p class="page-subtitle">Painel de demonstração</p></div>
-      </header>
-      <div class="page-body">
-        <div class="workspace-table">
-          <table class="kb-table">
-            <thead><tr><th scope="col">Clínica</th><th scope="col">Plano</th><th scope="col">Atendimentos no mês</th><th scope="col">Situação</th><th scope="col">Suporte</th></tr></thead>
+
+    <div class="main">
+      <div class="topbar">
+        <nav class="topnav"><a href="#" class="active">Clínicas</a></nav>
+        <div class="right">
+          <button class="iconbtn" id="themeBtn" title="Alternar tema"><i data-lucide="moon" id="themeIcon"></i></button>
+          <button class="iconbtn" onclick="doLogout()" title="Sair"><i data-lucide="log-out"></i></button>
+          <div class="avatar">{{ (usuario.nome or 'AD')[:2]|upper }}</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="page-head"><div><h1>Clínicas</h1><div class="sub">Painel de administração da plataforma</div></div></div>
+
+        <div class="kpis">
+          <div class="kpi"><div class="k-top"><span>Clínicas</span><i data-lucide="building-2"></i></div><div class="val num">{{ clinicas|length }}</div><div class="foot mut">cadastradas</div></div>
+          <div class="kpi"><div class="k-top"><span>Ativas</span><i data-lucide="check-circle"></i></div><div class="val num">{{ clinicas|selectattr('status','equalto','ativo')|list|length }}</div><div class="foot pos">operando</div></div>
+          <div class="kpi"><div class="k-top"><span>Atendimentos/mês</span><i data-lucide="message-circle"></i></div><div class="val num">{{ clinicas|sum(attribute='atendimentos_mes') }}</div><div class="foot mut">somados</div></div>
+          <div class="kpi"><div class="k-top"><span>Suporte solicitado</span><i data-lucide="life-buoy"></i></div><div class="val num">{{ clinicas|selectattr('suporte')|list|length }}</div><div class="foot warn-c">em aberto</div></div>
+        </div>
+
+        <div class="card pad0">
+          <div class="card-head"><h3>Clínicas cadastradas</h3></div>
+          <table>
+            <thead><tr><th>Clínica</th><th>Plano</th><th class="r">Atendimentos/mês</th><th>Situação</th><th>Suporte</th></tr></thead>
             <tbody>
-              {% for clinica in clinicas %}
-              <tr><th scope="row">{{ clinica.nome }}</th><td>{{ clinica.plano }}</td><td>{{ clinica.atendimentos_mes }}</td><td>{{ clinica.status | capitalize }}</td><td>{{ 'Solicitado' if clinica.suporte else 'Sem solicitação' }}</td></tr>
+              {% for c in clinicas %}
+              <tr>
+                <td><div class="cell"><div class="ic"><i data-lucide="building-2"></i></div><div><b>{{ c.nome }}</b><small>{{ c.owner }}</small></div></div></td>
+                <td class="muted">{{ c.plano }}</td>
+                <td class="r num">{{ c.atendimentos_mes }}</td>
+                <td><span class="badge {{ 'ok' if c.status == 'ativo' else 'neg' }}">{{ c.status|capitalize }}</span></td>
+                <td>{% if c.suporte %}<span class="badge warn">Solicitado</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+              </tr>
               {% else %}
-              <tr><td colspan="5">Nenhuma clínica cadastrada.</td></tr>
+              <tr><td colspan="5" class="muted">Nenhuma clínica cadastrada.</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       </div>
-    </main>
+    </div>
   </div>
-  <script src="/static/workspace.js"></script>
+
+  <script src="/static/ai-client.js"></script>
   <script src="/static/session.js"></script>
+  <script src="/static/app.js"></script>
 </body>
 </html>

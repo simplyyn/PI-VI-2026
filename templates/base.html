@@ -1,253 +1,149 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}SmartDent AI{% endblock %}</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <link rel="stylesheet" href="/static/theme.css">
-  <link rel="stylesheet" href="/static/interface.css">
-  <script>
-    document.documentElement.classList.toggle('dark', localStorage.getItem('smartdent-dark') === '1');
-  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesque:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/static/app.css">
+  <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('smartdent-tema')||'light');</script>
+  {% block head_extra %}{% endblock %}
 </head>
 <body>
-  <div class="app-container">
-
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div>
-        <div class="logo">
-          <div class="logo-brand">
-            <h2>Smart<span>Dent</span></h2>
-          </div>
-          <button type="button" class="dark-toggle" id="btn-dark-toggle" aria-label="Modo escuro" aria-pressed="false" title="Modo escuro">
-            Tema
-          </button>
-        </div>
-
-        <button type="button" class="btn-secondary menu-toggle" aria-controls="workspace-menu" aria-expanded="false">Menu</button>
-        <nav class="menu" id="workspace-menu" aria-label="Área da clínica">
-          <a href="/" {% if pagina == 'dashboard' %}class="active" aria-current="page"{% endif %}>
-            Início
-          </a>
-          <a href="/atendimentos" {% if pagina == 'atendimentos' %}class="active" aria-current="page"{% endif %}>
-            Atendimentos
-          </a>
-          <a href="/pacientes" {% if pagina == 'pacientes' %}class="active" aria-current="page"{% endif %}>
-            Pacientes
-          </a>
-          <a href="/profissionais" {% if pagina == 'profissionais' %}class="active" aria-current="page"{% endif %}>
-            Profissionais
-          </a>
-          <a href="/agendamentos" {% if pagina == 'agendamentos' %}class="active" aria-current="page"{% endif %}>
-            Agendamentos
-          </a>
-          <a href="/estoque" {% if pagina == 'estoque' %}class="active" aria-current="page"{% endif %}>
-            Estoque
-          </a>
-          <a href="/base-conhecimento" {% if pagina == 'conhecimento' %}class="active" aria-current="page"{% endif %}>
-            Base de conhecimento
-          </a>
-          <a href="/relatorios" {% if pagina == 'relatorios' %}class="active" aria-current="page"{% endif %}>
-            Relatórios e IA
-          </a>
-          <a href="/configuracoes" {% if pagina == 'configuracoes' %}class="active" aria-current="page"{% endif %}>
-            Configurações
-          </a>
-          <a href="/demo" class="menu-demo-link">
-            Portal do paciente
-          </a>
-        </nav>
+  <div class="layout">
+    <aside class="side">
+      <div class="org">
+        <div class="logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2c-1.6 0-2.5.9-4.3.9-1.2 0-2-.3-3-.3C2.5 2.8 1.6 4.4 1.6 6.6c0 1.9.6 3.3 1.2 5.4.3 1 .4 1.6.6 3 .4 2.6.6 5.4 1.9 5.4 1.2 0 1.3-3.3 1.6-5 .2-1.1.6-1.8 1.5-1.8s1.3.7 1.5 1.8c.3 1.7.4 5 1.6 5 1.3 0 1.5-2.8 1.9-5.4.2-1.4.3-2 .6-3 .6-2.1 1.2-3.5 1.2-5.4 0-2.2-.9-3.8-3.1-3.8-1 0-1.8.3-3 .3-1.8 0-2.7-.9-4.3-.9z"/></svg></div>
+        <div><b>{{ usuario.empresa_nome or usuario.empresa or usuario.nome }}</b><small>{{ usuario.plano if usuario and usuario.plano else 'SmartDent AI' }}</small></div>
       </div>
-
-      <div class="user-profile">
-        <div class="user-info">
-          <h4>{{ usuario.empresa_nome or usuario.empresa or usuario.nome }}</h4>
-          <span>{{ usuario.plano if usuario and usuario.plano else 'Responsável' if usuario else '' }}</span>
-        </div>
-        <a href="/logout" class="btn-logout" title="Sair" aria-label="Sair">
-          <span>Sair</span>
-        </a>
+      <div class="grp">
+        <div class="gt">Geral</div>
+        <a class="nav {% if pagina == 'dashboard' %}active{% endif %}" href="/"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a class="nav {% if pagina == 'agendamentos' %}active{% endif %}" href="/agendamentos"><i data-lucide="calendar-days"></i> Agendamentos</a>
+        <a class="nav {% if pagina == 'atendimentos' %}active{% endif %}" href="/atendimentos"><i data-lucide="message-circle"></i> Atendimentos</a>
+        <a class="nav {% if pagina == 'pacientes' %}active{% endif %}" href="/pacientes"><i data-lucide="users"></i> Pacientes</a>
+        <a class="nav {% if pagina == 'estoque' %}active{% endif %}" href="/estoque"><i data-lucide="package"></i> Estoque</a>
+      </div>
+      <div class="grp">
+        <div class="gt">Conteúdo</div>
+        <a class="nav {% if pagina == 'conhecimento' %}active{% endif %}" href="/base-conhecimento"><i data-lucide="book-open"></i> Base de Conhecimento</a>
+        <a class="nav {% if pagina == 'relatorios' %}active{% endif %}" href="/relatorios"><i data-lucide="bar-chart-2"></i> Relatórios</a>
+      </div>
+      <div class="grp">
+        <div class="gt">Outros</div>
+        <a class="nav {% if pagina == 'configuracoes' %}active{% endif %}" href="/configuracoes"><i data-lucide="settings"></i> Configurações</a>
+        <a class="nav" href="/demo"><i data-lucide="smartphone"></i> Portal do paciente</a>
       </div>
     </aside>
 
-    <!-- Conteúdo da página -->
-    {% block content %}{% endblock %}
-
-  </div>
-
-  <script src="/static/workspace.js"></script>
-
-  {% block extra_scripts %}{% endblock %}
-
-  <button class="chat-widget-btn" id="cwpBtn" type="button" aria-controls="cwpPanel" aria-expanded="false" onclick="toggleChatWidget()">
-    Assistente
-  </button>
-
-  <div class="chat-widget-panel" id="cwpPanel" aria-labelledby="cwp-title" hidden>
-    <div class="cwp-resize cwp-resize-top" data-dir="n" title="Arraste para redimensionar (duplo clique restaura)"></div>
-    <div class="cwp-resize cwp-resize-left" data-dir="w" title="Arraste para redimensionar (duplo clique restaura)"></div>
-    <div class="cwp-resize cwp-resize-corner" data-dir="nw" title="Arraste para redimensionar (duplo clique restaura)"></div>
-    <div class="cwp-header">
-      <div class="cwp-header-info">
-        <div>
-          <strong id="cwp-title">Assistente da clínica</strong>
+    <div class="main">
+      <div class="topbar">
+        {% block topnav %}<nav class="topnav"><a href="#" class="active">Visão geral</a></nav>{% endblock %}
+        <div class="right">
+          <button class="iconbtn" id="themeBtn" title="Alternar tema"><i data-lucide="moon" id="themeIcon"></i></button>
+          <button class="iconbtn" onclick="doLogout()" title="Sair"><i data-lucide="log-out"></i></button>
+          <div class="avatar">{{ (usuario.empresa_nome or usuario.nome or 'CS')[:2]|upper }}</div>
         </div>
       </div>
-      <button class="cwp-close" type="button" aria-label="Fechar assistente" onclick="toggleChatWidget()">Fechar</button>
-    </div>
 
-    <div class="cwp-messages" id="cwpMessages" role="log" aria-live="polite" aria-label="Conversa com o assistente">
-      <div class="cwp-msg cwp-msg-ai">
-        <p>Escolha um atalho ou escreva sua pergunta.</p>
-      </div>
-    </div>
-
-    <div class="cwp-tools"><button type="button" class="cwp-tool active" data-cwp-group="rotina" aria-pressed="true">Rotina</button><button type="button" class="cwp-tool" data-cwp-group="gestao" aria-pressed="false">Gestão</button><button type="button" class="cwp-tool" data-cwp-group="clinica" aria-pressed="false">Clínica</button><button type="button" class="cwp-reset" onclick="cwpClear()" aria-label="Limpar conversa local">Limpar</button></div>
-    <div class="cwp-suggestions" id="cwpSuggestions">
-      <button data-cwp-topic="rotina" onclick="cwpSend('Quais são os agendamentos de hoje?')">Agenda de hoje</button>
-      <button data-cwp-topic="rotina" onclick="cwpSend('Quantos clientes estão sem resposta?')">Sem resposta</button>
-      <button data-cwp-topic="rotina" onclick="cwpSend('Prepare respostas para todos os clientes sem resposta')">Preparar respostas</button>
-      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Consultas por profissional')">Por profissional</button>
-      <button data-cwp-topic="clinica" hidden onclick="cwpSend('Quais os profissionais e especialidades?')">Profissionais</button>
-      <button data-cwp-topic="clinica" hidden onclick="cwpSend('Quais os preços da clínica cadastrados?')">Preços próprios</button>
-      <button data-cwp-topic="rotina" onclick="cwpSend('Quais são os agendamentos de amanhã?')">Agenda de amanhã</button>
-      <button data-cwp-topic="rotina" onclick="cwpSend('Quais são os próximos agendamentos?')">Próximas consultas</button>
-      <button data-cwp-topic="rotina" onclick="cwpSend('Quantos pacientes estão cadastrados?')">Pacientes</button>
-      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais itens do estoque precisam de reposição?')">Reposição</button>
-      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais atendimentos estão pendentes?')">Atendimentos pendentes</button>
-      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais reclamações foram identificadas?')">Reclamações</button>
-      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quantas limpezas fizemos este mês?')">Limpezas no mês</button>
-      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Quais resumos estão pendentes?')">Resumos pendentes</button>
-      <button data-cwp-topic="gestao" hidden onclick="cwpSend('Resumo da semana')">Resumo da semana</button>
-      <button data-cwp-topic="clinica" hidden onclick="cwpSend('Quais são os preços dos procedimentos?')">Preços</button>
-      <button data-cwp-topic="clinica" hidden onclick="cwpSend('Quais os horários de funcionamento?')">Funcionamento</button>
-      <button data-cwp-topic="clinica" hidden onclick="cwpSend('Qual a política de cancelamento?')">Cancelamentos</button>
-      <button data-cwp-topic="clinica" hidden onclick="cwpSend('O que fazer quando o dente está doendo?')">Orientação inicial</button>
-    </div>
-    <div class="cwp-input-bar">
-      <input type="text" id="cwpInput" placeholder="Ex.: agenda de amanhã ou preço da limpeza" maxlength="2000" aria-label="Pergunta para o assistente" onkeydown="if(event.key==='Enter')cwpSend()">
-      <button id="cwpSendButton" aria-label="Enviar pergunta" onclick="cwpSend()">Enviar</button>
+      {% block content %}{% endblock %}
     </div>
   </div>
 
+  <!-- Assistente da clínica (chatbot: agenda, estoque, pacientes, agendamentos) -->
+  <button class="asst-btn" id="asstBtn" type="button" onclick="toggleAsst()"><i data-lucide="sparkles"></i> Assistente</button>
+  <div class="asst-panel" id="asstPanel" hidden>
+    <div class="asst-resize t" data-dir="t" title="Arraste para redimensionar (duplo clique restaura)"></div>
+    <div class="asst-resize l" data-dir="l" title="Arraste para redimensionar (duplo clique restaura)"></div>
+    <div class="asst-resize tl" data-dir="tl" title="Arraste para redimensionar (duplo clique restaura)"></div>
+    <div class="asst-head">
+      <div class="who"><div class="ic"><i data-lucide="sparkles"></i></div><div><b>Assistente da clínica</b><small>Agende, veja estoque, pacientes e a agenda</small></div></div>
+      <button class="iconbtn" type="button" aria-label="Fechar" onclick="toggleAsst()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="asst-msgs" id="asstMsgs" role="log" aria-live="polite">
+      <div class="asst-m ai">Olá! Posso <strong>agendar consultas</strong>, consultar <strong>estoque</strong>, <strong>pacientes</strong> e a <strong>agenda</strong>. O que você precisa?</div>
+    </div>
+    <div class="asst-chips">
+      <button onclick="asstSend('Quais são os agendamentos de hoje?')">Agenda de hoje</button>
+      <button onclick="asstSend('Quais itens do estoque precisam de reposição?')">Reposição</button>
+      <button onclick="asstSend('Quantos pacientes estão cadastrados?')">Pacientes</button>
+      <button onclick="asstSend('Agende uma consulta')">Agendar consulta</button>
+    </div>
+    <div class="asst-input">
+      <input type="text" id="asstInput" placeholder="Escreva aqui…" maxlength="2000" aria-label="Pergunta para o assistente" onkeydown="if(event.key==='Enter')asstSend()">
+      <button type="button" aria-label="Enviar" onclick="asstSend()"><i data-lucide="arrow-up"></i></button>
+    </div>
+  </div>
+
+  <script src="/static/ai-client.js"></script>
+  <script src="/static/session.js"></script>
+  <script src="/static/app.js"></script>
   <script>
-    let cwpBusy=false, cwpContext=null;
-    async function cwpGetReply(msg) { return window.smartdentAskOwner(msg,cwpContext); }
-    function cwpAddMsg(text,isUser,actions=[],origin='') {
-      const box=document.getElementById('cwpMessages');const div=document.createElement('div');div.className='cwp-msg '+(isUser?'cwp-msg-usr':'cwp-msg-ai');
-      if(origin){const badge=document.createElement('small');badge.className='cwp-origin';badge.textContent=({agendamento:'Agendamento assistido',registros:'Consulta aos registros',llm:'IA com contexto da clínica',orientacao:'Orientação inicial',base:'Base de conhecimento'}[origin]||'Assistente');div.append(badge);}
-      const p=document.createElement('p');p.textContent=text;p.style.whiteSpace='pre-wrap';div.append(p);
-      const allowed=['/agendamentos','/atendimentos','/pacientes','/estoque','/relatorios','/base-conhecimento','/respostas'];
-      for(const action of actions){const path=action.url?.split('?')[0];if(!allowed.includes(path))continue;const a=document.createElement('a');a.className='cwp-action';a.href=action.url;a.textContent=action.rotulo;div.append(a);}
-      const stamp=document.createElement('span');stamp.className='cwp-time';stamp.textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});div.append(stamp);box.append(div);box.scrollTop=box.scrollHeight;
+    let asstBusy=false, asstCtx=null;
+    const ASST_OPEN='smartdent-asst-open', ASST_SIZE='smartdent-asst-size', ASST_LOG='smartdent-asst-log', ASST_CTX='smartdent-asst-ctx';
+
+    function asstRender(text,isUser,acoes,origem){
+      const box=document.getElementById('asstMsgs');const d=document.createElement('div');d.className='asst-m '+(isUser?'user':'ai');
+      if(origem){const o=document.createElement('span');o.className='orig';o.textContent=({agendamento:'Agendamento assistido',registros:'Consulta aos registros',llm:'IA com contexto da clínica',orientacao:'Orientação',base:'Base de conhecimento'}[origem]||'Assistente');d.append(o);}
+      const p=document.createElement('span');p.textContent=text;d.append(p);
+      const allowed=['/agendamentos','/atendimentos','/pacientes','/estoque','/relatorios','/base-conhecimento'];
+      (acoes||[]).forEach(a=>{const path=(a.url||'').split('?')[0];if(!allowed.includes(path))return;const link=document.createElement('a');link.className='act';link.href=a.url;link.textContent=a.rotulo;d.append(link);});
+      box.append(d);box.scrollTop=box.scrollHeight;
     }
-    async function cwpClear(){if(cwpBusy)return;cwpBusy=true;try{const reply=await window.smartdentAskOwner('limpar',null,true);cwpContext=null;document.getElementById('cwpMessages').replaceChildren();cwpAddMsg(reply.resposta,false);}catch(error){cwpAddMsg(error.message,false);}finally{cwpBusy=false;}}
-    document.querySelectorAll('[data-cwp-group]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-cwp-group]').forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});document.querySelectorAll('[data-cwp-topic]').forEach(b=>b.hidden=b.dataset.cwpTopic!==button.dataset.cwpGroup);}));
-    function cwpTyping() {
-      const box = document.getElementById('cwpMessages');
-      const div = document.createElement('div');
-      div.className = 'cwp-msg cwp-msg-ai';
-      div.id = 'cwpTyping';
-      div.textContent = 'Consultando…';
-      box.appendChild(div);
-      box.scrollTop = box.scrollHeight;
+    function asstLog(entry){ try{const l=JSON.parse(sessionStorage.getItem(ASST_LOG)||'[]');l.push(entry);sessionStorage.setItem(ASST_LOG,JSON.stringify(l));}catch(e){} }
+    function asstAdd(text,isUser,acoes,origem){ asstRender(text,isUser,acoes,origem); asstLog({t:text,u:isUser,a:acoes,o:origem}); }
+
+    function toggleAsst(){
+      const p=document.getElementById('asstPanel'), b=document.getElementById('asstBtn');
+      if(p.hasAttribute('hidden')){p.removeAttribute('hidden');b.style.display='none';localStorage.setItem(ASST_OPEN,'1');document.getElementById('asstInput').focus();}
+      else{p.setAttribute('hidden','');b.style.display='';localStorage.setItem(ASST_OPEN,'');}
+    }
+    function asstClear(){ try{sessionStorage.removeItem(ASST_LOG);sessionStorage.removeItem(ASST_CTX);}catch(e){} document.getElementById('asstMsgs').replaceChildren(); asstCtx=null; }
+
+    async function asstSend(text){
+      const input=document.getElementById('asstInput');const msg=(text||input.value).trim();if(!msg||asstBusy)return;
+      asstBusy=true;input.value='';asstAdd(msg,true);
+      const typing=document.createElement('div');typing.className='asst-m ai';typing.textContent='Consultando…';document.getElementById('asstMsgs').append(typing);
+      try{
+        const reply=await window.smartdentAskOwner(msg,asstCtx);
+        asstCtx=({"/agendamentos":"agenda","/pacientes":"pacientes","/estoque":"estoque","/atendimentos":"atendimentos","/relatorios":"gestao","/base-conhecimento":"clinica"}[reply.acoes&&reply.acoes[0]&&reply.acoes[0].url]||null);
+        try{sessionStorage.setItem(ASST_CTX,asstCtx||'');}catch(e){}
+        typing.remove();asstAdd(reply.resposta,false,reply.acoes,reply.origem);
+        if(reply.registro_tipo==='appointments'||reply.estado==='concluido') SmartDent.toast('Agenda atualizada.','ok');
+      }catch(error){typing.remove();asstAdd(error.message,false);}
+      finally{asstBusy=false;if(!document.getElementById('asstPanel').hasAttribute('hidden'))input.focus();}
     }
 
-    async function cwpSend(text) {
-      const input=document.getElementById('cwpInput');const msg=(text||input.value).trim();if(!msg||cwpBusy)return;
-      if(msg.length>2000){cwpAddMsg('Sua mensagem está muito longa. Use até 2000 caracteres para eu consultar.',false);return;}
-      cwpBusy=true;input.value='';input.disabled=true;document.getElementById('cwpSendButton').disabled=true;document.getElementById('cwpMessages').setAttribute('aria-busy','true');
-      document.querySelectorAll('[data-cwp-topic]').forEach(b=>b.disabled=true);cwpAddMsg(msg,true);cwpTyping();
-      try{const reply=await cwpGetReply(msg);cwpContext=({"/agendamentos":"agenda","/pacientes":"pacientes","/estoque":"estoque","/atendimentos":"atendimentos","/relatorios":"gestao","/base-conhecimento":"clinica"}[reply.acoes?.[0]?.url]||null);cwpAddMsg(reply.resposta,false,reply.acoes||[],reply.origem);if((reply.estado==='concluido'&&reply.agendamento_id)||reply.registro_tipo==='appointments')document.dispatchEvent(new CustomEvent('smartdent-agenda-updated',{detail:{id:reply.agendamento_id||reply.registro_id}}));}
-      catch(error){cwpAddMsg(error.message+' Você pode tentar novamente ou abrir a seção pelo menu.',false);}
-      finally{document.getElementById('cwpTyping')?.remove();cwpBusy=false;input.disabled=false;document.getElementById('cwpSendButton').disabled=false;document.querySelectorAll('[data-cwp-topic]').forEach(b=>b.disabled=false);document.getElementById('cwpMessages').setAttribute('aria-busy','false');if(document.getElementById('cwpPanel').classList.contains('open'))input.focus();}
-    }
-    function toggleChatWidget() {
-      const panel = document.getElementById('cwpPanel');
-      const trigger = document.getElementById('cwpBtn');
-      const open = panel.classList.toggle('open');
-      panel.hidden = !open;
-      trigger.setAttribute('aria-expanded', String(open));
-      (open ? document.getElementById('cwpInput') : trigger).focus();
-    }
-    document.getElementById('cwpPanel').addEventListener('keydown', event => {
-      if (event.key === 'Escape') toggleChatWidget();
-    });
-
-    // ── Redimensionamento do painel (tamanho salvo neste navegador) ──
-    (function () {
-      const panel = document.getElementById('cwpPanel');
-      const KEY = 'smartdent.chatWidgetSize';
-      const MIN_W = 300, MIN_H = 360, MARGIN = 16;
-
-      function limits() {
-        const cs = getComputedStyle(panel);
-        return {
-          maxW: window.innerWidth - parseFloat(cs.right) - MARGIN,
-          maxH: window.innerHeight - parseFloat(cs.bottom) - MARGIN,
-        };
-      }
-
-      function apply(w, h) {
-        const { maxW, maxH } = limits();
-        w = Math.min(Math.max(MIN_W, w), maxW);
-        h = Math.min(Math.max(MIN_H, h), maxH);
-        panel.style.width = w + 'px';
-        panel.style.height = h + 'px';
-        panel.style.maxHeight = 'none';
-        return { w, h };
-      }
-
-      function reset() {
-        panel.style.width = panel.style.height = panel.style.maxHeight = '';
-        try { localStorage.removeItem(KEY); } catch (e) {}
-      }
-
-      try {
-        const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
-        if (saved && saved.w && saved.h) apply(saved.w, saved.h);
-      } catch (e) {}
-
-      panel.querySelectorAll('.cwp-resize').forEach(handle => {
-        handle.addEventListener('dblclick', reset);
-        handle.addEventListener('pointerdown', e => {
-          e.preventDefault();
-          handle.setPointerCapture(e.pointerId);
-          const dir = handle.dataset.dir;
-          const start = { x: e.clientX, y: e.clientY, w: panel.offsetWidth, h: panel.offsetHeight };
-          let size = { w: start.w, h: start.h };
-          panel.classList.add('resizing');
-
-          function move(ev) {
-            // Arrastar para a esquerda/para cima aumenta, porque o canto oposto é fixo.
-            const w = dir.includes('w') ? start.w + (start.x - ev.clientX) : start.w;
-            const h = dir.includes('n') ? start.h + (start.y - ev.clientY) : start.h;
-            size = apply(w, h);
-          }
-          function up() {
-            panel.classList.remove('resizing');
-            handle.removeEventListener('pointermove', move);
-            handle.removeEventListener('pointerup', up);
-            handle.removeEventListener('pointercancel', up);
-            try { localStorage.setItem(KEY, JSON.stringify(size)); } catch (e) {}
-          }
-          handle.addEventListener('pointermove', move);
-          handle.addEventListener('pointerup', up);
-          handle.addEventListener('pointercancel', up);
+    // Redimensionamento (tamanho salvo neste navegador)
+    (function initAsstResize(){
+      const panel=document.getElementById('asstPanel'), MINW=320, MINH=380, MARGIN=16;
+      function clamp(w,h){return [Math.min(Math.max(w,MINW),innerWidth-MARGIN*2),Math.min(Math.max(h,MINH),innerHeight-MARGIN*2)];}
+      panel.querySelectorAll('.asst-resize').forEach(handle=>{
+        handle.addEventListener('dblclick',()=>{panel.style.width='';panel.style.height='';try{localStorage.removeItem(ASST_SIZE);}catch(e){}});
+        handle.addEventListener('pointerdown',e=>{
+          e.preventDefault();handle.setPointerCapture(e.pointerId);
+          const dir=handle.dataset.dir,sx=e.clientX,sy=e.clientY,sw=panel.offsetWidth,sh=panel.offsetHeight;
+          panel.classList.add('resizing');let last={w:sw,h:sh};
+          function move(ev){const w=dir.includes('l')?sw+(sx-ev.clientX):sw,h=dir.includes('t')?sh+(sy-ev.clientY):sh;const c=clamp(w,h);panel.style.width=c[0]+'px';panel.style.height=c[1]+'px';last={w:c[0],h:c[1]};}
+          function up(){panel.classList.remove('resizing');handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',up);try{localStorage.setItem(ASST_SIZE,JSON.stringify(last));}catch(e){}}
+          handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);
         });
       });
+    })();
 
-      // Se a janela diminuir, mantém o painel dentro da tela.
-      window.addEventListener('resize', () => {
-        if (panel.style.width) apply(parseFloat(panel.style.width), parseFloat(panel.style.height));
-      });
+    // Restaura tamanho, histórico e estado aberto ao navegar entre páginas
+    (function restoreAsst(){
+      const panel=document.getElementById('asstPanel');
+      try{const s=JSON.parse(localStorage.getItem(ASST_SIZE)||'null');if(s&&s.w&&s.h){panel.style.width=s.w+'px';panel.style.height=s.h+'px';}}catch(e){}
+      try{const log=JSON.parse(sessionStorage.getItem(ASST_LOG)||'[]');if(log.length){document.getElementById('asstMsgs').replaceChildren();log.forEach(e=>asstRender(e.t,e.u,e.a,e.o));}}catch(e){}
+      asstCtx=sessionStorage.getItem(ASST_CTX)||null;
+      if(localStorage.getItem(ASST_OPEN)==='1'){panel.removeAttribute('hidden');document.getElementById('asstBtn').style.display='none';}
+      if(window.lucide)lucide.createIcons();
     })();
   </script>
-<link rel="stylesheet" href="/static/widget.css">
-<script src="/static/ai-client.js"></script>
-<script src="/static/session.js"></script>
-<script src="/static/clinic-overview.js"></script>
+  {% block extra_scripts %}{% endblock %}
 </body>
 </html>

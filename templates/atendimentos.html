@@ -1,38 +1,159 @@
 {% extends "base.html" %}
-{% block title %}Atendimentos · SmartDent
+{% block title %}Atendimentos · SmartDent{% endblock %}
+{% block topnav %}<nav class="topnav"><a href="#" class="active">Caixa de entrada</a></nav>{% endblock %}
+{% block head_extra %}
+<style>
+  .main{overflow:hidden}
+  .work{flex:1;display:grid;grid-template-columns:384px 1fr;min-height:0}
+  .list-col{border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+  .list-top{padding:20px;display:flex;align-items:center;justify-content:space-between}
+  .list-top h1{font-size:1.4rem;font-weight:800;letter-spacing:-.02em}
+  .list-top .sub{font-size:.82rem;color:var(--muted-fg)}
+  .list{flex:1;overflow-y:auto;padding:8px 12px 12px;display:flex;flex-direction:column;gap:6px}
+  .item{display:flex;gap:12px;padding:13px;border-radius:11px;cursor:pointer;border:1px solid var(--border);background:var(--card)}
+  .item:hover{background:var(--muted-bg)} .item.active{border-color:var(--ring);background:var(--muted-bg)}
+  .item .av{width:40px;height:40px;flex:none;border-radius:50%;background:var(--muted-bg);color:var(--muted-fg);display:grid;place-items:center;font-weight:700;font-size:.82rem;border:1px solid var(--border)}
+  .it-body{flex:1;min-width:0}
+  .it-row{display:flex;justify-content:space-between;gap:10px}
+  .it-name{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .it-time{font-size:.72rem;color:var(--muted-fg)}
+  .it-prev{font-size:.84rem;color:var(--muted-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0 8px}
+  .chat{display:flex;flex-direction:column;min-height:0}
+  .chat-top{padding:16px 28px;display:flex;align-items:center;gap:13px;border-bottom:1px solid var(--border)}
+  .chat-top .av{width:44px;height:44px;border-radius:50%;background:var(--muted-bg);border:1px solid var(--border);display:grid;place-items:center;font-weight:700}
+  .chat-top h2{font-size:1.1rem;font-weight:700}
+  .chat-top .st{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted-fg);margin-top:3px}
+  .chat-top .acts{margin-left:auto;display:flex;gap:8px}
+  .scroll{flex:1;overflow-y:auto;padding:26px 28px}
+  .thread{max-width:680px;margin:0 auto}
+  .msg{margin-bottom:18px;max-width:78%}
+  .msg.them{margin-right:auto} .msg.us{margin-left:auto}
+  .msg .label{font-size:.73rem;color:var(--muted-fg);margin:0 4px 6px} .msg.us .label{text-align:right}
+  .bubble{padding:12px 16px;border-radius:14px;font-size:.92rem;line-height:1.55;border:1px solid var(--border);white-space:pre-wrap}
+  .msg.them .bubble{background:var(--muted-bg);border-top-left-radius:4px}
+  .msg.us .bubble{background:var(--info-bg);border-color:transparent;border-top-right-radius:4px}
+  .composer{padding:14px 28px 18px;border-top:1px solid var(--border)}
+  .composer .box{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:10px;background:var(--muted-bg);border:1px solid transparent;border-radius:12px;padding:6px 6px 6px 16px}
+  .composer .box:focus-within{background:var(--bg);border-color:var(--border)}
+  .composer input{flex:1;border:none;background:none;font-family:var(--font);font-size:.92rem;color:var(--fg);padding:9px 0}
+  .composer input:focus{outline:none}
+  .suggest{background:none;border:none;color:var(--info);font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:6px;padding:0 6px;white-space:nowrap;cursor:pointer}
+  .suggest svg{width:15px;height:15px}
+  .send{width:40px;height:40px;flex:none;border-radius:10px;border:none;background:var(--primary);color:var(--primary-fg);display:grid;place-items:center;cursor:pointer}
+  .send svg{width:17px;height:17px}
+  .empty{display:grid;place-items:center;height:100%;color:var(--muted-fg)}
+</style>
 {% endblock %}
 {% block content %}
-<div class="atend-container">
-  <div class="conv-list-panel">
-    <div class="conv-list-header"><a href="/respostas" class="pending-link">Respostas pendentes</a><div class="conv-list-top"><h1>Atendimentos</h1><button class="btn-primary" data-action="create">Novo</button></div><input class="search-input" id="records-search" placeholder="Paciente ou assunto" aria-label="Buscar atendimento"><div class="filter-tabs"><button class="filter-tab active" data-filter="todos">Todos</button><button class="filter-tab" data-filter="pending">Pendentes</button><button class="filter-tab" data-filter="resolved">Resolvidos</button><button class="filter-tab" data-filter="escalated">Escalados</button></div></div>
-    <div class="conv-list">
-    {% for at in atendimentos %}
-      <button type="button" class="conv-item" data-id="{{ at.id }}" data-action="select" style="width:100%;text-align:left;color:inherit;background:inherit;border:0">
-        <div class="conv-avatar">{{ at.iniciais }}</div><div class="conv-body"><div class="conv-row"><span class="conv-name">{{ at.cliente }}</span><span class="conv-time">{{ at.hora }}</span></div><p class="conv-preview">{{ at.preview }}</p><div class="conv-tags"><span class="badge badge-{{ at.status }}">{{ {'resolved':'Resolvido','pending':'Pendente','escalated':'Escalado'}[at.status] }}</span><span class="badge badge-{{ at.canal }}">{{ 'IA' if at.canal == 'ai' else 'Humano' }}</span></div></div>
-      </button>
-    {% else %}<p>Nenhum atendimento cadastrado.</p>{% endfor %}
+<div class="work">
+  <section class="list-col">
+    <div class="list-top"><div><h1>Atendimentos</h1><div class="sub">{{ atendimentos|length }} conversa(s)</div></div></div>
+    <div class="list" id="list">
+      {% for at in atendimentos %}
+      <div class="item {% if loop.first %}active{% endif %}" data-id="{{ at.id }}">
+        <div class="av">{{ at.iniciais or (at.cliente[:2]|upper) }}</div>
+        <div class="it-body">
+          <div class="it-row"><span class="it-name">{{ at.cliente }}</span><span class="it-time">{{ at.hora }}</span></div>
+          <div class="it-prev">{{ at.preview }}</div>
+          <span class="badge {{ {'resolved':'ok','pending':'warn','escalated':'neg'}[at.status] }}" data-badge>{{ {'resolved':'Resolvido','pending':'Pendente','escalated':'Escalado'}[at.status] }}</span>
+          {% if at.canal == 'ai' %}<span class="badge info">IA</span>{% else %}<span class="badge ghost">Humano</span>{% endif %}
+        </div>
+      </div>
+      {% else %}
+      <p class="muted" style="padding:16px">Nenhum atendimento registrado.</p>
+      {% endfor %}
     </div>
-  </div>
-  <div class="conv-detail-panel" id="attendance-detail" hidden>
-    <div class="conv-detail-header"><div class="conv-detail-info"><div><h3 id="attendance-name"></h3><p id="attendance-subject"></p></div></div><div class="kb-actions"><button class="btn-summary" data-action="summary">Resumo da IA</button><button class="btn-escalate" data-action="escalate">Escalar</button><button class="btn-icon workspace-action" data-action="resolve">Resolver</button><button class="btn-icon workspace-action" data-action="edit" title="Editar">Editar</button><button class="btn-icon workspace-action danger" data-action="delete" title="Excluir">Excluir</button></div></div>
-<div class="messages-area" id="attendance-messages"></div>
-    <form class="chat-input-bar" id="human-message-form"><label class="attendance-draft">Resposta ao paciente<textarea name="texto" required maxlength="4000" rows="5" placeholder="Escreva uma resposta" aria-label="Mensagem para revisar antes de enviar"></textarea></label><button type="button" class="btn-suggest" data-action="suggest-ai">Sugestão IA</button><button type="submit" class="btn-send">Enviar</button></form>
-    <p id="suggestion-feedback" class="suggestion-feedback" role="status" aria-live="polite"></p>
-    <p class="workspace-channel-note">Envio pelo portal do paciente.</p>
-  </div>
+  </section>
+  <section class="chat" id="chat"><div class="empty">Selecione um atendimento</div></section>
 </div>
-<dialog id="summary-dialog" class="summary-dialog" aria-labelledby="summary-title">
-<header><h2 id="summary-title">Resumo do atendimento</h2><button type="button" id="summary-close" aria-label="Fechar resumo">Fechar</button></header>
-<p id="attendance-summary" role="status"></p><small id="summary-meta"></small>
-<button type="button" class="btn-primary" id="summary-refresh">Gerar / atualizar resumo</button>
-</dialog>
+<script id="at-data" type="application/json">{{ atendimentos|tojson }}</script>
 {% endblock %}
 {% block extra_scripts %}
-<script id="records-data" type="application/json">{{ atendimentos | tojson }}</script>
-<div id="records-root" data-resource="atendimentos"></div>
-<link rel="stylesheet" href="/static/answer-rating.css">
-<script src="/static/answer-rating.js"></script>
-{% include "records_scripts.html" %}
-<link rel="stylesheet" href="/static/attendance-analysis.css">
-<script src="/static/attendance-analysis.js"></script>
+<script>
+  (function(){
+    const data=JSON.parse(document.getElementById('at-data').textContent);
+    const stLabel={resolved:'Resolvido',pending:'Pendente',escalated:'Escalado'};
+    const stClass={resolved:'ok',pending:'warn',escalated:'neg'};
+    const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+    const hhmm=iso=>{try{return new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}catch(e){return '';}};
+    function esc(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML;}
+    let current=null;
+
+    function msgHTML(m,cliente){
+      const them=m.autor==='client';
+      const label=them?cliente.split(' ')[0]:(m.autor==='ai'?'IA':'Atendente');
+      return `<div class="msg ${them?'them':'us'}"><div class="label">${esc(label)}${m.criado_em?' · '+hhmm(m.criado_em):''}</div><div class="bubble">${esc(m.texto)}</div></div>`;
+    }
+    function render(a){
+      current=a;
+      const chat=document.getElementById('chat');
+      if(!a){chat.innerHTML='<div class="empty">Selecione um atendimento</div>';return;}
+      const msgs=(a.mensagens||[]);
+      let thread=msgs.map(m=>msgHTML(m,a.cliente)).join('');
+      if(!thread) thread=`<div class="msg them"><div class="label">${esc(a.cliente.split(' ')[0])}</div><div class="bubble">${esc(a.preview)}</div></div>`;
+      chat.innerHTML=`
+        <div class="chat-top">
+          <div class="av">${esc(a.iniciais||a.cliente.slice(0,2).toUpperCase())}</div>
+          <div><h2>${esc(a.cliente)}</h2><div class="st"><span class="badge ${stClass[a.status]}">${stLabel[a.status]}</span> ${a.canal==='ai'?'IA':'Humano'} · ${msgs.length} mensagem(ns)</div></div>
+          <div class="acts">
+            <button class="iconbtn" data-act="resumo" title="Gerar resumo (IA)"><i data-lucide="sparkles"></i></button>
+            <button class="iconbtn" data-act="resolver" title="Marcar como resolvido"><i data-lucide="check"></i></button>
+            <button class="iconbtn" data-act="escalar" title="Escalar"><i data-lucide="arrow-up-right"></i></button>
+          </div>
+        </div>
+        <div class="scroll"><div class="thread" id="thread">${thread}</div></div>
+        <div class="composer"><div class="box">
+          <input id="cmp" placeholder="Escreva uma resposta...">
+          <button class="suggest" data-act="sugestao"><i data-lucide="sparkles"></i> Sugestão</button>
+          <button class="send" data-act="enviar"><i data-lucide="arrow-up"></i></button>
+        </div></div>`;
+      if(window.lucide)lucide.createIcons();
+      chat.querySelector('[data-act=enviar]').onclick=enviar;
+      chat.querySelector('#cmp').addEventListener('keydown',e=>{if(e.key==='Enter')enviar();});
+      chat.querySelector('[data-act=sugestao]').onclick=sugestao;
+      chat.querySelector('[data-act=resumo]').onclick=resumo;
+      chat.querySelector('[data-act=resolver]').onclick=()=>setStatus('resolved');
+      chat.querySelector('[data-act=escalar]').onclick=()=>setStatus('escalated');
+      const sc=chat.querySelector('.scroll');sc.scrollTop=sc.scrollHeight;
+    }
+    async function enviar(){
+      const inp=document.getElementById('cmp');const texto=inp.value.trim();if(!texto||!current)return;
+      inp.value='';
+      try{
+        await SmartDent.api('POST','/api/atendimentos/'+current.id+'/mensagens',{texto,request_id:rid()});
+        const m={autor:'human',texto,criado_em:new Date().toISOString()};
+        (current.mensagens=current.mensagens||[]).push(m);
+        document.getElementById('thread').insertAdjacentHTML('beforeend',msgHTML(m,current.cliente));
+        const sc=document.querySelector('.scroll');sc.scrollTop=sc.scrollHeight;
+      }catch(e){SmartDent.toast(e.message,'err');}
+    }
+    async function sugestao(){
+      if(!current)return;SmartDent.toast('Gerando sugestão...','info');
+      try{const r=await SmartDent.api('POST','/api/atendimentos/'+current.id+'/sugestao');document.getElementById('cmp').value=r.resposta||'';}
+      catch(e){SmartDent.toast(e.message,'err');}
+    }
+    async function resumo(){
+      if(!current)return;SmartDent.toast('Gerando resumo...','info');
+      try{const r=await SmartDent.api('POST','/api/atendimentos/'+current.id+'/resumo');alert('Resumo da IA:\n\n'+(r.resumo||r.resumo&&r.resumo.resumo||'(sem conteúdo)'));}
+      catch(e){SmartDent.toast(e.message,'err');}
+    }
+    async function setStatus(status){
+      if(!current)return;
+      try{
+        await SmartDent.api('PUT','/api/atendimentos/'+current.id,{cliente:current.cliente,preview:current.preview,status,canal:current.canal});
+        current.status=status;
+        const item=document.querySelector('.item[data-id="'+current.id+'"] [data-badge]');
+        if(item){item.className='badge '+stClass[status];item.textContent=stLabel[status];}
+        render(current);
+        SmartDent.toast('Status atualizado.','ok');
+      }catch(e){SmartDent.toast(e.message,'err');}
+    }
+    document.querySelectorAll('#list .item').forEach(it=>it.addEventListener('click',()=>{
+      document.querySelectorAll('#list .item').forEach(x=>x.classList.remove('active'));
+      it.classList.add('active');
+      render(data.find(a=>String(a.id)===it.dataset.id));
+    }));
+    render(data[0]);
+  })();
+</script>
 {% endblock %}

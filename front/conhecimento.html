@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDent — Base de Conhecimento</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesque:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="app.css">
+  <style>
+    .kb-grid{grid-template-columns:repeat(3,1fr)}
+    .kb{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:20px;cursor:pointer;transition:border-color .14s,transform .14s}
+    .kb:hover{border-color:var(--ring);transform:translateY(-2px)}
+    .kb .ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:var(--muted-bg);color:var(--info);margin-bottom:14px}
+    .kb .ic svg{width:20px;height:20px}
+    .kb h4{font-size:1rem;font-weight:700;margin-bottom:6px}
+    .kb p{font-size:.86rem;color:var(--muted-fg);line-height:1.5;margin-bottom:16px}
+    .kb .meta{display:flex;align-items:center;justify-content:space-between;font-size:.76rem;color:var(--muted-fg)}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="side">
+      <div class="org"><div class="logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2c-1.6 0-2.5.9-4.3.9-1.2 0-2-.3-3-.3C2.5 2.8 1.6 4.4 1.6 6.6c0 1.9.6 3.3 1.2 5.4.3 1 .4 1.6.6 3 .4 2.6.6 5.4 1.9 5.4 1.2 0 1.3-3.3 1.6-5 .2-1.1.6-1.8 1.5-1.8s1.3.7 1.5 1.8c.3 1.7.4 5 1.6 5 1.3 0 1.5-2.8 1.9-5.4.2-1.4.3-2 .6-3 .6-2.1 1.2-3.5 1.2-5.4 0-2.2-.9-3.8-3.1-3.8-1 0-1.8.3-3 .3-1.8 0-2.7-.9-4.3-.9z"/></svg></div><div><b>Clínica Sorriso</b><small>SmartDent AI · Pro</small></div></div>
+      <div class="grp"><div class="gt">Geral</div>
+        <a class="nav" href="index.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a class="nav" href="agendamentos.html"><i data-lucide="calendar-days"></i> Agendamentos</a>
+        <a class="nav" href="atendimentos.html"><i data-lucide="message-circle"></i> Atendimentos <span class="pill">6</span></a>
+        <a class="nav" href="pacientes.html"><i data-lucide="users"></i> Pacientes</a>
+        <a class="nav" href="estoque.html"><i data-lucide="package"></i> Estoque</a>
+      </div>
+      <div class="grp"><div class="gt">Conteúdo</div>
+        <a class="nav active" href="conhecimento.html"><i data-lucide="book-open"></i> Base de Conhecimento</a>
+        <a class="nav" href="relatorios.html"><i data-lucide="bar-chart-2"></i> Relatórios</a>
+      </div>
+      <div class="grp"><div class="gt">Outros</div>
+        <a class="nav" href="configuracoes.html"><i data-lucide="settings"></i> Configurações</a>
+        <a class="nav" href="ajuda.html"><i data-lucide="life-buoy"></i> Ajuda</a>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <nav class="topnav"><a href="#" class="active">Artigos</a><a href="#">Respostas da IA</a><a href="#">Pendências</a></nav>
+        <div class="right"><div class="search"><i data-lucide="search"></i><input placeholder="Buscar artigo..."></div>
+          <button class="iconbtn" id="themeBtn" title="Alternar tema"><i data-lucide="moon" id="themeIcon"></i></button>
+          <button class="iconbtn"><i data-lucide="settings"></i></button><div class="avatar">CS</div></div>
+      </div>
+
+      <div class="content">
+        <div class="page-head"><div><h1>Base de Conhecimento</h1><div class="sub">Conteúdo que alimenta as respostas da IA</div></div><button class="btn-primary"><i data-lucide="plus"></i> Novo artigo</button></div>
+
+        <div class="tabs"><button class="active">Todos</button><button>Procedimentos</button><button>Convênios</button><button>Preços</button><button>Cuidados</button></div>
+
+        <div class="grid kb-grid">
+          <div class="kb"><div class="ic"><i data-lucide="stethoscope"></i></div><h4>Consulta de rotina e profilaxia</h4><p>O que inclui a consulta de rotina, limpeza dental e orientações de higiene.</p><div class="meta"><span class="badge info">Procedimentos</span><span>1.204 usos</span></div></div>
+          <div class="kb"><div class="ic"><i data-lucide="sparkles"></i></div><h4>Clareamento dental</h4><p>Técnicas, duração, cuidados pós e faixa de preço do clareamento.</p><div class="meta"><span class="badge info">Procedimentos</span><span>876 usos</span></div></div>
+          <div class="kb"><div class="ic"><i data-lucide="shield-check"></i></div><h4>Convênios aceitos</h4><p>Lista de planos atendidos (Unimed, Bradesco, Amil) e cobertura.</p><div class="meta"><span class="badge violet">Convênios</span><span>642 usos</span></div></div>
+          <div class="kb"><div class="ic"><i data-lucide="bone"></i></div><h4>Implantes dentários</h4><p>Etapas do tratamento, tempo de osseointegração e orçamento.</p><div class="meta"><span class="badge info">Procedimentos</span><span>531 usos</span></div></div>
+          <div class="kb"><div class="ic"><i data-lucide="dollar-sign"></i></div><h4>Tabela de preços</h4><p>Valores de referência por procedimento e condições de pagamento.</p><div class="meta"><span class="badge ok">Preços</span><span>489 usos</span></div></div>
+          <div class="kb"><div class="ic"><i data-lucide="heart-pulse"></i></div><h4>Cuidados pós-operatórios</h4><p>Orientações após extração, cirurgia e restaurações.</p><div class="meta"><span class="badge warn">Cuidados</span><span>377 usos</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

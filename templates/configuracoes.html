@@ -1,22 +1,60 @@
 {% extends "base.html" %}
 {% block title %}Configurações · SmartDent{% endblock %}
+{% block topnav %}<nav class="topnav"><a href="#" class="active">Clínica</a></nav>{% endblock %}
+{% block head_extra %}
+<style>
+  .cfg{max-width:720px}
+  .section{margin-bottom:18px}
+  .section .s-head{margin-bottom:14px}
+  .section .s-head h3{font-size:1.05rem;font-weight:700}
+  .section .s-head p{font-size:.84rem;color:var(--muted-fg)}
+  .field{margin-bottom:16px}.field:last-child{margin-bottom:0}
+  .field label{display:block;font-size:.85rem;font-weight:600;margin-bottom:6px}
+  .field input,.field select{width:100%;height:40px;padding:0 12px;background:var(--bg);border:1px solid var(--border);border-radius:9px;font-family:var(--font);font-size:.9rem;color:var(--fg)}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--ring)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--border)}
+  .toggle-row:last-child{border:none}
+  .toggle-row .t b{font-size:.9rem;font-weight:600;display:block}
+  .toggle-row .t small{font-size:.8rem;color:var(--muted-fg)}
+  .sw{width:42px;height:24px;border-radius:20px;background:var(--muted-bg);border:1px solid var(--border);position:relative;flex:none;cursor:pointer}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--fg);transition:transform .15s}
+  .sw.on{background:var(--pos);border-color:var(--pos)}
+  .sw.on::after{transform:translateX(18px);background:#fff}
+</style>
+{% endblock %}
 {% block content %}
-<main class="page-container">
-  <header class="page-header"><h1>Configurações</h1></header>
-  <div class="page-body workspace-settings">
-    <section class="workspace-settings-section" aria-labelledby="settings-clinic">
-      <h2 id="settings-clinic">Clínica</h2>
-      <p>{{ usuario.empresa_nome or usuario.empresa or usuario.empresa_id }}</p>
-      <ul class="workspace-link-list">
-        <li><a href="/profissionais">Profissionais e expediente</a><span>Edite o cadastro e os horários de atendimento.</span></li>
-        <li><a href="/base-conhecimento">Base de conhecimento</a><span>Gerencie os artigos e consulte os preços cadastrados.</span></li>
-        <li><a href="/demo">Portal do paciente</a><span>Veja como acessar o chat e o agendamento.</span></li>
-      </ul>
-    </section>
-    <section class="workspace-settings-section" aria-labelledby="settings-channels">
-      <h2 id="settings-channels">Canais de atendimento</h2>
-      <p>As mensagens do paciente chegam pelo portal. WhatsApp, Instagram e e-mail ainda não estão integrados.</p>
-    </section>
+<div class="content">
+  <div class="page-head"><div><h1>Configurações</h1><div class="sub">Gerencie a clínica, a IA e as notificações</div></div></div>
+
+  <div class="cfg">
+    <div class="card section">
+      <div class="s-head"><h3>Dados da clínica</h3><p>Informações exibidas aos pacientes.</p></div>
+      <div class="field"><label>Nome da clínica</label><input value="{{ usuario.empresa_nome or usuario.empresa or usuario.nome }}"></div>
+      <div class="two">
+        <div class="field"><label>Responsável</label><input value="{{ usuario.nome or '' }}"></div>
+        <div class="field"><label>E-mail de acesso</label><input value="{{ usuario.email or '' }}"></div>
+      </div>
+      <div class="field"><label>Plano</label><input value="{{ usuario.plano or 'Responsável' }}" readonly></div>
+    </div>
+
+    <div class="card section">
+      <div class="s-head"><h3>Assistente de IA</h3><p>Comportamento do atendimento automático.</p></div>
+      <div class="field"><label>Provedor do modelo</label><select><option>Gemini</option><option>Groq</option></select></div>
+      <div class="toggle-row"><div class="t"><b>Respostas automáticas</b><small>A IA responde pacientes sem intervenção humana.</small></div><div class="sw on" data-sw></div></div>
+      <div class="toggle-row"><div class="t"><b>Escalonamento para humano</b><small>Encaminhar urgências e reclamações a um atendente.</small></div><div class="sw on" data-sw></div></div>
+      <div class="toggle-row"><div class="t"><b>Resumo automático</b><small>Gerar resumo da conversa ao encerrar.</small></div><div class="sw on" data-sw></div></div>
+    </div>
+
+    <div class="card section">
+      <div class="s-head"><h3>Notificações</h3><p>Alertas enviados à equipe.</p></div>
+      <div class="toggle-row"><div class="t"><b>Alerta de estoque baixo (RF009)</b><small>Avisar quando um item ficar abaixo do mínimo.</small></div><div class="sw on" data-sw></div></div>
+      <div class="toggle-row"><div class="t"><b>Lembrete de consulta</b><small>Enviar lembrete por WhatsApp 24h antes.</small></div><div class="sw on" data-sw></div></div>
+      <div class="toggle-row"><div class="t"><b>Resumo diário por e-mail</b><small>Enviar um panorama do dia às 19h.</small></div><div class="sw" data-sw></div></div>
+    </div>
   </div>
-</main>
+</div>
+<script>
+  document.querySelectorAll('[data-sw]').forEach(s=>s.onclick=()=>s.classList.toggle('on'));
+</script>
 {% endblock %}

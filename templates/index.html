@@ -1,59 +1,89 @@
 {% extends "base.html" %}
-{% block title %}Início · SmartDent{% endblock %}
+{% block title %}Dashboard · SmartDent{% endblock %}
+{% block topnav %}<nav class="topnav"><a href="#" class="active">Visão geral</a><a href="/relatorios">Relatórios</a><a href="/atendimentos">Atendimentos</a></nav>{% endblock %}
+{% block head_extra %}
+<style>
+  .dash-grid{grid-template-columns:1.6fr 1fr}
+  .y-axis{display:flex;flex-direction:column;justify-content:space-between;font-size:.72rem;color:var(--muted-fg);text-align:right;padding-bottom:22px;flex:none}
+  .chart{display:flex;gap:12px;height:240px}
+  .plot{flex:1;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:0 6px}
+  .rec .list{display:flex;flex-direction:column;gap:18px}
+  .rec .row{display:flex;align-items:center;gap:12px}
+  .rec .row .amt{margin-left:auto}
+  .ins{display:flex;flex-direction:column;gap:14px}
+  .ins .row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.88rem}
+  .ins .row .lbl{color:var(--fg)} .ins .row .v{color:var(--muted-fg);font-size:.82rem}
+</style>
+{% endblock %}
 {% block content %}
-<main class="page-container workspace-home">
-  <header class="page-header">
-    <div>
-      <h1>Painel da clínica</h1>
-      <p class="page-subtitle">{{ usuario.empresa_nome or usuario.empresa or usuario.nome }}</p>
+<div class="content">
+  <div class="page-head">
+    <div><h1>Dashboard</h1><div class="sub">{{ usuario.empresa_nome or usuario.empresa or usuario.nome }} · últimos {{ periodo_dias }} dias</div></div>
+    <a class="btn-primary" href="/relatorios"><i data-lucide="bar-chart-2"></i> Ver relatórios</a>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="k-top"><span>Atendimentos</span><i data-lucide="message-circle"></i></div><div class="val num">{{ metricas.atendimentos_semana }}</div><div class="foot mut">{{ metricas.total_hoje }} hoje</div></div>
+    <div class="kpi"><div class="k-top"><span>Automação (IA)</span><i data-lucide="sparkles"></i></div><div class="val num">{{ metricas.taxa_automatizacao }}%</div><div class="foot pos">{{ metricas.canal_ia }} pela IA</div></div>
+    <div class="kpi"><div class="k-top"><span>Tempo de resposta</span><i data-lucide="timer"></i></div><div class="val num">{% if metricas.tempo_resposta %}{{ metricas.tempo_resposta }}s{% else %}—{% endif %}</div><div class="foot mut">{{ metricas.amostras_tempo_resposta }} amostras</div></div>
+    <div class="kpi"><div class="k-top"><span>Satisfação</span><i data-lucide="smile"></i></div><div class="val num">{% if metricas.satisfacao is not none %}{{ metricas.satisfacao }}%{% else %}—{% endif %}</div><div class="foot mut">{{ avaliacoes.total }} avaliações</div></div>
+  </div>
+
+  <div class="grid dash-grid" style="margin-bottom:16px">
+    <div class="card">
+      <h3>Atendimentos por dia</h3><div class="desc">IA e atendimento humano</div>
+      <div class="chart"><div class="y-axis" id="yax"></div><div class="plot" id="plot"></div></div>
     </div>
-    <a href="/agendamentos" class="btn-primary">Abrir agenda</a>
-  </header>
-
-  <div class="page-body">
-    <section aria-labelledby="overview-title">
-      <header class="workspace-section-heading">
-        <div><h2 id="overview-title">Últimos {{ periodo_dias }} dias</h2><p>{{ metricas.total_hoje }} {{ 'atendimento cadastrado' if metricas.total_hoje == 1 else 'atendimentos cadastrados' }} hoje</p></div>
-        <a href="/relatorios">Ver relatórios</a>
-      </header>
-      <div class="metrics-grid">
-        <div class="card metric"><div class="metric-info"><strong>{{ metricas.atendimentos_semana }}</strong><p>Atendimentos</p></div></div>
-        <div class="card metric"><div class="metric-info"><strong>{{ metricas.resumos }}</strong><p>Resumos atualizados</p></div></div>
-        <div class="card metric"><div class="metric-info"><strong>{{ reclamacoes.reclamacoes }}</strong><p>Reclamações identificadas</p></div></div>
-      </div>
-    </section>
-
-    <section class="workspace-shortcuts" aria-label="Acessos">
-      <div><h2>Portal do paciente</h2><p>Acesso ao chat e aos agendamentos com a conta do paciente.</p></div>
-      <a href="/demo" class="btn-secondary">Acessar portal</a>
-    </section>
-
-    <div class="dashboard-grid">
-      <section class="card dashboard-card" aria-labelledby="recent-title">
-        <header class="card-header"><h2 id="recent-title">Atendimentos recentes</h2><a href="/atendimentos">Ver todos</a></header>
-        <ul class="recent-list">
-          {% for at in atendimentos %}
-          <li class="chat-item">
-            <div class="chat-info"><strong>{{ at.cliente }}</strong><p>{{ at.preview }}</p></div>
-            <span class="badge badge-{{ at.status }}">{{ {'resolved': 'Resolvido', 'pending': 'Pendente', 'escalated': 'Escalado'}[at.status] }}</span>
-          </li>
-          {% else %}
-          <li>Nenhum atendimento registrado no período.</li>
-          {% endfor %}
-        </ul>
-      </section>
-      <section class="card dashboard-card" aria-labelledby="complaints-title">
-        <header class="card-header"><h2 id="complaints-title">Reclamações por motivo</h2></header>
-        <div class="insights-container">
-          {% for categoria in reclamacoes.categorias %}
-          <div class="insight-item"><div><h3>{{ categoria.rotulo }}</h3><p>{{ categoria.total }} registro(s) · {{ categoria.percentual }}%</p></div></div>
-          {% else %}
-          <p>Nenhuma reclamação classificada no período.</p>
-          {% endfor %}
-          <p>{{ reclamacoes.analisados }} analisado(s) · {{ reclamacoes.pendentes }} pendente(s)</p>
+    <div class="card rec">
+      <h3>Atendimentos recentes</h3><div class="desc">Últimos registros</div>
+      <div class="list">
+        {% for at in atendimentos %}
+        <div class="row">
+          <div class="cell"><div class="av">{{ at.iniciais or (at.cliente[:2]|upper) }}</div><div><b>{{ at.cliente }}</b><small>{{ at.preview|truncate(34) }}</small></div></div>
+          <span class="badge {{ {'resolved':'ok','pending':'warn','escalated':'neg'}[at.status] }} amt">{{ {'resolved':'Resolvido','pending':'Pendente','escalated':'Escalado'}[at.status] }}</span>
         </div>
-      </section>
+        {% else %}
+        <p class="muted">Nenhum atendimento no período.</p>
+        {% endfor %}
+      </div>
     </div>
   </div>
-</main>
+
+  <div class="grid dash-grid">
+    <div class="card">
+      <h3>Reclamações por motivo</h3><div class="desc">{{ reclamacoes.analisados }} analisados · {{ reclamacoes.pendentes }} pendentes</div>
+      <div class="ins">
+        {% for c in reclamacoes.categorias %}
+        <div class="row"><span class="lbl">{{ c.rotulo }}</span><span class="v">{{ c.total }} · {{ c.percentual }}%</span></div>
+        {% else %}
+        <p class="muted">Nenhuma reclamação classificada no período.</p>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="card">
+      <h3>Principais dúvidas</h3><div class="desc">O que os pacientes mais perguntam</div>
+      <div class="ins">
+        {% for d in principais_duvidas %}
+        <div class="row"><span class="lbl">{{ d.tema }}</span><span class="v">{{ d.total }}</span></div>
+        {% else %}
+        <p class="muted">Sem dúvidas registradas no período.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script id="grafico-data" type="application/json">{{ grafico|tojson }}</script>
+<script>
+  (function(){
+    const g=JSON.parse(document.getElementById('grafico-data').textContent);
+    const totals=g.labels.map((_,i)=>(g.ia[i]||0)+(g.humano[i]||0));
+    const max=Math.max(1,...totals), reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const short=iso=>{try{const d=new Date(iso+'T00:00:00');return ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()];}catch(e){return '';}};
+    document.getElementById('yax').innerHTML=[max,Math.round(max*.66),Math.round(max*.33),0].map(v=>`<span>${v}</span>`).join('');
+    const el=document.getElementById('plot');
+    el.innerHTML=g.labels.map((lb,i)=>`<div class="b"><div class="col ${totals[i]===max?'hot':''}" style="height:${totals[i]/max*100}%"><b>${totals[i]}</b></div><div class="cap">${short(lb)}</div></div>`).join('');
+    if(!reduce) el.querySelectorAll('.col').forEach((c,i)=>{const h=c.style.height;c.style.height='0%';setTimeout(()=>c.style.height=h,60+i*50);});
+  })();
+</script>
 {% endblock %}

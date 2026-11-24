@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDent — Ajuda</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesque:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="app.css">
+  <style>
+    .help{max-width:760px}
+    .help-hero{text-align:center;padding:14px 0 26px}
+    .help-hero h2{font-size:1.5rem;font-weight:800;letter-spacing:-.02em}
+    .help-hero p{color:var(--muted-fg);margin-top:4px}
+    .help-search{max-width:440px;margin:18px auto 0;position:relative}
+    .help-search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--muted-fg)}
+    .help-search input{width:100%;height:46px;padding:0 14px 0 44px;background:var(--card);border:1px solid var(--border);border-radius:11px;font-family:var(--font);font-size:.92rem;color:var(--fg)}
+    .help-search input:focus{outline:none;border-color:var(--ring)}
+    .cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+    .hc{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:18px;cursor:pointer;transition:border-color .14s}
+    .hc:hover{border-color:var(--ring)}
+    .hc .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--muted-bg);color:var(--info);margin-bottom:12px}
+    .hc .ic svg{width:19px;height:19px}
+    .hc b{font-size:.94rem;font-weight:700;display:block;margin-bottom:3px}
+    .hc small{font-size:.82rem;color:var(--muted-fg)}
+    details{border-bottom:1px solid var(--border)}
+    details summary{list-style:none;cursor:pointer;padding:16px 4px;font-weight:600;font-size:.95rem;display:flex;align-items:center;justify-content:space-between}
+    details summary::-webkit-details-marker{display:none}
+    details summary .chev{width:18px;height:18px;color:var(--muted-fg);transition:transform .2s}
+    details[open] summary .chev{transform:rotate(180deg)}
+    details p{padding:0 4px 16px;color:var(--muted-fg);font-size:.9rem;line-height:1.6}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="side">
+      <div class="org"><div class="logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2c-1.6 0-2.5.9-4.3.9-1.2 0-2-.3-3-.3C2.5 2.8 1.6 4.4 1.6 6.6c0 1.9.6 3.3 1.2 5.4.3 1 .4 1.6.6 3 .4 2.6.6 5.4 1.9 5.4 1.2 0 1.3-3.3 1.6-5 .2-1.1.6-1.8 1.5-1.8s1.3.7 1.5 1.8c.3 1.7.4 5 1.6 5 1.3 0 1.5-2.8 1.9-5.4.2-1.4.3-2 .6-3 .6-2.1 1.2-3.5 1.2-5.4 0-2.2-.9-3.8-3.1-3.8-1 0-1.8.3-3 .3-1.8 0-2.7-.9-4.3-.9z"/></svg></div><div><b>Clínica Sorriso</b><small>SmartDent AI · Pro</small></div></div>
+      <div class="grp"><div class="gt">Geral</div>
+        <a class="nav" href="index.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a class="nav" href="agendamentos.html"><i data-lucide="calendar-days"></i> Agendamentos</a>
+        <a class="nav" href="atendimentos.html"><i data-lucide="message-circle"></i> Atendimentos <span class="pill">6</span></a>
+        <a class="nav" href="pacientes.html"><i data-lucide="users"></i> Pacientes</a>
+        <a class="nav" href="estoque.html"><i data-lucide="package"></i> Estoque</a>
+      </div>
+      <div class="grp"><div class="gt">Conteúdo</div>
+        <a class="nav" href="conhecimento.html"><i data-lucide="book-open"></i> Base de Conhecimento</a>
+        <a class="nav" href="relatorios.html"><i data-lucide="bar-chart-2"></i> Relatórios</a>
+      </div>
+      <div class="grp"><div class="gt">Outros</div>
+        <a class="nav" href="configuracoes.html"><i data-lucide="settings"></i> Configurações</a>
+        <a class="nav active" href="ajuda.html"><i data-lucide="life-buoy"></i> Ajuda</a>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <nav class="topnav"><a href="#" class="active">Central de ajuda</a><a href="#">Novidades</a><a href="#">Status</a></nav>
+        <div class="right"><div class="search"><i data-lucide="search"></i><input placeholder="Buscar..."></div>
+          <button class="iconbtn" id="themeBtn" title="Alternar tema"><i data-lucide="moon" id="themeIcon"></i></button>
+          <button class="iconbtn"><i data-lucide="settings"></i></button><div class="avatar">CS</div></div>
+      </div>
+
+      <div class="content">
+        <div class="help">
+          <div class="help-hero">
+            <h2>Como podemos ajudar?</h2>
+            <p>Guias, dúvidas frequentes e suporte da equipe SmartDent.</p>
+            <div class="help-search"><i data-lucide="search"></i><input placeholder="Pesquisar na central de ajuda..."></div>
+          </div>
+
+          <div class="cards3">
+            <div class="hc"><div class="ic"><i data-lucide="rocket"></i></div><b>Primeiros passos</b><small>Configure a clínica e a IA</small></div>
+            <div class="hc"><div class="ic"><i data-lucide="message-circle"></i></div><b>Atendimento</b><small>Conversas, escalonamento e resumos</small></div>
+            <div class="hc"><div class="ic"><i data-lucide="package"></i></div><b>Estoque</b><small>Alertas e reposição (RF009)</small></div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-bottom:6px">Perguntas frequentes</h3>
+            <details open><summary>Como a IA decide escalar para um humano? <i data-lucide="chevron-down" class="chev"></i></summary><p>Casos de urgência, reclamações ou quando a IA não encontra resposta confiável na Base de Conhecimento são encaminhados automaticamente a um atendente, conforme as regras em Configurações → IA.</p></details>
+            <details><summary>Posso editar as respostas da IA? <i data-lucide="chevron-down" class="chev"></i></summary><p>Sim. A IA usa a Base de Conhecimento como fonte. Edite ou adicione artigos em Base de Conhecimento para ajustar o que ela responde.</p></details>
+            <details><summary>Como funcionam os alertas de estoque? <i data-lucide="chevron-down" class="chev"></i></summary><p>Cada item tem um nível mínimo. Quando a quantidade fica abaixo dele, o item é marcado como Crítico e aparece nos alertas do Dashboard e do Estoque (RF009).</p></details>
+            <details><summary>Os dados dos pacientes ficam seguros? <i data-lucide="chevron-down" class="chev"></i></summary><p>O acesso é restrito por perfil (responsável, atendente, paciente) e as conversas do paciente ficam isoladas no portal dele.</p></details>
+          </div>
+
+          <div class="card" style="margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:16px">
+            <div><b style="font-weight:700">Ainda precisa de ajuda?</b><div class="muted" style="font-size:.86rem">Fale com o suporte — respondemos em até 1 dia útil.</div></div>
+            <button class="btn-primary"><i data-lucide="mail"></i> Falar com o suporte</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

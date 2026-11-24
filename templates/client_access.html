@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Portal do paciente · SmartDent{% endblock %}
+{% block topnav %}<nav class="topnav"><a href="#" class="active">Portal do paciente</a></nav>{% endblock %}
 {% block content %}
-<main class="page-container">
-  <header class="page-header"><h1>Portal do paciente</h1></header>
-  <div class="page-body workspace-settings">
-    <section class="workspace-settings-section" aria-labelledby="portal-access-title">
-      <h2 id="portal-access-title">Acesso do paciente</h2>
-      <p>Em uma janela anônima, abra <a href="/chat">/chat</a> e entre com a conta vinculada ao paciente.</p>
-      <p class="page-subtitle">Consulte as conversas recebidas em <a href="/atendimentos">Atendimentos</a>.</p>
-    </section>
+<div class="content">
+  <div class="page-head"><div><h1>Portal do paciente</h1><div class="sub">Acesso e conversas do paciente</div></div></div>
+  <div class="card" style="max-width:640px">
+    <h3>Acesso do paciente</h3>
+    <p class="muted" style="margin:8px 0 18px;line-height:1.6">Em uma <strong>janela anônima</strong>, abra o portal e entre com a conta vinculada ao paciente. Assim a sessão do paciente não conflita com a sua.</p>
+    <a class="btn-primary" href="/chat"><i data-lucide="external-link"></i> Abrir portal do paciente</a>
+    <p class="muted" style="margin-top:18px">As conversas recebidas aparecem em <a href="/atendimentos" style="color:var(--info);font-weight:600">Atendimentos</a>.</p>
   </div>
-</main>
+</div>
+<script>if(window.lucide)lucide.createIcons();</script>
 {% endblock %}

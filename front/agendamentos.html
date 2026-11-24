@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDent — Agendamentos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesque:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="app.css">
+  <style>
+    .ag-grid{grid-template-columns:1.7fr 1fr}
+    .slot{display:flex;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
+    .slot:last-child{border:none}
+    .slot .time{font-variant-numeric:tabular-nums;font-weight:700;width:48px;flex:none}
+    .slot .bar{width:3px;height:38px;border-radius:3px;flex:none}
+    .slot .info{flex:1}.slot .info b{font-weight:600;display:block}.slot .info small{color:var(--muted-fg);font-size:.8rem;display:block}
+    .wk{display:flex;flex-direction:column;gap:14px}
+    .wk .row{display:flex;align-items:center;gap:12px}
+    .wk .d{width:38px;font-size:.82rem;color:var(--muted-fg)}
+    .wk .track{flex:1;height:8px;border-radius:8px;background:var(--muted-bg);overflow:hidden}
+    .wk .track i{display:block;height:100%;background:var(--info);border-radius:8px}
+    .wk .n{font-size:.82rem;font-weight:700;width:24px;text-align:right}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="side">
+      <div class="org"><div class="logo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2c-1.6 0-2.5.9-4.3.9-1.2 0-2-.3-3-.3C2.5 2.8 1.6 4.4 1.6 6.6c0 1.9.6 3.3 1.2 5.4.3 1 .4 1.6.6 3 .4 2.6.6 5.4 1.9 5.4 1.2 0 1.3-3.3 1.6-5 .2-1.1.6-1.8 1.5-1.8s1.3.7 1.5 1.8c.3 1.7.4 5 1.6 5 1.3 0 1.5-2.8 1.9-5.4.2-1.4.3-2 .6-3 .6-2.1 1.2-3.5 1.2-5.4 0-2.2-.9-3.8-3.1-3.8-1 0-1.8.3-3 .3-1.8 0-2.7-.9-4.3-.9z"/></svg></div><div><b>Clínica Sorriso</b><small>SmartDent AI · Pro</small></div></div>
+      <div class="grp"><div class="gt">Geral</div>
+        <a class="nav" href="index.html"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a class="nav active" href="agendamentos.html"><i data-lucide="calendar-days"></i> Agendamentos</a>
+        <a class="nav" href="atendimentos.html"><i data-lucide="message-circle"></i> Atendimentos <span class="pill">6</span></a>
+        <a class="nav" href="pacientes.html"><i data-lucide="users"></i> Pacientes</a>
+        <a class="nav" href="estoque.html"><i data-lucide="package"></i> Estoque</a>
+      </div>
+      <div class="grp"><div class="gt">Conteúdo</div>
+        <a class="nav" href="conhecimento.html"><i data-lucide="book-open"></i> Base de Conhecimento</a>
+        <a class="nav" href="relatorios.html"><i data-lucide="bar-chart-2"></i> Relatórios</a>
+      </div>
+      <div class="grp"><div class="gt">Outros</div>
+        <a class="nav" href="configuracoes.html"><i data-lucide="settings"></i> Configurações</a>
+        <a class="nav" href="ajuda.html"><i data-lucide="life-buoy"></i> Ajuda</a>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <nav class="topnav"><a href="#" class="active">Dia</a><a href="#">Semana</a><a href="#">Mês</a></nav>
+        <div class="right"><div class="search"><i data-lucide="search"></i><input placeholder="Buscar..."></div>
+          <button class="iconbtn" id="themeBtn" title="Alternar tema"><i data-lucide="moon" id="themeIcon"></i></button>
+          <button class="iconbtn"><i data-lucide="settings"></i></button><div class="avatar">CS</div></div>
+      </div>
+
+      <div class="content">
+        <div class="page-head"><div><h1>Agendamentos</h1><div class="sub">Segunda-feira, 24 de novembro</div></div><button class="btn-primary"><i data-lucide="plus"></i> Nova consulta</button></div>
+
+        <div class="kpis">
+          <div class="kpi"><div class="k-top"><span>Consultas hoje</span><i data-lucide="calendar-days"></i></div><div class="val num">18</div><div class="foot mut">4 profissionais</div></div>
+          <div class="kpi"><div class="k-top"><span>Confirmadas</span><i data-lucide="check-circle"></i></div><div class="val num">14</div><div class="foot pos">78% confirmadas</div></div>
+          <div class="kpi"><div class="k-top"><span>Pendentes</span><i data-lucide="clock"></i></div><div class="val num">3</div><div class="foot warn-c">aguardando</div></div>
+          <div class="kpi"><div class="k-top"><span>Faltas (mês)</span><i data-lucide="user-x"></i></div><div class="val num">7</div><div class="foot neg">+2 vs. mês passado</div></div>
+        </div>
+
+        <div class="grid ag-grid">
+          <div class="card">
+            <h3>Agenda de hoje</h3><div class="desc">8 consultas · Dra. Ana Paula e equipe</div>
+            <div class="sched">
+              <div class="slot"><div class="time num">08:00</div><div class="bar" style="background:var(--pos)"></div><div class="info"><b>Maria Santos</b><small>Consulta de rotina · Dra. Ana Paula</small></div><span class="badge ok">Confirmada</span></div>
+              <div class="slot"><div class="time num">09:00</div><div class="bar" style="background:var(--pos)"></div><div class="info"><b>Roberto Mendes</b><small>Avaliação de implante · Dr. Felipe</small></div><span class="badge ok">Confirmada</span></div>
+              <div class="slot"><div class="time num">10:00</div><div class="bar" style="background:var(--warn)"></div><div class="info"><b>Pedro Lima</b><small>Remarcação · Dra. Ana Paula</small></div><span class="badge warn">Pendente</span></div>
+              <div class="slot"><div class="time num">11:00</div><div class="bar" style="background:var(--pos)"></div><div class="info"><b>Ana Costa</b><small>Clareamento · Dra. Júlia</small></div><span class="badge ok">Confirmada</span></div>
+              <div class="slot"><div class="time num">13:30</div><div class="bar" style="background:var(--neg)"></div><div class="info"><b>Carlos Oliveira</b><small>Urgência · dor · Dr. Felipe</small></div><span class="badge neg">Cancelada</span></div>
+              <div class="slot"><div class="time num">14:30</div><div class="bar" style="background:var(--pos)"></div><div class="info"><b>Julia Ferreira</b><small>Profilaxia · Dra. Ana Paula</small></div><span class="badge ok">Confirmada</span></div>
+              <div class="slot"><div class="time num">15:30</div><div class="bar" style="background:var(--warn)"></div><div class="info"><b>Fernanda Dias</b><small>Ortodontia · Dra. Júlia</small></div><span class="badge warn">Pendente</span></div>
+              <div class="slot"><div class="time num">16:30</div><div class="bar" style="background:var(--pos)"></div><div class="info"><b>Lucas Almeida</b><small>Restauração · Dr. Felipe</small></div><span class="badge ok">Confirmada</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Ocupação da semana</h3><div class="desc">Consultas por dia</div>
+            <div class="wk">
+              <div class="row"><span class="d">Seg</span><div class="track"><i style="width:90%"></i></div><span class="n num">18</span></div>
+              <div class="row"><span class="d">Ter</span><div class="track"><i style="width:75%"></i></div><span class="n num">15</span></div>
+              <div class="row"><span class="d">Qua</span><div class="track"><i style="width:100%"></i></div><span class="n num">20</span></div>
+              <div class="row"><span class="d">Qui</span><div class="track"><i style="width:60%"></i></div><span class="n num">12</span></div>
+              <div class="row"><span class="d">Sex</span><div class="track"><i style="width:85%"></i></div><span class="n num">17</span></div>
+              <div class="row"><span class="d">Sáb</span><div class="track"><i style="width:40%"></i></div><span class="n num">8</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
