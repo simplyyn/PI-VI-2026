@@ -9,12 +9,41 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="app.css">
   <style>
-    .ag-grid{grid-template-columns:1.7fr 1fr}
-    .slot{display:flex;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
-    .slot:last-child{border:none}
-    .slot .time{font-variant-numeric:tabular-nums;font-weight:700;width:48px;flex:none}
-    .slot .bar{width:3px;height:38px;border-radius:3px;flex:none}
-    .slot .info{flex:1}.slot .info b{font-weight:600;display:block}.slot .info small{color:var(--muted-fg);font-size:.8rem;display:block}
+    /* ---- Calendário semanal ---- */
+    .cal{--rh:64px;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+    .cal-top{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border)}
+    .cal-top .navbtns{display:flex;gap:6px}
+    .cal-nav{width:34px;height:34px;border-radius:10px;border:1px solid var(--border);background:var(--bg);display:grid;place-items:center;color:var(--fg);cursor:pointer;transition:background .14s}
+    .cal-nav:hover{background:var(--muted-bg)}
+    .cal-nav svg{width:18px;height:18px}
+    .cal-title{font-size:1.2rem;font-weight:800;letter-spacing:-.01em}
+    .cal-week{font-size:.76rem;font-weight:600;color:var(--muted-fg);background:var(--muted-bg);border:1px solid var(--border);border-radius:20px;padding:5px 13px}
+    .cal-top .btn-primary{margin-left:auto}
+
+    .cal-days{display:grid;grid-template-columns:64px repeat(7,1fr);background:var(--muted-bg);border-bottom:1px solid var(--border)}
+    .cal-days .dh{text-align:center;padding:12px 4px;border-left:1px solid var(--border)}
+    .cal-days .dh:first-child{border-left:none}
+    .cal-days .dh small{display:block;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-fg);margin-bottom:3px}
+    .cal-days .dh b{font-size:1.3rem;font-weight:800;color:var(--fg)}
+    .cal-days .dh.today small,.cal-days .dh.today b{color:var(--info)}
+
+    .cal-body{position:relative;display:grid;grid-template-columns:64px repeat(7,1fr);grid-template-rows:repeat(9,var(--rh))}
+    .cal-body .col{grid-row:1/-1;border-left:1px solid var(--border);background:repeating-linear-gradient(var(--card),var(--card) calc(var(--rh) - 1px),var(--border) var(--rh))}
+    .cal-body .tc{grid-column:1;display:flex;justify-content:flex-end;padding:0 10px}
+    .cal-body .tc span{transform:translateY(-8px);font-size:.72rem;font-weight:600;color:var(--muted-fg);font-variant-numeric:tabular-nums}
+
+    .ev{margin:4px;border-radius:11px;padding:9px 11px;border-left:4px solid var(--c);background:var(--cbg);display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;z-index:2;min-height:0;cursor:pointer;transition:transform .14s,box-shadow .14s}
+    .ev:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    .ev b{font-weight:700;font-size:.82rem;color:var(--c);line-height:1.25}
+    .ev small{font-size:.72rem;color:var(--muted-fg);margin-top:2px}
+    .ev .t{font-size:.72rem;font-weight:600;color:var(--c);margin-top:auto;padding-top:6px;opacity:.85;font-variant-numeric:tabular-nums}
+    .ev.g{--c:var(--pos);--cbg:var(--pos-bg)} .ev.b{--c:var(--info);--cbg:var(--info-bg)}
+    .ev.v{--c:var(--violet);--cbg:var(--violet-bg)} .ev.w{--c:var(--warn);--cbg:var(--warn-bg)}
+    .ev.r{--c:var(--neg);--cbg:var(--neg-bg)}
+    .now{grid-column:2/3;align-self:start;position:relative;height:0;border-top:2px solid var(--info);z-index:3}
+    .now::before{content:"";position:absolute;left:-4px;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--info)}
+
+    /* ---- Ocupação da semana ---- */
     .wk{display:flex;flex-direction:column;gap:14px}
     .wk .row{display:flex;align-items:center;gap:12px}
     .wk .d{width:38px;font-size:.82rem;color:var(--muted-fg)}
@@ -46,7 +75,7 @@
 
     <div class="main">
       <div class="topbar">
-        <nav class="topnav"><a href="#" class="active">Dia</a><a href="#">Semana</a><a href="#">Mês</a></nav>
+        <nav class="topnav"><a href="#">Dia</a><a href="#" class="active">Semana</a><a href="#">Mês</a></nav>
         <div class="right"><div class="search"><i data-lucide="search"></i><input placeholder="Buscar..."></div>
           <button class="iconbtn" id="themeBtn" title="Alternar tema"><i data-lucide="moon" id="themeIcon"></i></button>
           <button class="iconbtn"><i data-lucide="settings"></i></button><div class="avatar">CS</div></div>
@@ -62,31 +91,70 @@
           <div class="kpi"><div class="k-top"><span>Faltas (mês)</span><i data-lucide="user-x"></i></div><div class="val num">7</div><div class="foot neg">+2 vs. mês passado</div></div>
         </div>
 
-        <div class="grid ag-grid">
-          <div class="card">
-            <h3>Agenda de hoje</h3><div class="desc">8 consultas · Dra. Ana Paula e equipe</div>
-            <div class="sched">
-              <div class="slot"><div class="time num">08:00</div><div class="bar" style="background:var(--pos)"></div><div class="info"><b>Maria Santos</b><small>Consulta de rotina · Dra. Ana Paula</small></div><span class="badge ok">Confirmada</span></div>
-              <div class="slot"><div class="time num">09:00</div><div class="bar" style="background:var(--pos)"></div><div class="info"><b>Roberto Mendes</b><small>Avaliação de implante · Dr. Felipe</small></div><span class="badge ok">Confirmada</span></div>
-              <div class="slot"><div class="time num">10:00</div><div class="bar" style="background:var(--warn)"></div><div class="info"><b>Pedro Lima</b><small>Remarcação · Dra. Ana Paula</small></div><span class="badge warn">Pendente</span></div>
-              <div class="slot"><div class="time num">11:00</div><div class="bar" style="background:var(--pos)"></div><div class="info"><b>Ana Costa</b><small>Clareamento · Dra. Júlia</small></div><span class="badge ok">Confirmada</span></div>
-              <div class="slot"><div class="time num">13:30</div><div class="bar" style="background:var(--neg)"></div><div class="info"><b>Carlos Oliveira</b><small>Urgência · dor · Dr. Felipe</small></div><span class="badge neg">Cancelada</span></div>
-              <div class="slot"><div class="time num">14:30</div><div class="bar" style="background:var(--pos)"></div><div class="info"><b>Julia Ferreira</b><small>Profilaxia · Dra. Ana Paula</small></div><span class="badge ok">Confirmada</span></div>
-              <div class="slot"><div class="time num">15:30</div><div class="bar" style="background:var(--warn)"></div><div class="info"><b>Fernanda Dias</b><small>Ortodontia · Dra. Júlia</small></div><span class="badge warn">Pendente</span></div>
-              <div class="slot"><div class="time num">16:30</div><div class="bar" style="background:var(--pos)"></div><div class="info"><b>Lucas Almeida</b><small>Restauração · Dr. Felipe</small></div><span class="badge ok">Confirmada</span></div>
+        <div class="cal">
+          <div class="cal-top">
+            <div class="navbtns">
+              <button class="cal-nav"><i data-lucide="chevron-left"></i></button>
+              <button class="cal-nav"><i data-lucide="chevron-right"></i></button>
             </div>
+            <div class="cal-title num">24 – 30 de novembro</div>
+            <span class="cal-week">Semana 48</span>
+            <button class="btn-primary"><i data-lucide="plus"></i> Nova consulta</button>
           </div>
 
-          <div class="card">
-            <h3>Ocupação da semana</h3><div class="desc">Consultas por dia</div>
-            <div class="wk">
-              <div class="row"><span class="d">Seg</span><div class="track"><i style="width:90%"></i></div><span class="n num">18</span></div>
-              <div class="row"><span class="d">Ter</span><div class="track"><i style="width:75%"></i></div><span class="n num">15</span></div>
-              <div class="row"><span class="d">Qua</span><div class="track"><i style="width:100%"></i></div><span class="n num">20</span></div>
-              <div class="row"><span class="d">Qui</span><div class="track"><i style="width:60%"></i></div><span class="n num">12</span></div>
-              <div class="row"><span class="d">Sex</span><div class="track"><i style="width:85%"></i></div><span class="n num">17</span></div>
-              <div class="row"><span class="d">Sáb</span><div class="track"><i style="width:40%"></i></div><span class="n num">8</span></div>
-            </div>
+          <div class="cal-days">
+            <div class="dh"></div>
+            <div class="dh today"><small>Seg</small><b class="num">24</b></div>
+            <div class="dh"><small>Ter</small><b class="num">25</b></div>
+            <div class="dh"><small>Qua</small><b class="num">26</b></div>
+            <div class="dh"><small>Qui</small><b class="num">27</b></div>
+            <div class="dh"><small>Sex</small><b class="num">28</b></div>
+            <div class="dh"><small>Sáb</small><b class="num">29</b></div>
+            <div class="dh"><small>Dom</small><b class="num">30</b></div>
+          </div>
+
+          <div class="cal-body">
+            <!-- fundo com linhas de grade -->
+            <div class="col" style="grid-column:2"></div><div class="col" style="grid-column:3"></div>
+            <div class="col" style="grid-column:4"></div><div class="col" style="grid-column:5"></div>
+            <div class="col" style="grid-column:6"></div><div class="col" style="grid-column:7"></div>
+            <div class="col" style="grid-column:8"></div>
+
+            <!-- faixas de horário -->
+            <div class="tc" style="grid-row:1"><span>08:00</span></div>
+            <div class="tc" style="grid-row:2"><span>09:00</span></div>
+            <div class="tc" style="grid-row:3"><span>10:00</span></div>
+            <div class="tc" style="grid-row:4"><span>11:00</span></div>
+            <div class="tc" style="grid-row:5"><span>12:00</span></div>
+            <div class="tc" style="grid-row:6"><span>13:00</span></div>
+            <div class="tc" style="grid-row:7"><span>14:00</span></div>
+            <div class="tc" style="grid-row:8"><span>15:00</span></div>
+            <div class="tc" style="grid-row:9"><span>16:00</span></div>
+
+            <!-- eventos -->
+            <div class="ev g" style="grid-column:2;grid-row:1/3"><b>Maria Santos</b><small>Consulta de rotina · Dra. Ana Paula</small><span class="t">08:00 – 09:00</span></div>
+            <div class="ev w" style="grid-column:2;grid-row:3/4"><b>Pedro Lima</b><small>Remarcação · Dra. Ana Paula</small><span class="t">10:00 – 11:00</span></div>
+            <div class="ev b" style="grid-column:3;grid-row:2/4"><b>Roberto Mendes</b><small>Avaliação de implante · Dr. Felipe</small><span class="t">09:00 – 11:00</span></div>
+            <div class="ev r" style="grid-column:3;grid-row:6/7"><b>Carlos Oliveira</b><small>Urgência · dor · Dr. Felipe</small><span class="t">13:00 – 14:00</span></div>
+            <div class="ev g" style="grid-column:4;grid-row:4/5"><b>Ana Costa</b><small>Clareamento · Dra. Júlia</small><span class="t">11:00 – 12:00</span></div>
+            <div class="ev v" style="grid-column:5;grid-row:2/4"><b>Fernanda Dias</b><small>Ortodontia · Dra. Júlia</small><span class="t">09:00 – 11:00</span></div>
+            <div class="ev g" style="grid-column:5;grid-row:6/7"><b>Lucas Almeida</b><small>Restauração · Dr. Felipe</small><span class="t">13:00 – 14:00</span></div>
+            <div class="ev b" style="grid-column:6;grid-row:7/8"><b>Julia Ferreira</b><small>Profilaxia · Dra. Ana Paula</small><span class="t">14:00 – 15:00</span></div>
+
+            <!-- linha do "agora" -->
+            <div class="now" style="grid-row:6"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <h3>Ocupação da semana</h3><div class="desc">Consultas por dia</div>
+          <div class="wk">
+            <div class="row"><span class="d">Seg</span><div class="track"><i style="width:90%"></i></div><span class="n num">18</span></div>
+            <div class="row"><span class="d">Ter</span><div class="track"><i style="width:75%"></i></div><span class="n num">15</span></div>
+            <div class="row"><span class="d">Qua</span><div class="track"><i style="width:100%"></i></div><span class="n num">20</span></div>
+            <div class="row"><span class="d">Qui</span><div class="track"><i style="width:60%"></i></div><span class="n num">12</span></div>
+            <div class="row"><span class="d">Sex</span><div class="track"><i style="width:85%"></i></div><span class="n num">17</span></div>
+            <div class="row"><span class="d">Sáb</span><div class="track"><i style="width:40%"></i></div><span class="n num">8</span></div>
           </div>
         </div>
       </div>
