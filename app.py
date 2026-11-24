@@ -416,21 +416,44 @@ def clinic_assistant(request: Request,question: AssistantQuestion):
         return dict(resposta='Conversa reiniciada e rascunho de agendamento descartado. Nenhuma consulta existente foi alterada.',origem='registros',fontes=[],gerado_por_llm=False,acoes=[])
     from assistant_admin import respond as administrative_reply
     from integrated_api import generation
+    from booking_input import BOOKING_INTENT
+    from scheduling import RESUME_BOOKING, SchedulingAgent, normalized
     import re
-    if re.search(r'\b(agende|agendar|marque uma consulta|marcar uma consulta)\b',question.pergunta.casefold()):
+    message = normalized(question.pergunta).rstrip('!?.,')
+    booking = SchedulingAgent(request.app.state.repository,user,request.session)
+    read_request = re.match(
+        r'^(?:e )?(?:quais?|quant[oa]s?|mostre|liste|listar|ver|consultar|como|'
+        r'agenda|estoque|indicadores?|relatorios?)\b', message
+    ) or (question.contexto and re.fullmatch(r'e (?:hoje|amanha|na semana|os ativos|os novos|os esgotados|os baixos)',message))
+    if BOOKING_INTENT.search(message) and not read_request:
         request.session.pop('admin_action',None)
         request.session.pop('admin_followup',None)
         request.session.pop('reply_batch',None)
+    current_booking = booking.active_state()
+    booking_correction = re.match(
+        r'^(?:mude|troque|corrija|altere|ajuste) (?:(?:o |a )?(?:horario|data|procedimento|dentista|profissional|paciente)\b|para\b)',
+        message,
+    )
+    if current_booking and not current_booking.get('done') and booking_correction:
+        return booking.respond(question.pergunta)
     try:
         response=administrative_reply(request,user,question.pergunta,lambda:request_llm(request),generation(request,user))
     except (LLMUnavailable,RetrievalUnavailable) as exc:
         raise HTTPException(503,str(exc)) from None
+    from assistant import ClinicAssistant, result
+    clinic_assistant = ClinicAssistant(request.app.state.repository,user['empresa_id'])
+    current_booking = booking.active_state()
+    if current_booking and not current_booking.get('done') and read_request:
+        response = response or clinic_assistant.reply(question.pergunta,question.contexto)
+        if response is None:
+            if re.search(r'\b(?:horarios?|opcoes|disponibilidade)\b',message):
+                return booking.respond(RESUME_BOOKING)
+            response = result('Posso consultar a agenda, pacientes ou estoque. Seu agendamento segue como rascunho.')
+        return dict(response,opcoes=[booking.option('Retomar agendamento',RESUME_BOOKING)])
     if response is not None:return response
-    from scheduling import SchedulingAgent
-    scheduled=SchedulingAgent(request.app.state.repository,user,request.session).respond(question.pergunta)
+    scheduled=booking.respond(question.pergunta)
     if scheduled is not None:return scheduled
-    from assistant import ClinicAssistant
-    response=ClinicAssistant(request.app.state.repository,user['empresa_id']).reply(question.pergunta,question.contexto)
+    response=clinic_assistant.reply(question.pergunta,question.contexto)
     if response is not None:return response
     response=api_chat(request,question)
     response['origem']='llm' if response['gerado_por_llm'] else 'orientacao' if response.get('tipo') else 'base'

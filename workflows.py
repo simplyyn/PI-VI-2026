@@ -142,8 +142,8 @@ class CustomerChat:
                 item=tx.save('attendance',self.user['empresa_id'],data,identifier)
             request=tx.save('chat_requests',self.user['empresa_id'],dict(user_id=self.user['id'],key=key,text_hash=version(text),state='processing',created_at=now()))
             captured=version(item)
-        from assistant import normalize
-        human=not automatic or any(term in normalize(text) for term in ('falar com atendente','falar com humano','atendimento humano','falar com a recepcao','falar com recepcao','falar com a equipe','falar com uma pessoa')) or item['status']=='escalated'
+        from patient_scope import wants_human
+        human=not automatic or wants_human(text) or item['status']=='escalated'
         answer=None;warning=''
         try:
             if human:

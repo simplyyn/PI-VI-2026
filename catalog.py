@@ -8,3 +8,22 @@ PROCEDURE_OPTIONS = (
     'Placa de mordida', 'Aplicação tópica de flúor', 'Aplicação de selante',
     'Consulta odontopediátrica', 'Prótese protocolo',
 )
+
+
+def requested_procedure(message, options=PROCEDURE_OPTIONS):
+    from scheduling import normalized
+    import re
+
+    aliases = {
+        'limpeza': 'Limpeza dental (profilaxia)', 'profilaxia': 'Limpeza dental (profilaxia)',
+        'avaliacao': 'Consulta de avaliação', 'canal': 'Tratamento de canal',
+        'clareamento': 'Clareamento dental', 'restauracao': 'Restauração dentária',
+        'raspagem': 'Raspagem periodontal', 'fluor': 'Aplicação tópica de flúor',
+    }
+    for option in sorted(options, key=len, reverse=True):
+        if re.search(r'\b'+re.escape(normalized(option))+r'(?!\w)', message):
+            return option
+    for alias, procedure in aliases.items():
+        if procedure in options and re.search(r'\b'+alias+r'\b', message):
+            return procedure
+    return None

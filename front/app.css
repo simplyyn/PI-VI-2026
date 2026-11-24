@@ -176,16 +176,23 @@ svg.chart-svg{display:block;width:100%;overflow:visible}
 
 /* ── Assistente da clínica (chatbot) ── */
 .asst-btn{position:fixed;right:22px;bottom:22px;z-index:90;display:flex;align-items:center;gap:8px;background:var(--primary);color:var(--primary-fg);border:none;border-radius:30px;padding:12px 18px;font-family:var(--font);font-weight:600;font-size:.9rem;box-shadow:0 12px 32px rgba(0,0,0,.28);cursor:pointer}
-.asst-btn svg{width:18px;height:18px}
+.asst-btn svg{width:18px;height:18px;flex:none}
+.asst-btn--docked{position:static;padding:8px 12px;box-shadow:none}
+.asst-btn[hidden],.asst-panel[hidden]{display:none}
 .asst-panel{position:fixed;right:22px;bottom:22px;z-index:91;width:384px;max-width:calc(100vw - 44px);height:572px;max-height:calc(100vh - 44px);background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 26px 72px rgba(0,0,0,.42);display:flex;flex-direction:column;overflow:hidden}
-.asst-panel[hidden]{display:none}
+.asst-panel--above-composer{top:68px;bottom:auto;max-height:calc(100dvh - 164px)}
+.asst-positioned{position:fixed;right:auto;bottom:auto}
+.asst-btn,.asst-head,.asst-resize{touch-action:none}
+.asst-head{cursor:grab;user-select:none}
+.asst-dragging,.asst-dragging .asst-head{cursor:grabbing;user-select:none}
 .asst-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.asst-head .iconbtn{flex:none}
 .asst-head .who{display:flex;gap:10px;align-items:center}
 .asst-head .ic{width:36px;height:36px;border-radius:10px;background:var(--primary);color:var(--primary-fg);display:grid;place-items:center;flex:none}
 .asst-head .ic svg{width:19px;height:19px}
 .asst-head b{font-weight:700;font-size:.95rem}
 .asst-head small{display:block;color:var(--muted-fg);font-size:.75rem}
-.asst-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.asst-msgs{flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
 .asst-m{max-width:86%;padding:10px 13px;border-radius:12px;font-size:.88rem;line-height:1.5;white-space:pre-wrap;border:1px solid var(--border)}
 .asst-m.ai{background:var(--muted-bg);align-self:flex-start;border-top-left-radius:4px}
 .asst-m.user{background:var(--info-bg);border-color:transparent;align-self:flex-end;border-top-right-radius:4px}
@@ -195,8 +202,11 @@ svg.chart-svg{display:block;width:100%;overflow:visible}
 .asst-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px}
 .asst-chips button{font-family:var(--font);font-size:.76rem;border:1px solid var(--border);background:var(--bg);color:var(--fg);border-radius:20px;padding:5px 11px;cursor:pointer}
 .asst-chips button:hover{background:var(--muted-bg)}
+.asst-options[hidden]{display:none}
+.asst-options{max-height:112px;overflow-y:auto;flex-shrink:0}
+.asst-options button{border-color:var(--info);color:var(--info)}
 .asst-input{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border)}
-.asst-input input{flex:1;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:.88rem}
+.asst-input input{flex:1;min-width:0;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:.88rem}
 .asst-input input:focus{outline:none;border-color:var(--ring)}
 .asst-input button{width:40px;height:40px;flex:none;border:none;border-radius:9px;background:var(--primary);color:var(--primary-fg);display:grid;place-items:center;cursor:pointer}
 .asst-input button svg{width:17px;height:17px}

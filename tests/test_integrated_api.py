@@ -308,3 +308,87 @@ class IntegratedAPITests(unittest.TestCase):
         self.assertEqual(appointment['horario'],'08:30:00')
         self.assertEqual(appointment['dentista'],'Roberto')
         self.assertIn(str(appointment_id),self.client.get('/agendamentos').text)
+
+    def test_owner_booking_guides_choices_and_keeps_preview_after_lookup(self):
+        records = ClinicRecords(self.repo,'a')
+        records.save('patients',Patient(nome='Paciente inativo',status='inativo'))
+        ClinicRecords(self.repo,'b').save('patients',Patient(nome='Paciente de outra clínica',status='ativo'))
+        headers = self.login('owner@a.test')
+        before = records.list('appointments')
+        occupied = next(a for a in before if a['dentista']=='Roberto' and a['paciente_id']==self.patient['id'])
+
+        def ask(text, context=None):
+            response = self.client.post('/api/assistente',headers=headers,json={'pergunta':text,'contexto':context})
+            self.assertEqual(response.status_code,200)
+            return response.json()
+
+        with patch('app.create_llm') as model:
+            start = ask('Quero agendar uma consulta')
+            self.assertIn('paciente',start['resposta'])
+            self.assertNotIn('Paciente inativo',str(start))
+            self.assertNotIn('Paciente de outra clínica',str(start))
+            choice = next(item for item in start['opcoes'] if item['rotulo'].startswith('Pedro'))
+            procedures = ask(choice['mensagem'])
+            cleaning = next(item for item in procedures['opcoes'] if item['rotulo'].startswith('Limpeza'))
+            ask(cleaning['mensagem'])
+            conflict = ask(f"{occupied['data']} às {occupied['horario'][:5]}")
+            self.assertEqual(conflict['estado'],'erro')
+            self.assertTrue(conflict['opcoes'])
+            picked = ask(conflict['opcoes'][0]['mensagem'])
+            self.assertEqual(picked['estado'],'aguardando_confirmacao')
+            updated = ask('Mude para às 11h45')
+            self.assertEqual(updated['estado'],'erro')
+            self.assertTrue(updated['opcoes'])
+            picked = ask(updated['opcoes'][0]['mensagem'])
+            self.assertEqual(picked['estado'],'aguardando_confirmacao')
+            lookup = ask('Quais os agendamentos de hoje?')
+            self.assertIn('/agendamentos',str(lookup['acoes']))
+            followup = ask('E amanhã?', 'agenda')
+            self.assertIn('amanhã',followup['resposta'])
+            resumed = ask(followup['opcoes'][0]['mensagem'])
+            self.assertEqual(resumed['resposta'],picked['resposta'])
+            self.assertEqual(len(records.list('appointments')),len(before))
+            done = ask(resumed['opcoes'][0]['mensagem'])
+            self.assertEqual(done['estado'],'concluido')
+            self.assertEqual(ask('confirmar')['agendamento_id'],done['agendamento_id'])
+            self.assertEqual(len(records.list('appointments')),len(before)+1)
+            model.assert_not_called()
+
+    def test_patient_short_followups_grounded_and_handoff_resets_pending_booking(self):
+        from uuid import uuid4
+
+        for title,content in [('Limpeza dental','A limpeza custa R$ 80 e pode ser parcelada.'),
+                              ('Horário de funcionamento','No sábado, o expediente termina às 11h.')]:
+            self.repo.save('kb','a',dict(titulo=title,categoria='Atendimento',conteudo=content,status=True))
+        headers = self.login('patient@a.test',self.account['password'])
+        before = len(self.repo.list('appointments','a'))
+
+        def send(text):
+            response = self.client.post('/api/cliente/mensagens',headers=headers,
+                                        json={'texto':text,'request_id':uuid4().hex})
+            self.assertEqual(response.status_code,200)
+            return response.json()
+
+        with patch('app.create_llm') as model:
+            generate = model.return_value.generate
+            generate.return_value = 'Resposta simulada com base no artigo.'
+            send('Quanto custa a limpeza?')
+            send('E dá pra parcelar?')
+            self.assertIn('R$ 80',generate.call_args.args[0][1]['content'])
+            self.assertIn('ÚLTIMA MENSAGEM DO CLIENTE A RESPONDER:\nE dá pra parcelar?',generate.call_args.args[0][1]['content'])
+            send('Qual o horário de funcionamento?')
+            send('E no sábado?')
+            self.assertIn('termina às 11h',generate.call_args.args[0][1]['content'])
+            self.assertEqual(generate.call_count,4)
+            private = send('E quanto vocês faturaram no mês?')
+            self.assertIn('restritos',private['mensagens'][-1]['texto'])
+            whitening = send('Quero marcar um clareamento')
+            self.assertIn('clareamento dental com Roberto',whitening['mensagens'][-1]['texto'])
+            pick = whitening['acao']['opcoes'][0]
+            preview = send(f"{pick['data']} às {pick['horarios'][0]}")
+            self.assertEqual(preview['acao']['estado'],'aguardando_confirmacao')
+            handoff = send('Quero falar com um atendente')
+            self.assertEqual(handoff['status'],'escalated')
+            self.assertIsNone(handoff['acao'])
+            self.assertEqual(len(self.repo.list('appointments','a')),before)
+            self.assertEqual(generate.call_count,4)

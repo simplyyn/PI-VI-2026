@@ -21,3 +21,5 @@ class BookingInputTests(unittest.TestCase):
     def test_relative_date_and_single_slot(self):
         self.assertEqual(patient_datetime('amanha as 8h30'),'amanha 08:30')
         self.assertEqual(patient_datetime('depois de amanha as 8'),'depois de amanha 08:00')
+        self.assertEqual(patient_datetime('e sexta as 10 da manha'), 'sexta 10:00')
+        self.assertEqual(patient_datetime('na proxima terca-feira as 3 da tarde'), 'proxima terca-feira 15:00')

@@ -43,6 +43,7 @@
       <div class="topbar">
         {% block topnav %}<nav class="topnav"><a href="#" class="active">Visão geral</a></nav>{% endblock %}
         <div class="right">
+          <button class="asst-btn{% if pagina == 'atendimentos' %} asst-btn--docked{% endif %}" id="asstBtn" type="button" aria-controls="asstPanel" aria-expanded="false" title="Arraste para mover ou use as setas. Home restaura a posição inicial."><i data-lucide="sparkles" aria-hidden="true"></i> Assistente</button>
           <button class="iconbtn" id="themeBtn" title="Alternar tema"><i data-lucide="moon" id="themeIcon"></i></button>
           <button class="iconbtn" onclick="doLogout()" title="Sair"><i data-lucide="log-out"></i></button>
           <div class="avatar">{{ (usuario.empresa_nome or usuario.nome or 'CS')[:2]|upper }}</div>
@@ -54,18 +55,18 @@
   </div>
 
   <!-- Assistente da clínica (chatbot: agenda, estoque, pacientes, agendamentos) -->
-  <button class="asst-btn" id="asstBtn" type="button" onclick="toggleAsst()"><i data-lucide="sparkles"></i> Assistente</button>
-  <div class="asst-panel" id="asstPanel" hidden>
+  <div class="asst-panel{% if pagina == 'atendimentos' %} asst-panel--above-composer{% endif %}" id="asstPanel" role="dialog" aria-labelledby="asstTitle" hidden>
     <div class="asst-resize t" data-dir="t" title="Arraste para redimensionar (duplo clique restaura)"></div>
     <div class="asst-resize l" data-dir="l" title="Arraste para redimensionar (duplo clique restaura)"></div>
     <div class="asst-resize tl" data-dir="tl" title="Arraste para redimensionar (duplo clique restaura)"></div>
-    <div class="asst-head">
-      <div class="who"><div class="ic"><i data-lucide="sparkles"></i></div><div><b>Assistente da clínica</b><small>Agende, veja estoque, pacientes e a agenda</small></div></div>
-      <button class="iconbtn" type="button" aria-label="Fechar" onclick="toggleAsst()"><i data-lucide="x"></i></button>
+    <div class="asst-head" tabindex="0" aria-label="Mover painel do assistente" title="Arraste para mover ou use as setas. Home restaura a posição inicial.">
+      <div class="who"><div class="ic"><i data-lucide="sparkles" aria-hidden="true"></i></div><div><b id="asstTitle">Assistente da clínica</b><small>Agende, veja estoque, pacientes e a agenda</small></div></div>
+      <button class="iconbtn" id="asstClose" type="button" aria-label="Fechar assistente"><i data-lucide="x"></i></button>
     </div>
     <div class="asst-msgs" id="asstMsgs" role="log" aria-live="polite">
       <div class="asst-m ai">Olá! Posso <strong>agendar consultas</strong>, consultar <strong>estoque</strong>, <strong>pacientes</strong> e a <strong>agenda</strong>. O que você precisa?</div>
     </div>
+    <div class="asst-chips asst-options" id="asstOptions" role="group" aria-label="Opções do agendamento" hidden></div>
     <div class="asst-chips">
       <button onclick="asstSend('Quais são os agendamentos de hoje?')">Agenda de hoje</button>
       <button onclick="asstSend('Quais itens do estoque precisam de reposição?')">Reposição</button>
@@ -81,66 +82,55 @@
   <script src="/static/ai-client.js"></script>
   <script src="/static/session.js"></script>
   <script src="/static/app.js"></script>
+  <script src="/static/assistant-position.js"></script>
   <script>
     let asstBusy=false, asstCtx=null;
-    const ASST_OPEN='smartdent-asst-open', ASST_SIZE='smartdent-asst-size', ASST_LOG='smartdent-asst-log', ASST_CTX='smartdent-asst-ctx';
+    const ASST_LOG='smartdent-asst-log', ASST_CTX='smartdent-asst-ctx';
 
     function asstRender(text,isUser,acoes,origem){
       const box=document.getElementById('asstMsgs');const d=document.createElement('div');d.className='asst-m '+(isUser?'user':'ai');
       if(origem){const o=document.createElement('span');o.className='orig';o.textContent=({agendamento:'Agendamento assistido',registros:'Consulta aos registros',llm:'IA com contexto da clínica',orientacao:'Orientação',base:'Base de conhecimento'}[origem]||'Assistente');d.append(o);}
       const p=document.createElement('span');p.textContent=text;d.append(p);
-      const allowed=['/agendamentos','/atendimentos','/pacientes','/estoque','/relatorios','/base-conhecimento'];
+      const allowed=['/agendamentos','/atendimentos','/pacientes','/estoque','/relatorios','/base-conhecimento','/respostas'];
       (acoes||[]).forEach(a=>{const path=(a.url||'').split('?')[0];if(!allowed.includes(path))return;const link=document.createElement('a');link.className='act';link.href=a.url;link.textContent=a.rotulo;d.append(link);});
       box.append(d);box.scrollTop=box.scrollHeight;
     }
     function asstLog(entry){ try{const l=JSON.parse(sessionStorage.getItem(ASST_LOG)||'[]');l.push(entry);sessionStorage.setItem(ASST_LOG,JSON.stringify(l));}catch(e){} }
     function asstAdd(text,isUser,acoes,origem){ asstRender(text,isUser,acoes,origem); asstLog({t:text,u:isUser,a:acoes,o:origem}); }
 
-    function toggleAsst(){
-      const p=document.getElementById('asstPanel'), b=document.getElementById('asstBtn');
-      if(p.hasAttribute('hidden')){p.removeAttribute('hidden');b.style.display='none';localStorage.setItem(ASST_OPEN,'1');document.getElementById('asstInput').focus();}
-      else{p.setAttribute('hidden','');b.style.display='';localStorage.setItem(ASST_OPEN,'');}
-    }
     function asstClear(){ try{sessionStorage.removeItem(ASST_LOG);sessionStorage.removeItem(ASST_CTX);}catch(e){} document.getElementById('asstMsgs').replaceChildren(); asstCtx=null; }
 
-    async function asstSend(text){
+    function asstOptions(options){
+      const list=document.getElementById('asstOptions');
+      list.replaceChildren(...options.map(option=>{
+        const button=document.createElement('button');
+        button.type='button';
+        button.textContent=option.rotulo;
+        button.addEventListener('click',()=>asstSend(option.mensagem,option.rotulo));
+        return button;
+      }));
+      list.hidden=options.length===0;
+    }
+
+    async function asstSend(text,label){
       const input=document.getElementById('asstInput');const msg=(text||input.value).trim();if(!msg||asstBusy)return;
-      asstBusy=true;input.value='';asstAdd(msg,true);
+      asstBusy=true;input.value='';asstAdd(label||msg,true);
       const typing=document.createElement('div');typing.className='asst-m ai';typing.textContent='Consultando…';document.getElementById('asstMsgs').append(typing);
       try{
         const reply=await window.smartdentAskOwner(msg,asstCtx);
-        asstCtx=({"/agendamentos":"agenda","/pacientes":"pacientes","/estoque":"estoque","/atendimentos":"atendimentos","/relatorios":"gestao","/base-conhecimento":"clinica"}[reply.acoes&&reply.acoes[0]&&reply.acoes[0].url]||null);
+        if(reply.origem!=='agendamento')asstCtx=({"/agendamentos":"agenda","/pacientes":"pacientes","/estoque":"estoque","/atendimentos":"atendimentos","/relatorios":"gestao","/base-conhecimento":"clinica"}[reply.acoes&&reply.acoes[0]&&reply.acoes[0].url]||null);
         try{sessionStorage.setItem(ASST_CTX,asstCtx||'');}catch(e){}
         typing.remove();asstAdd(reply.resposta,false,reply.acoes,reply.origem);
+        asstOptions(reply.opcoes||[]);
         if(reply.registro_tipo==='appointments'||reply.estado==='concluido') SmartDent.toast('Agenda atualizada.','ok');
       }catch(error){typing.remove();asstAdd(error.message,false);}
       finally{asstBusy=false;if(!document.getElementById('asstPanel').hasAttribute('hidden'))input.focus();}
     }
 
-    // Redimensionamento (tamanho salvo neste navegador)
-    (function initAsstResize(){
-      const panel=document.getElementById('asstPanel'), MINW=320, MINH=380, MARGIN=16;
-      function clamp(w,h){return [Math.min(Math.max(w,MINW),innerWidth-MARGIN*2),Math.min(Math.max(h,MINH),innerHeight-MARGIN*2)];}
-      panel.querySelectorAll('.asst-resize').forEach(handle=>{
-        handle.addEventListener('dblclick',()=>{panel.style.width='';panel.style.height='';try{localStorage.removeItem(ASST_SIZE);}catch(e){}});
-        handle.addEventListener('pointerdown',e=>{
-          e.preventDefault();handle.setPointerCapture(e.pointerId);
-          const dir=handle.dataset.dir,sx=e.clientX,sy=e.clientY,sw=panel.offsetWidth,sh=panel.offsetHeight;
-          panel.classList.add('resizing');let last={w:sw,h:sh};
-          function move(ev){const w=dir.includes('l')?sw+(sx-ev.clientX):sw,h=dir.includes('t')?sh+(sy-ev.clientY):sh;const c=clamp(w,h);panel.style.width=c[0]+'px';panel.style.height=c[1]+'px';last={w:c[0],h:c[1]};}
-          function up(){panel.classList.remove('resizing');handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',up);try{localStorage.setItem(ASST_SIZE,JSON.stringify(last));}catch(e){}}
-          handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);
-        });
-      });
-    })();
-
-    // Restaura tamanho, histórico e estado aberto ao navegar entre páginas
+    // Restaura o histórico ao navegar entre páginas
     (function restoreAsst(){
-      const panel=document.getElementById('asstPanel');
-      try{const s=JSON.parse(localStorage.getItem(ASST_SIZE)||'null');if(s&&s.w&&s.h){panel.style.width=s.w+'px';panel.style.height=s.h+'px';}}catch(e){}
       try{const log=JSON.parse(sessionStorage.getItem(ASST_LOG)||'[]');if(log.length){document.getElementById('asstMsgs').replaceChildren();log.forEach(e=>asstRender(e.t,e.u,e.a,e.o));}}catch(e){}
       asstCtx=sessionStorage.getItem(ASST_CTX)||null;
-      if(localStorage.getItem(ASST_OPEN)==='1'){panel.removeAttribute('hidden');document.getElementById('asstBtn').style.display='none';}
       if(window.lucide)lucide.createIcons();
     })();
   </script>

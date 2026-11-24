@@ -83,14 +83,14 @@ class AttendanceAgent:
     def __init__(self, retriever, llm):
         self.retriever, self.llm = retriever, llm
 
-    def answer(self, clinic, question, history=None, *, patient_facing=False):
+    def answer(self, clinic, question, history=None, *, patient_facing=False, retrieval_question=None):
         from guidance import initial_guidance
         guidance=initial_guidance(question)
         normalized=''.join(c for c in unicodedata.normalize('NFKD',question.lower()) if not unicodedata.combining(c))
         practical=bool(re.search(r'\b(preco|precos|valor|valores|custa|horario|horarios|funcionamento|politica|politicas|remarcar|cancelamento|convenio|convenios|pagamento|pix)\b',normalized))
         if guidance and (guidance.get('tipo')=='orientacao_urgente' or not practical):
             return guidance
-        documents = self.retriever.retrieve(clinic,question)
+        documents = self.retriever.retrieve(clinic,retrieval_question or question)
         # Defesa adicional contra adaptadores que retornem documentos de outra clínica:
         documents = [d for d in documents if d.get('empresa_id',clinic)==clinic and d.get('status',True)]
         if patient_facing:

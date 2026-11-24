@@ -7,7 +7,9 @@ from security import require_user, csrf_check
 from workflows import CustomerChat, BatchReplies, pending, rate_answer, require_workflows
 from rag import AttendanceAgent,create_retriever
 from guidance import initial_guidance
-from patient_scope import booking_reply, patient_response
+from patient_scope import booking_reply, followup_context, patient_response
+from assistant import normalize
+from booking_input import BOOKING_INTENT
 
 router=APIRouter()
 
@@ -31,18 +33,22 @@ def generation(request,user):
         if guidance and guidance['tipo'] == 'orientacao_urgente':
             return guidance
         active = user['role'] == 'customer' and bool(request.session.get('patient_booking'))
-        local_reply = patient_response(text, booking_active=active)
+        messages = item.get('mensagens', [])
+        is_booking_reply = active and booking_reply(text)
+        context = None if is_booking_reply else followup_context(text, messages)
+        local_reply = patient_response(text, booking_active=active, followup=bool(context))
         if local_reply is not None:
             return local_reply
         if user['role']=='customer':
             from professionals import PatientBooking
-            if not active or booking_reply(text):
+            if not active or is_booking_reply or BOOKING_INTENT.search(normalize(text)):
                 booking=PatientBooking(request.app.state.repository,user,request.session).answer(text)
                 if booking is not None:return booking
-        history = [message for message in item.get('mensagens', [])
+        history = [message for message in messages
                    if message.get('autor') != 'client' or patient_response(message['texto']) is None]
         agent = AttendanceAgent(create_retriever(request.app.state.repository),request_llm(request))
-        return agent.answer(user['empresa_id'], text, history, patient_facing=True)
+        retrieval_question = (context[:500]+'\n'+text) if context else None
+        return agent.answer(user['empresa_id'], text, history, patient_facing=True, retrieval_question=retrieval_question)
     return answer
 
 
@@ -77,6 +83,9 @@ def customer_send(request:Request,data:CustomerMessage):
     user=require_user(request,{'customer'});csrf_check(request)
     generator=generation(request,user)
     result = CustomerChat(request.app.state.repository,user).send(data.texto,data.request_id,generator,data.resposta_automatica)
+    if result['status'] == 'escalated':
+        request.session.pop('patient_booking',None)
+        request.session.pop('booking',None)
     return customer_view(request, result)
 
 

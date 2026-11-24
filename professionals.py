@@ -74,17 +74,18 @@ def validate_professional(professionals,data):
     return dict(data,profissional_id=p['id'],dentista=p['nome'])
 
 
-def available(repo,clinic,professional_id,day,duration=30,patient_id=-1):
+def available(repo,clinic,professional_id,day,duration=30,patient_id=-1,*,now=None):
     from workflows import record
     p=record(repo,'professionals',clinic,professional_id)
     if not p['ativo']: return []
-    parsed=date.fromisoformat(day);values=[];now=datetime.now(LOCAL_ZONE)
+    parsed=date.fromisoformat(day);values=[];now=now or datetime.now(LOCAL_ZONE)
+    appointments = repo.list('appointments',clinic)
     for a,b in p['expediente'].get(str(parsed.weekday()),[]):
         cursor=datetime.combine(parsed,time.fromisoformat(a),tzinfo=LOCAL_ZONE)
         end=datetime.combine(parsed,time.fromisoformat(b),tzinfo=LOCAL_ZONE)
         while cursor+timedelta(minutes=duration)<=end:
             data=dict(data=day,horario=cursor.strftime('%H:%M'),duracao=duration,dentista=p['nome'],paciente_id=patient_id,status='pendente')
-            try: check_conflict(repo.list('appointments',clinic),data)
+            try: check_conflict(appointments,data)
             except AppointmentConflict: pass
             else:
                 if cursor>now: values.append(cursor.strftime('%H:%M'))
@@ -97,11 +98,12 @@ class PatientBooking:
 
     def answer(self,text):
         import re
+        from catalog import requested_procedure
+        from booking_input import BOOKING_INTENT, patient_datetime
         from workflows import customer_patient,record
         from scheduling import SchedulingAgent
         m=normalized(text);state=self.session.get('patient_booking')
-        intent = re.search(r'\b(?:agendar|agende|marcar|marque|reservar|reserve|horarios? (?:livres?|disponiveis?)|'
-                           r'(?:quero|preciso de|gostaria de) (?:um |novo )?agendamento)\b', m)
+        intent = BOOKING_INTENT.search(m) or re.search(r'\bhorarios? (?:livres?|disponiveis?)\b', m)
         if not state and not intent: return None
         if m in ('cancelar','desistir'):
             self.session.pop('patient_booking',None);self.session.pop('booking',None)
@@ -109,11 +111,16 @@ class PatientBooking:
         patient=customer_patient(self.repo,self.user)
         professionals=[p for p in self.repo.list('professionals',self.user['empresa_id']) if p['ativo']]
         if not professionals: return self.result('A equipe precisa cadastrar a disponibilidade dos profissionais antes de reservar. Sua mensagem está registrada.')
+        surgical = bool(re.search(r'cirurg|complex|siso|implante|\b(?:extracao|extrair)\b',m))
+        procedure = 'Avaliação cirúrgica' if surgical else requested_procedure(m)
+        if state and intent and procedure and procedure != state['procedure']:
+            state = None
+            self.session.pop('patient_booking',None)
+            self.session.pop('booking',None)
         if not state:
-            surgical=any(t in m for t in ('cirurg','complex','siso','implante'))
-            procedure='Avaliação cirúrgica' if surgical else 'Limpeza dental (profilaxia)' if 'limpeza' in m else 'Consulta de avaliação'
+            procedure = procedure or 'Consulta de avaliação'
             candidates=[p for p in professionals if procedure in p['procedimentos']]
-            if not candidates: return self.result('A equipe precisa confirmar qual profissional atende essa solicitação.')
+            if not candidates: return self.result(f'Não encontrei horários cadastrados para {procedure.lower()}. A recepção pode ajudar a verificar a disponibilidade.')
             p=candidates[0]
             if 'elias' in m or 'roberto' in m:
                 named=[v for v in candidates if normalized(v['nome']) in m]
@@ -134,16 +141,17 @@ class PatientBooking:
                 return self.result('Não encontrei horários livres nos próximos sete dias. Você pode consultar outras datas com a recepção.')
             prompt=intro+'Escolha um horário nas opções de agendamento ou escreva a data e o horário desejados.'
             # Accept a full initial request too, but never skip its confirmation.
-            if not re.search(r'\d{1,2}(?:h|:)',m):
+            if not re.search(r'(?:\b\d{1,2}\s*[h:]|\bas \d)',m):
                 return dict(self.result(prompt), estado='escolher_horario', opcoes=dates)
         p=record(self.repo,'professionals',self.user['empresa_id'],state['professional_id'])
         booking=SchedulingAgent(self.repo,self.user,self.session)
+        if m in ('confirmar','confirmo','sim','pode agendar') and not self.session.get('booking'):
+            return self.result('Escolha primeiro uma data e um horário nas opções acima. A consulta só será gravada depois da revisão.')
         if m not in ('confirmar','confirmo','sim','pode agendar'):
             existing=self.session.get('booking')
             if not existing:
                 self.session['booking']=dict(user=self.user['id'],clinic=self.user['empresa_id'],time=datetime.now(LOCAL_ZONE).timestamp(),data=dict(paciente_id=patient['id'],procedimento=state['procedure'],dentista=p['nome'],duracao=p['duracao_padrao']),key=uuid4().hex)
             # A patient can supply dates/times, never another patient's name or arbitrary fields.
-            from booking_input import patient_datetime
             try: choice=patient_datetime(m)
             except ValueError as error:
                 current=self.session.get('booking',{});current.pop('ready',None);self.session['booking']=current
@@ -155,6 +163,7 @@ class PatientBooking:
         if result is None:
             self.session.pop('patient_booking', None)
             return dict(self.result('O pedido expirou. Use Agendar consulta para começar novamente.'), estado='cancelado')
+        result.pop('opcoes', None)
         if result.get('estado')=='erro':
             current=self.session.get('booking',{}).get('data',{});day=current.get('data')
             slots=available(self.repo,self.user['empresa_id'],p['id'],day,p['duracao_padrao'],patient['id']) if day else []
