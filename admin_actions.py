@@ -173,6 +173,9 @@ class AdminActions:
             audit(tx,self.user,draft['plan']['ferramenta'],pid or 'novo',tuple(data or {}))
         reply=self.result('Operação concluída e registrada no banco. A revisão manual de uma conversa não equivale a enviar uma resposta.' if kind=='attendance_meta' else 'Operação concluída e registrada no banco.')
         path={'patients':'/pacientes','appointments':'/agendamentos','stock':'/estoque','move':'/estoque','kb':'/base-conhecimento','prices':'/base-conhecimento','attendance_meta':'/atendimentos','message':'/atendimentos'}.get(kind,'/atendimentos')
+        if kind=='appointments' and pid and data is not None:
+            reply.update(registro_tipo=kind,registro_id=pid,acoes=[dict(rotulo='Ver no calendário',url=f'/agendamentos?agendamento_id={pid}')])
+            return reply
         reply.update(registro_tipo=kind,registro_id=pid,acoes=[dict(rotulo='Conferir resultado',url=path)])
         return reply
 

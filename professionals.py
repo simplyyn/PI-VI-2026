@@ -111,21 +111,40 @@ class PatientBooking:
         patient=customer_patient(self.repo,self.user)
         professionals=[p for p in self.repo.list('professionals',self.user['empresa_id']) if p['ativo']]
         if not professionals: return self.result('A equipe precisa cadastrar a disponibilidade dos profissionais antes de reservar. Sua mensagem está registrada.')
-        surgical = bool(re.search(r'cirurg|complex|siso|implante|\b(?:extracao|extrair)\b',m))
-        procedure = 'Avaliação cirúrgica' if surgical else requested_procedure(m)
-        if state and intent and procedure and procedure != state['procedure']:
+        surgical_words = r'cirurg|complex|siso|implante|\b(?:extracao|extrair)\b'
+        surgical = bool(re.search(surgical_words,m))
+        offered = list(dict.fromkeys(v for p in professionals for v in p['procedimentos']))
+        procedure = 'Avaliação cirúrgica' if surgical else requested_procedure(m, offered) or requested_procedure(m)
+        restart = bool(re.search(r'\boutro procedimento\b', m))
+        mentioned = [v['id'] for v in professionals if re.search(r'\b'+re.escape(normalized(v['nome']))+r'\b', m)]
+        other_doctor = bool(state and mentioned and state['professional_id'] not in mentioned)
+        if state and intent and (restart or other_doctor or (procedure and procedure != state['procedure'])):
+            procedure = procedure or state['procedure']
             state = None
             self.session.pop('patient_booking',None)
             self.session.pop('booking',None)
+            if restart: procedure = None
         if not state:
-            procedure = procedure or 'Consulta de avaliação'
+            if not procedure:
+                # O paciente escolhe o que quer fazer antes de ver horários.
+                # Procedimentos cirúrgicos aparecem só como "Avaliação cirúrgica": a indicação é do dentista.
+                choices=[v for v in offered if v=='Avaliação cirúrgica' or not re.search(surgical_words,normalized(v))]
+                preferred=('Consulta de avaliação','Limpeza dental (profilaxia)','Clareamento dental','Restauração dentária')
+                choices=[v for v in preferred if v in choices]+[v for v in choices if v not in preferred]
+                return dict(self.result('O que você gostaria de fazer? Escolha o procedimento e depois o profissional. '
+                                        'Se não souber, escolha "Consulta de avaliação".'),
+                            estado='escolher_procedimento', procedimentos=choices)
             candidates=[p for p in professionals if procedure in p['procedimentos']]
             if not candidates: return self.result(f'Não encontrei horários cadastrados para {procedure.lower()}. A recepção pode ajudar a verificar a disponibilidade.')
-            p=candidates[0]
-            if 'elias' in m or 'roberto' in m:
-                named=[v for v in candidates if normalized(v['nome']) in m]
-                if not named:return self.result('O profissional indicado não atende esse procedimento no cadastro. Escolha uma avaliação ou consulte a equipe.')
-                p=named[0]
+            named=[v for v in candidates if re.search(r'\b'+re.escape(normalized(v['nome']))+r'\b', m)]
+            other_named=[v for v in professionals if v not in candidates and re.search(r'\b'+re.escape(normalized(v['nome']))+r'\b', m)]
+            if other_named and not named:
+                return dict(self.result(f"{other_named[0]['nome']} não atende {procedure.lower()}. Escolha um dos profissionais que fazem esse procedimento."),
+                            estado='escolher_profissional', procedimento=procedure, profissionais=self.capable(candidates))
+            if len(candidates)>1 and not named:
+                return dict(self.result(f'{len(candidates)} profissionais fazem {procedure.lower()}. Com quem você prefere?'),
+                            estado='escolher_profissional', procedimento=procedure, profissionais=self.capable(candidates))
+            p=named[0] if named else candidates[0]
             state=dict(professional_id=p['id'],procedure=procedure)
             self.session['patient_booking']=state
             self.session.pop('booking',None)
@@ -142,7 +161,7 @@ class PatientBooking:
             prompt=intro+'Escolha um horário nas opções de agendamento ou escreva a data e o horário desejados.'
             # Accept a full initial request too, but never skip its confirmation.
             if not re.search(r'(?:\b\d{1,2}\s*[h:]|\bas \d)',m):
-                return dict(self.result(prompt), estado='escolher_horario', opcoes=dates)
+                return dict(self.result(prompt), estado='escolher_horario', opcoes=dates, procedimento=procedure, profissional=p['nome'])
         p=record(self.repo,'professionals',self.user['empresa_id'],state['professional_id'])
         booking=SchedulingAgent(self.repo,self.user,self.session)
         if m in ('confirmar','confirmo','sim','pode agendar') and not self.session.get('booking'):
@@ -171,6 +190,10 @@ class PatientBooking:
                 result['opcoes'] = [dict(data=day, horarios=slots[:8])]
         if result.get('estado')=='concluido':self.session.pop('patient_booking',None)
         return result
+
+    @staticmethod
+    def capable(candidates):
+        return [dict(nome=v['nome'],especialidades=v['especialidades'][:3],duracao=v['duracao_padrao']) for v in candidates]
 
     @staticmethod
     def result(text):return dict(resposta=text,fontes=[],gerado_por_llm=False,tipo='agendamento')

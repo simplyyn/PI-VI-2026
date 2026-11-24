@@ -10,6 +10,19 @@ import math
 from typing import Protocol
 from embeddings import EmbeddingUnavailable
 
+# Marcadores de fonte que o modelo coloca no texto: [19], [19, 20], 【20】, (Fonte: [20]), (fontes 19 e 20).
+# As fontes continuam no campo 'fontes' da resposta; o texto mostrado ao paciente fica limpo.
+_CITATION = re.compile(r'\s*(?:\(\s*fontes?\s*:?\s*(?:\[?\d+\]?(?:\s*(?:,|e)\s*)?)+\)|【\s*\d+(?:\s*[,;]\s*\d+)*\s*】|\[\s*\d+(?:\s*[,;]\s*\d+)*\s*\])', re.I)
+
+
+def strip_citations(text):
+    cleaned = _CITATION.sub('', text or '')
+    cleaned = re.sub(r'\s*[–—-]\s*\)', ')', cleaned)            # "(horário – [19])" -> "(horário)"
+    cleaned = re.sub(r'\s*\(\s*\)', '', cleaned)                 # parênteses que ficaram vazios
+    cleaned = re.sub(r'[ \t]+([.,;:!?])', r'\1', cleaned)      # "horário [19]." -> "horário."
+    cleaned = re.sub(r'([.!?])(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ])', r'\1 ', cleaned)  # "...[20].O valor" -> "... O valor"
+    return re.sub(r'[ \t]{2,}', ' ', cleaned).strip()
+
 class Retriever(Protocol):
     def retrieve(self, clinic: str, question: str, limit: int = 4) -> list[dict]: ...
 
@@ -109,6 +122,6 @@ class AttendanceAgent:
         if patient_facing:
             messages[0]['content'] += (' Este canal atende pacientes. Responda sobre o atendimento odontológico da clínica e informações públicas. '
                 'Recuse dados internos, indicadores, registros de outros pacientes e assuntos alheios ao atendimento, inclusive em perguntas mistas.')
-        answer=self.llm.generate(messages)
+        answer=strip_citations(self.llm.generate(messages))
         if guidance: answer=guidance['resposta']+'\n\n'+answer
         return {'resposta':answer,'fontes':[{'id':d['id'],'titulo':d['titulo']} for d in documents[:4]],'gerado_por_llm':True}

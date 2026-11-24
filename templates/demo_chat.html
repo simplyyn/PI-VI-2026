@@ -16,6 +16,7 @@
       --border:#27272a;--ring:#3f3f46;--primary:#fafafa;--primary-fg:#18181b;
       --pos:#4ade80;--pos-bg:rgba(74,222,128,.14);--neg:#f87171;--neg-bg:rgba(248,113,113,.14);
       --info:#60a5fa;--info-bg:rgba(96,165,250,.14);
+      --warn:#fbbf24;--warn-bg:rgba(251,191,36,.14);--violet:#a78bfa;--violet-bg:rgba(167,139,250,.14);
     }
     body.patient-portal{overflow:auto;background:var(--bg)}
     .portal-header{border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:5}
@@ -41,9 +42,40 @@
     .portal-date select{width:100%;height:40px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--fg);padding:0 10px;font-family:var(--font)}
     .portal-times{display:flex;flex-wrap:wrap;gap:8px}
     .portal-actions{display:flex;gap:10px;margin-top:12px}
+    /* ---- Escolha do procedimento e do profissional ---- */
+    .portal-picks{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto;padding-right:2px}
+    .portal-pick{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 13px;border:1px solid var(--border);border-radius:11px;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:.86rem;font-weight:600;cursor:pointer;transition:border-color .15s,background .15s,transform .1s}
+    .portal-pick:hover{border-color:var(--ring);background:var(--muted-bg)}
+    .portal-pick:active{transform:scale(.99)}
+    .portal-pick small{display:block;font-weight:500;font-size:.74rem;color:var(--muted-fg);margin-top:2px}
+    .portal-pick .av{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--info-bg);color:var(--info);font-weight:800;font-size:.8rem}
+    .portal-pick.featured{border-color:var(--info)}
+    .portal-step{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-fg);margin-bottom:4px}
+    .portal-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin-bottom:12px;border-radius:10px;background:var(--muted-bg);font-size:.84rem}
+    .portal-summary b{font-weight:700}
+    .portal-link{background:none;border:0;padding:0;color:var(--info);font:inherit;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap}
+    .portal-link:hover{text-decoration:underline}
+
+    /* ---- Meus agendamentos ---- */
     .portal-appointments{margin-top:18px;border-top:1px solid var(--border);padding-top:14px}
-    .portal-appointments summary{cursor:pointer;font-weight:600;font-size:.9rem}
-    #customer-appointments{margin-top:10px;display:flex;flex-direction:column;gap:8px;font-size:.84rem;color:var(--muted-fg)}
+    .portal-appointments summary{cursor:pointer;font-weight:700;font-size:.92rem;display:flex;align-items:center;gap:8px}
+    .portal-appointments summary .n{font-size:.72rem;font-weight:700;padding:1px 8px;border-radius:20px;background:var(--muted-bg);color:var(--muted-fg)}
+    #customer-appointments{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+    #customer-appointments .group{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-fg);margin:8px 2px 0}
+    #customer-appointments .group:first-child{margin-top:0}
+    #customer-appointments .none{font-size:.84rem;color:var(--muted-fg)}
+    .appt{--c:var(--muted-fg);--cbg:var(--muted-bg);display:flex;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-left:4px solid var(--c);border-radius:11px;background:var(--card)}
+    .appt.confirmado{--c:var(--pos);--cbg:var(--pos-bg)} .appt.pendente{--c:var(--warn);--cbg:var(--warn-bg)}
+    .appt.cancelado{--c:var(--neg);--cbg:var(--neg-bg);opacity:.6} .appt.realizado{--c:var(--info);--cbg:var(--info-bg)}
+    .appt.pendente{border-left-style:dashed}
+    .appt .day{width:42px;flex:none;text-align:center;border-radius:9px;background:var(--cbg);color:var(--c);padding:5px 0;line-height:1.05}
+    .appt .day b{display:block;font-size:1.15rem;font-weight:800}
+    .appt .day small{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    .appt .info{flex:1;min-width:0}
+    .appt .info b{display:block;font-size:.86rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .appt.cancelado .info b{text-decoration:line-through}
+    .appt .info span{display:block;font-size:.76rem;color:var(--muted-fg);margin-top:1px}
+    .appt .chip{flex:none;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--cbg);color:var(--c)}
     .portal-chat{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;display:flex;flex-direction:column;min-height:560px}
     #chat-title{font-size:1.15rem;font-weight:700;margin-bottom:14px}
     .portal-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:4px 2px;max-height:62vh}
@@ -59,6 +91,10 @@
     #demo-input:focus{outline:none;border-color:var(--ring)}
     .portal-message-row .portal-primary{width:auto;padding:0 20px}
     .portal-auto{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.82rem;color:var(--muted-fg)}
+    .portal-chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .portal-chat-head h1{margin:0}
+    .portal-clear{width:auto;padding:0 14px;font-size:.82rem}
+    .portal-clear:hover{color:var(--neg,#dc2626);border-color:currentColor}
   </style>
 </head>
 <body class="patient-portal">
@@ -81,7 +117,16 @@
       <h2 id="appointments-title">Agendamentos</h2>
       <button type="button" class="portal-primary" id="start-booking">Agendar consulta</button>
 
+      <section class="portal-booking" id="booking-pick" aria-labelledby="pick-title" hidden>
+        <div class="portal-step" id="pick-step"></div>
+        <h3 id="pick-title"></h3>
+        <div class="portal-picks" id="pick-list"></div>
+        <button type="button" class="portal-secondary" id="discard-pick" style="margin-top:12px">Cancelar</button>
+      </section>
+
       <section class="portal-booking" id="booking-options" aria-labelledby="options-title" hidden>
+        <div class="portal-step">Passo 3 de 3</div>
+        <div class="portal-summary" id="booking-summary" hidden><span id="booking-summary-text"></span><button type="button" class="portal-link" id="change-procedure">Trocar</button></div>
         <h3 id="options-title">Escolha um horário</h3>
         <div class="portal-options-row" id="booking-choices">
           <div class="portal-date">
@@ -102,14 +147,17 @@
         </div>
       </section>
 
-      <details class="portal-appointments">
-        <summary>Meus agendamentos</summary>
+      <details class="portal-appointments" open>
+        <summary>Meus agendamentos <span class="n" id="appointments-count">0</span></summary>
         <div id="customer-appointments"></div>
       </details>
     </section>
 
     <section class="portal-chat" aria-labelledby="chat-title">
-      <h1 id="chat-title">Conversa com a clínica</h1>
+      <div class="portal-chat-head">
+        <h1 id="chat-title">Conversa com a clínica</h1>
+        <button type="button" class="portal-secondary portal-clear" id="clear-chat" title="Apaga todas as mensagens desta conversa">Apagar conversa</button>
+      </div>
       <div class="portal-log" id="demo-messages" role="log" aria-label="Histórico da conversa"></div>
 
       <p id="customer-feedback" role="status" class="portal-feedback"></p>

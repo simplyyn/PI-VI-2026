@@ -381,6 +381,20 @@ class PostgresRepository:
                      'VALUES (%s, %s, %s, %s, coalesce(%s::timestamptz, now()), %s)',
                      (clinic, attendance_id, message['texto'], message['autor'], STAMP[0](message.get('criado_em')), Jsonb(metadata)))
 
+    def clear_messages(self, clinic, identifier):
+        """Apaga o histórico de uma conversa e o que dependia dele (avaliações, prioridade, classificação)."""
+        with self._transaction() as conn:
+            self._lock_workflows(conn)
+            if not conn.execute('SELECT 1 FROM attendances WHERE id=%s AND clinic_id=%s FOR UPDATE', (identifier, clinic)).fetchone():
+                raise LookupError('Registro não encontrado')
+            conn.execute('DELETE FROM attendance_messages WHERE clinic_id=%s AND attendance_id=%s', (clinic, identifier))
+            conn.execute('DELETE FROM workflow_records WHERE clinic_id=%s AND kind=ANY(%s) AND payload->>%s=%s',
+                         (clinic, ['attendance_meta', 'answer_ratings'], 'attendance_id', str(identifier)))
+        try:
+            self.delete_complaint(clinic, identifier)
+        except LookupError:
+            pass
+
     def append_message(self, clinic, identifier, message):
         query = sql.SQL('SELECT id, {} FROM attendances WHERE id = %s AND clinic_id = %s FOR UPDATE').format(
             _names(TABLES['attendance'][1]))

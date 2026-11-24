@@ -10,6 +10,21 @@
   .list-top h1{font-size:1.4rem;font-weight:800;letter-spacing:-.02em}
   .list-top .sub{font-size:.82rem;color:var(--muted-fg)}
   .list{flex:1;overflow-y:auto;padding:8px 12px 12px;display:flex;flex-direction:column;gap:6px}
+  .tabs{display:flex;gap:4px;margin:0 20px 8px;padding:4px;background:var(--muted-bg);border:1px solid var(--border);border-radius:11px}
+  .tab{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:7px 8px;border:0;border-radius:8px;background:none;color:var(--muted-fg);font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s,color .15s}
+  .tab:hover{color:var(--fg)}
+  .tab.active{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .tab .count{min-width:20px;padding:1px 6px;border-radius:20px;font-size:.7rem;background:var(--border);color:var(--fg);font-variant-numeric:tabular-nums}
+  .tab[data-tab="pendentes"] .count.has{background:var(--warn-bg);color:var(--warn)}
+  .tab[data-tab="concluidos"] .count{background:var(--pos-bg);color:var(--pos)}
+  .group-label{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-fg);margin:8px 4px 2px}
+  .group-label:first-child{margin-top:0}
+  .item.escalated{border-left:3px solid var(--neg)}
+  .item.urgent .it-name::after{content:"Urgente";margin-left:8px;font-size:.66rem;font-weight:700;color:var(--neg);background:var(--neg-bg);padding:2px 7px;border-radius:20px;vertical-align:1px}
+  .list-empty{padding:28px 12px;text-align:center;color:var(--muted-fg);font-size:.86rem}
+  .item{animation:item-in .2s ease}
+  @keyframes item-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.item{animation:none}}
   .item{display:flex;gap:12px;padding:13px;border-radius:11px;cursor:pointer;border:1px solid var(--border);background:var(--card)}
   .item:hover{background:var(--muted-bg)} .item.active{border-color:var(--ring);background:var(--muted-bg)}
   .item .av{width:40px;height:40px;flex:none;border-radius:50%;background:var(--muted-bg);color:var(--muted-fg);display:grid;place-items:center;font-weight:700;font-size:.82rem;border:1px solid var(--border)}
@@ -33,15 +48,49 @@
   .msg.them .bubble{background:var(--muted-bg);border-top-left-radius:4px}
   .msg.us .bubble{background:var(--info-bg);border-color:transparent;border-top-right-radius:4px}
   .composer{padding:14px 28px 18px;border-top:1px solid var(--border)}
-  .composer .box{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:10px;background:var(--muted-bg);border:1px solid transparent;border-radius:12px;padding:6px 6px 6px 16px}
+  .composer .box{max-width:680px;margin:0 auto;display:flex;align-items:flex-end;gap:10px;background:var(--muted-bg);border:1px solid transparent;border-radius:12px;padding:6px 6px 6px 16px}
   .composer .box:focus-within{background:var(--bg);border-color:var(--border)}
-  .composer input{flex:1;min-width:0;border:none;background:none;font-family:var(--font);font-size:.92rem;color:var(--fg);padding:9px 0}
-  .composer input:focus{outline:none}
+  .composer textarea{flex:1;min-width:0;border:none;background:none;font-family:var(--font);font-size:.92rem;line-height:1.5;color:var(--fg);padding:9px 0;resize:none;max-height:calc(1.5em * 6 + 18px);overflow-y:auto}
+  .composer textarea:focus{outline:none}
+  .composer .suggest{align-self:center}
   .suggest{background:none;border:none;color:var(--info);font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:6px;padding:0 6px;white-space:nowrap;cursor:pointer}
   .suggest svg{width:15px;height:15px}
   .send{width:40px;height:40px;flex:none;border-radius:10px;border:none;background:var(--primary);color:var(--primary-fg);display:grid;place-items:center;cursor:pointer}
   .send svg{width:17px;height:17px}
   .empty{display:grid;place-items:center;height:100%;color:var(--muted-fg)}
+
+  /* ---- Resumo da IA ---- */
+  .sum-dialog{margin:auto;border:1px solid var(--border);border-radius:16px;background:var(--card);color:var(--fg);padding:0;width:min(560px,calc(100vw - 32px));box-shadow:0 24px 60px rgba(0,0,0,.18)}
+  .sum-dialog::backdrop{background:rgba(0,0,0,.4)}
+  .sum-dialog[open]{animation:sum-in .18s ease-out}
+  @keyframes sum-in{from{opacity:0;transform:translateY(6px) scale(.99)}to{opacity:1;transform:none}}
+  .sum-hd{display:flex;align-items:flex-start;gap:12px;padding:20px 22px 14px;border-bottom:1px solid var(--border)}
+  .sum-hd .ic{width:38px;height:38px;flex:none;border-radius:11px;display:grid;place-items:center;background:var(--violet-bg);color:var(--violet)}
+  .sum-hd .ic svg{width:19px;height:19px}
+  .sum-hd h3{margin:0;font-size:1.05rem;font-weight:700}
+  .sum-hd small{display:block;margin-top:3px;font-size:.78rem;color:var(--muted-fg)}
+  .sum-hd .x{margin-left:auto}
+  .sum-body{padding:18px 22px;max-height:min(55vh,460px);overflow-y:auto}
+  .sum-body p{margin:0 0 12px;font-size:.93rem;line-height:1.65}
+  .sum-body p:last-child{margin-bottom:0}
+  .sum-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .sum-warn{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:14px;border-radius:10px;background:var(--warn-bg);color:var(--warn);font-size:.83rem;font-weight:600}
+  .sum-warn svg{width:16px;height:16px;flex:none}
+  .sum-loading{display:flex;flex-direction:column;gap:10px}
+  .sum-loading i{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--muted-bg),var(--border),var(--muted-bg));background-size:200% 100%;animation:sum-shimmer 1.2s linear infinite}
+  .sum-loading i:nth-child(2){width:92%}.sum-loading i:nth-child(3){width:78%}.sum-loading i:nth-child(4){width:60%}
+  @keyframes sum-shimmer{to{background-position:-200% 0}}
+  .sum-error{color:var(--neg);font-size:.9rem}
+  .sum-ft{display:flex;align-items:center;gap:8px;padding:14px 22px;border-top:1px solid var(--border)}
+  .sum-ft .grow{flex:1}
+  .sum-btn{height:36px;padding:0 14px;border-radius:9px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font:inherit;font-size:.84rem;font-weight:600;display:inline-flex;align-items:center;gap:7px;cursor:pointer}
+  .sum-btn:hover{background:var(--muted-bg)}
+  .sum-btn[hidden]{display:none}
+  .sum-btn:disabled{opacity:.5;cursor:default}
+  .sum-btn svg{width:15px;height:15px}
+  .sum-btn.primary{background:var(--primary);color:var(--primary-fg);border-color:transparent}
+  .sum-btn.primary:hover{opacity:.9}
+  @media (prefers-reduced-motion:reduce){.sum-dialog[open],.sum-loading i{animation:none}}
   @media(max-width:760px){
     .layout{height:100dvh;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
     .side{flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:4px 8px;border-right:0;border-bottom:1px solid var(--border)}
@@ -61,25 +110,30 @@
 {% block content %}
 <div class="work">
   <section class="list-col">
-    <div class="list-top"><div><h1>Atendimentos</h1><div class="sub">{{ atendimentos|length }} conversa(s)</div></div></div>
-    <div class="list" id="list">
-      {% for at in atendimentos %}
-      <div class="item {% if loop.first %}active{% endif %}" data-id="{{ at.id }}">
-        <div class="av">{{ at.iniciais or (at.cliente[:2]|upper) }}</div>
-        <div class="it-body">
-          <div class="it-row"><span class="it-name">{{ at.cliente }}</span><span class="it-time">{{ at.hora }}</span></div>
-          <div class="it-prev">{{ at.preview }}</div>
-          <span class="badge {{ {'resolved':'ok','pending':'warn','escalated':'neg'}[at.status] }}" data-badge>{{ {'resolved':'Resolvido','pending':'Pendente','escalated':'Escalado'}[at.status] }}</span>
-          {% if at.canal == 'ai' %}<span class="badge info">IA</span>{% else %}<span class="badge ghost">Humano</span>{% endif %}
-        </div>
-      </div>
-      {% else %}
-      <p class="muted" style="padding:16px">Nenhum atendimento registrado.</p>
-      {% endfor %}
+    <div class="list-top"><div><h1>Atendimentos</h1><div class="sub" id="list-sub">{{ atendimentos|length }} conversa(s)</div></div></div>
+    <div class="tabs" role="tablist" aria-label="Filtrar atendimentos">
+      <button class="tab active" role="tab" data-tab="pendentes" aria-selected="true">Pendentes <span class="count">0</span></button>
+      <button class="tab" role="tab" data-tab="concluidos" aria-selected="false">Concluídos <span class="count">0</span></button>
+      <button class="tab" role="tab" data-tab="todos" aria-selected="false">Todos <span class="count">0</span></button>
     </div>
+    <div class="list" id="list" role="tabpanel"></div>
   </section>
   <section class="chat" id="chat"><div class="empty">Selecione um atendimento</div></section>
 </div>
+<dialog class="sum-dialog" id="sum-dialog" aria-labelledby="sum-title">
+  <div class="sum-hd">
+    <div class="ic"><i data-lucide="sparkles"></i></div>
+    <div><h3 id="sum-title">Resumo da conversa</h3><small id="sum-sub"></small></div>
+    <button class="iconbtn x" id="sum-close" type="button" aria-label="Fechar"><i data-lucide="x"></i></button>
+  </div>
+  <div class="sum-body" id="sum-body" aria-live="polite"></div>
+  <div class="sum-ft">
+    <button class="sum-btn" id="sum-copy" type="button"><i data-lucide="copy"></i> Copiar</button>
+    <button class="sum-btn" id="sum-refresh" type="button" hidden><i data-lucide="refresh-cw"></i> Atualizar resumo</button>
+    <span class="grow"></span>
+    <button class="sum-btn primary" id="sum-ok" type="button">Fechar</button>
+  </div>
+</dialog>
 <script id="at-data" type="application/json">{{ atendimentos|tojson }}</script>
 {% endblock %}
 {% block extra_scripts %}
@@ -117,22 +171,26 @@
         </div>
         <div class="scroll"><div class="thread" id="thread">${thread}</div></div>
         <div class="composer"><div class="box">
-          <input id="cmp" placeholder="Escreva uma resposta...">
+          <textarea id="cmp" rows="1" placeholder="Escreva uma resposta... (Shift+Enter quebra a linha)"></textarea>
           <button class="suggest" data-act="sugestao"><i data-lucide="sparkles"></i> Sugestão</button>
           <button class="send" data-act="enviar"><i data-lucide="arrow-up"></i></button>
         </div></div>`;
       if(window.lucide)lucide.createIcons();
       chat.querySelector('[data-act=enviar]').onclick=enviar;
-      chat.querySelector('#cmp').addEventListener('keydown',e=>{if(e.key==='Enter')enviar();});
+      const cmp=chat.querySelector('#cmp');
+      cmp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviar();}});
+      cmp.addEventListener('input',()=>growComposer(cmp));
       chat.querySelector('[data-act=sugestao]').onclick=sugestao;
       chat.querySelector('[data-act=resumo]').onclick=resumo;
       chat.querySelector('[data-act=resolver]').onclick=()=>setStatus('resolved');
       chat.querySelector('[data-act=escalar]').onclick=()=>setStatus('escalated');
       const sc=chat.querySelector('.scroll');sc.scrollTop=sc.scrollHeight;
     }
+    // caixa de resposta cresce com o texto (até 6 linhas) — a sugestão da IA aparece inteira
+    function growComposer(el){ el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
     async function enviar(){
       const inp=document.getElementById('cmp');const texto=inp.value.trim();if(!texto||!current)return;
-      inp.value='';
+      inp.value='';growComposer(inp);
       try{
         await SmartDent.api('POST','/api/atendimentos/'+current.id+'/mensagens',{texto,request_id:rid()});
         const m={autor:'human',texto,criado_em:new Date().toISOString()};
@@ -143,31 +201,149 @@
     }
     async function sugestao(){
       if(!current)return;SmartDent.toast('Gerando sugestão...','info');
-      try{const r=await SmartDent.api('POST','/api/atendimentos/'+current.id+'/sugestao');document.getElementById('cmp').value=r.resposta||'';}
+      try{const r=await SmartDent.api('POST','/api/atendimentos/'+current.id+'/sugestao');const cmp=document.getElementById('cmp');cmp.value=r.resposta||'';growComposer(cmp);cmp.focus();}
       catch(e){SmartDent.toast(e.message,'err');}
+    }
+    // ── Resumo da IA numa janela própria (antes era um alert() do navegador) ──
+    const sumDlg=document.getElementById('sum-dialog'), sumBody=document.getElementById('sum-body');
+    let sumText='', sumFor=null;
+    const fmtWhen=iso=>{try{return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return '';}};
+    function sumLoading(){
+      sumBody.innerHTML='<div class="sum-loading" aria-label="Gerando resumo"><i></i><i></i><i></i><i></i></div>';
+      document.getElementById('sum-copy').disabled=true;
+      document.getElementById('sum-refresh').hidden=true;
+    }
+    function sumShow(s){
+      if(s&&s.resumo&&typeof s.resumo==='object') s=s.resumo; // aceita {resumo:{...}} (GET) e o registro direto (POST)
+      sumText=String((s&&s.resumo)||'').trim();
+      // quebra em parágrafos: respeita linhas em branco do modelo; senão agrupa frases de duas em duas
+      let paras=sumText.split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean);
+      if(paras.length===1){
+        const sentences=sumText.match(/[^.!?]+[.!?]+(\s|$)/g)||[sumText];
+        if(sentences.length>3){paras=[];for(let i=0;i<sentences.length;i+=2)paras.push(sentences.slice(i,i+2).join('').trim());}
+      }
+      const meta=`<div class="sum-meta"><span class="badge violet">Gerado por IA</span>${s.gerado_em?`<span class="badge ghost">${esc(fmtWhen(s.gerado_em))}</span>`:''}</div>`;
+      const warn=s.desatualizado?'<div class="sum-warn"><i data-lucide="alert-triangle"></i> A conversa teve novas mensagens depois deste resumo.</div>':'';
+      sumBody.innerHTML=meta+warn+(paras.length?paras.map(p=>`<p>${esc(p)}</p>`).join(''):'<p class="muted">A IA não retornou conteúdo.</p>');
+      document.getElementById('sum-copy').disabled=!sumText;
+      document.getElementById('sum-refresh').hidden=!s.desatualizado;
+      if(window.lucide)lucide.createIcons();
+    }
+    function sumError(message){
+      sumBody.innerHTML=`<p class="sum-error">${esc(message)}</p>`;
+      document.getElementById('sum-refresh').hidden=false;
+      document.getElementById('sum-copy').disabled=true;
+    }
+    async function sumGenerate(){
+      sumLoading();
+      try{ const r=await SmartDent.api('POST','/api/atendimentos/'+sumFor.id+'/resumo'); if(sumFor)sumShow(r); }
+      catch(e){ sumError(e.message); }
     }
     async function resumo(){
-      if(!current)return;SmartDent.toast('Gerando resumo...','info');
-      try{const r=await SmartDent.api('POST','/api/atendimentos/'+current.id+'/resumo');alert('Resumo da IA:\n\n'+(r.resumo||r.resumo&&r.resumo.resumo||'(sem conteúdo)'));}
-      catch(e){SmartDent.toast(e.message,'err');}
+      if(!current)return;
+      sumFor=current;
+      document.getElementById('sum-sub').textContent=`${current.cliente} · ${(current.mensagens||[]).length} mensagem(ns)`;
+      sumLoading();
+      sumDlg.showModal();
+      try{
+        // usa o resumo salvo quando ele ainda vale; só chama a IA se não houver ou se estiver desatualizado
+        const saved=(await SmartDent.api('GET','/api/atendimentos/'+current.id+'/resumo')).resumo;
+        if(saved&&!saved.desatualizado) sumShow(saved); else await sumGenerate();
+      }catch(e){ sumError(e.message); }
     }
+    const closeSum=()=>{sumDlg.close();sumFor=null;};
+    document.getElementById('sum-close').onclick=closeSum;
+    document.getElementById('sum-ok').onclick=closeSum;
+    sumDlg.addEventListener('click',e=>{if(e.target===sumDlg)closeSum();});
+    sumDlg.addEventListener('cancel',()=>{sumFor=null;});
+    document.getElementById('sum-refresh').onclick=()=>{if(sumFor)sumGenerate();};
+    document.getElementById('sum-copy').onclick=async()=>{
+      try{await navigator.clipboard.writeText(sumText);SmartDent.toast('Resumo copiado.','ok');}
+      catch(e){SmartDent.toast('Não foi possível copiar.','err');}
+    };
     async function setStatus(status){
       if(!current)return;
       try{
         await SmartDent.api('PUT','/api/atendimentos/'+current.id,{cliente:current.cliente,preview:current.preview,status,canal:current.canal});
         current.status=status;
-        const item=document.querySelector('.item[data-id="'+current.id+'"] [data-badge]');
-        if(item){item.className='badge '+stClass[status];item.textContent=stLabel[status];}
+        if(status==='escalated') current.canal='human';
         render(current);
-        SmartDent.toast('Status atualizado.','ok');
+        renderList(); // a conversa muda de aba (ex.: resolvida vai para Concluídos) e continua aberta
+        SmartDent.toast(status==='resolved'?'Atendimento concluído.':'Status atualizado.','ok');
       }catch(e){SmartDent.toast(e.message,'err');}
     }
-    document.querySelectorAll('#list .item').forEach(it=>it.addEventListener('click',()=>{
-      document.querySelectorAll('#list .item').forEach(x=>x.classList.remove('active'));
-      it.classList.add('active');
-      render(data.find(a=>String(a.id)===it.dataset.id));
+
+    // ── abas: Pendentes / Concluídos / Todos ──
+    const hasMessages=a=>(a.mensagens||[]).length>0;
+    const lastAt=a=>{const m=(a.mensagens||[]).at(-1);return (m&&m.criado_em)||a.criado_em||'';};
+    const isPending=a=>a.status!=='resolved'&&hasMessages(a);
+    const TABS={
+      pendentes:{filter:isPending,empty:'Nenhum atendimento pendente. Tudo em dia!'},
+      concluidos:{filter:a=>a.status==='resolved',empty:'Nenhum atendimento concluído ainda.'},
+      todos:{filter:()=>true,empty:'Nenhum atendimento registrado.'},
+    };
+    let tab='pendentes';
+    try{ const saved=localStorage.getItem('smartdent-atend-aba'); if(TABS[saved]) tab=saved; }catch(e){}
+    const tabOf=a=>isPending(a)?'pendentes':a.status==='resolved'?'concluidos':'todos';
+
+    function itemHTML(a){
+      const urgent=a.prioridade==='urgente';
+      const when=lastAt(a)?hhmm(lastAt(a)):(a.hora||'');
+      return `<div class="item${a.status==='escalated'?' escalated':''}${urgent?' urgent':''}${current&&current.id===a.id?' active':''}" data-id="${a.id}" role="button" tabindex="0">
+        <div class="av">${esc(a.iniciais||a.cliente.slice(0,2).toUpperCase())}</div>
+        <div class="it-body">
+          <div class="it-row"><span class="it-name">${esc(a.cliente)}</span><span class="it-time">${esc(when)}</span></div>
+          <div class="it-prev">${esc(a.preview)}</div>
+          <span class="badge ${stClass[a.status]}">${stLabel[a.status]}</span>
+          ${a.canal==='ai'?'<span class="badge info">IA</span>':'<span class="badge ghost">Humano</span>'}
+        </div></div>`;
+    }
+    function renderList(){
+      document.querySelectorAll('.tab').forEach(b=>{
+        const n=data.filter(TABS[b.dataset.tab].filter).length;
+        const c=b.querySelector('.count');c.textContent=n;c.classList.toggle('has',n>0);
+        const on=b.dataset.tab===tab;b.classList.toggle('active',on);b.setAttribute('aria-selected',on);
+      });
+      const rows=data.filter(TABS[tab].filter).sort((x,y)=>lastAt(y).localeCompare(lastAt(x)));
+      const list=document.getElementById('list');
+      if(!rows.length){list.innerHTML=`<div class="list-empty">${TABS[tab].empty}</div>`;}
+      else if(tab==='pendentes'){
+        // escalados e urgentes primeiro, depois os que aguardam resposta
+        const first=rows.filter(a=>a.status==='escalated'||a.prioridade==='urgente'), rest=rows.filter(a=>!first.includes(a));
+        list.innerHTML=(first.length?`<div class="group-label">Precisam de atenção · ${first.length}</div>`+first.map(itemHTML).join(''):'')+
+                       (rest.length?`<div class="group-label">Aguardando resposta · ${rest.length}</div>`+rest.map(itemHTML).join(''):'');
+      }else list.innerHTML=rows.map(itemHTML).join('');
+      document.getElementById('list-sub').textContent=`${rows.length} de ${data.length} conversa(s)`;
+    }
+    function select(a){
+      render(a);
+      document.querySelectorAll('#list .item').forEach(x=>x.classList.toggle('active',!!a&&x.dataset.id===String(a.id)));
+    }
+    document.getElementById('list').addEventListener('click',e=>{
+      const it=e.target.closest('.item');if(!it)return;
+      select(data.find(a=>String(a.id)===it.dataset.id));
+    });
+    document.getElementById('list').addEventListener('keydown',e=>{
+      if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('item')){e.preventDefault();e.target.click();}
+    });
+    document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
+      if(tab===b.dataset.tab)return;
+      tab=b.dataset.tab;
+      try{ localStorage.setItem('smartdent-atend-aba',tab); }catch(e){}
+      renderList();
+      // abre a primeira conversa da aba, se a aberta não pertencer a ela
+      if(!current||!TABS[tab].filter(current)){
+        const first=document.querySelector('#list .item');
+        select(first?data.find(a=>String(a.id)===first.dataset.id):null);
+      }
     }));
-    render(data[0]);
+
+    // link vindo do assistente: /atendimentos?atendimento_id=12 abre a conversa na aba certa
+    const wanted=data.find(a=>String(a.id)===new URLSearchParams(location.search).get('atendimento_id'));
+    if(wanted&&!TABS[tab].filter(wanted)) tab=tabOf(wanted);
+    renderList();
+    const firstItem=document.querySelector('#list .item');
+    select(wanted||(firstItem?data.find(a=>String(a.id)===firstItem.dataset.id):null));
   })();
 </script>
 {% endblock %}

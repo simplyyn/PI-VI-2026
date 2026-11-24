@@ -107,4 +107,4 @@ class ClinicAssistant:
         appointments.sort(key=lambda a:(a['data'],a['horario']))
         if not appointments:return result(f'Não há consultas não canceladas cadastradas para {label}. Posso te levar à agenda para conferir outras datas ou cadastrar uma consulta.',('Abrir agenda','/agendamentos'))
         lines=[f"• {a['data'][8:10]}/{a['data'][5:7]}, {a['horario'][:5]} — {a['paciente']}: {a['procedimento']} ({a['status']})." for a in appointments[:8]]
-        return result(f'Para {label}, encontrei {len(appointments)} consulta(s):\n'+'\n'.join(lines)+('\nMostrei as primeiras 8.' if len(appointments)>8 else '')+'\nSão os agendamentos registrados; nenhum horário foi criado ou alterado por mim.',('Abrir agenda','/agendamentos'))
+        return result(f'Para {label}, encontrei {len(appointments)} consulta(s):\n'+'\n'.join(lines)+('\nMostrei as primeiras 8.' if len(appointments)>8 else '')+'\nSão os agendamentos registrados; nenhum horário foi criado ou alterado por mim.',('Ver no calendário',f"/agendamentos?agendamento_id={appointments[0]['id']}"),('Abrir agenda','/agendamentos'))

@@ -161,7 +161,7 @@ class CustomerChat:
             elif answer:
                 escalated=human or answer.get('tipo')=='orientacao_urgente'
                 substantive=not escalated and answer.get('tipo')!='sem_contexto'
-                action={k:answer[k] for k in ('estado','agendamento_id','opcoes') if k in answer} or None
+                action={k:answer[k] for k in ('estado','agendamento_id','opcoes','procedimentos','profissionais','procedimento','profissional') if k in answer} or None
                 tx.append_message(self.user['empresa_id'],item['id'],dict(id=uuid4().hex,autor='ai',texto=answer['resposta'],
                     criado_em=now(),responde=substantive,gerado_por_llm=answer.get('gerado_por_llm',False),acao=action))
                 if escalated:

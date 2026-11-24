@@ -1,4 +1,55 @@
 {% extends "base.html" %}
 {% block title %}Respostas pendentes · SmartDent{% endblock %}
-{% block content %}<div class="page-container"><div class="page-header"><div><h1>Respostas pendentes</h1><p id="pending-count" class="page-subtitle">Consultando pendências…</p></div><button id="prepare-replies" class="btn-primary" disabled>Preparar até 5 respostas</button></div><div class="page-body"><p>Revise as sugestões antes de confirmar o envio.</p><p id="batch-feedback" role="status"></p><section aria-labelledby="pending-heading"><h2 id="pending-heading">Conversas aguardando resposta</h2><div id="pending-conversations" aria-live="polite"><p>Carregando conversas…</p></div></section><section id="batch-preview" hidden aria-labelledby="batch-heading"><h2 id="batch-heading">Respostas para revisar</h2><div id="batch-items"></div></section><button id="send-replies" class="btn-primary" hidden disabled>Confirmar envio das selecionadas</button></div></div>{% endblock %}
+{% block topnav %}<nav class="topnav"><a href="#" class="active">Respostas em lote</a></nav>{% endblock %}
+{% block head_extra %}
+<style>
+  .batch-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:20px;align-items:start}
+  @media(max-width:1100px){.batch-grid{grid-template-columns:1fr}}
+  .batch-note{display:flex;align-items:center;gap:10px;padding:11px 14px;margin-bottom:20px;border-radius:11px;background:var(--info-bg);color:var(--info);font-size:.86rem;font-weight:600}
+  .batch-note svg{width:16px;height:16px;flex:none}
+  #batch-feedback:empty{display:none}
+  .batch-section h2{font-size:1rem;font-weight:700;margin:0 0 4px}
+  .batch-section .desc{margin-bottom:14px}
+  /* cartões gerados pelo batch-replies.js (classe chart-card) */
+  .batch-section .chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:12px!important}
+  #pending-conversations .chart-card{border-left:3px solid var(--warn)}
+  #pending-conversations h3{font-size:.95rem;font-weight:700;margin:0 0 2px}
+  #pending-conversations p{margin:4px 0;font-size:.86rem;color:var(--muted-fg)}
+  #pending-conversations p:nth-of-type(2){color:var(--fg);font-size:.9rem}
+  #pending-conversations .link-more{display:inline-block;margin-top:6px;font-size:.82rem;font-weight:600;color:var(--info);text-decoration:none}
+  #pending-conversations .link-more:hover{text-decoration:underline}
+  #batch-items .chart-card{border-left:3px solid var(--violet)}
+  #batch-items label{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.95rem;cursor:pointer}
+  #batch-items label input{width:16px;height:16px;accent-color:var(--primary)}
+  #batch-items p{margin:6px 0 10px;font-size:.84rem;color:var(--muted-fg)}
+  #batch-items textarea{width:100%;box-sizing:border-box;padding:12px 14px!important;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:.9rem!important;line-height:1.55;resize:vertical}
+  #batch-items textarea:focus{outline:none;border-color:var(--ring)}
+  #batch-items .batch-status{margin:8px 0 0;font-size:.78rem;font-weight:600;color:var(--violet)}
+  #send-replies{margin-top:4px}
+  .batch-empty{padding:28px;text-align:center;color:var(--muted-fg);font-size:.9rem;border:1px dashed var(--border);border-radius:14px}
+</style>
+{% endblock %}
+{% block content %}
+<div class="content">
+  <div class="page-head">
+    <div><h1>Respostas pendentes</h1><div class="sub" id="pending-count">Consultando pendências…</div></div>
+    <button id="prepare-replies" class="btn-primary" disabled><i data-lucide="sparkles"></i> Preparar até 5 respostas</button>
+  </div>
+  <div class="batch-note"><i data-lucide="shield-check"></i> A IA prepara os rascunhos; nada é enviado sem a sua revisão e confirmação.</div>
+  <p id="batch-feedback" class="batch-note" role="status"></p>
+  <div class="batch-grid">
+    <section class="batch-section" aria-labelledby="pending-heading">
+      <h2 id="pending-heading">Conversas aguardando resposta</h2>
+      <div class="desc">Mensagens de pacientes sem resposta da equipe</div>
+      <div id="pending-conversations" aria-live="polite"><p class="batch-empty">Carregando conversas…</p></div>
+    </section>
+    <section class="batch-section" id="batch-preview" hidden aria-labelledby="batch-heading">
+      <h2 id="batch-heading">Rascunhos da IA para revisar</h2>
+      <div class="desc">Edite o texto e desmarque o que não quiser enviar</div>
+      <div id="batch-items"></div>
+      <button id="send-replies" class="btn-primary" hidden disabled><i data-lucide="send"></i> Confirmar envio das selecionadas</button>
+    </section>
+  </div>
+</div>
+{% endblock %}
 {% block extra_scripts %}<script src="/static/batch-replies.js"></script>{% endblock %}

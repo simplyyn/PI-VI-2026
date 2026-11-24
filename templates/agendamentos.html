@@ -1,78 +1,449 @@
 {% extends "base.html" %}
 {% block title %}Agendamentos · SmartDent{% endblock %}
-{% block topnav %}<nav class="topnav"><a href="#" class="active">Agenda</a></nav>{% endblock %}
+{% block topnav %}<nav class="topnav"><a href="#" class="active">Semana</a></nav>{% endblock %}
 {% block head_extra %}
 <style>
-  .slot{display:flex;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
-  .slot:last-child{border:none}
-  .slot .time{font-variant-numeric:tabular-nums;font-weight:700;width:56px;flex:none}
-  .slot .bar{width:3px;height:40px;border-radius:3px;flex:none}
-  .slot .info{flex:1;min-width:0}.slot .info b{font-weight:600;display:block}.slot .info small{color:var(--muted-fg);font-size:.8rem;display:block}
+  :root{--teal:#0d9488;--teal-bg:#ccfbf1;--pink:#db2777;--pink-bg:#fce7f3}
+  [data-theme="dark"]{--teal:#2dd4bf;--teal-bg:rgba(45,212,191,.14);--pink:#f472b6;--pink-bg:rgba(244,114,182,.14)}
+
+  /* ---- Calendário semanal ---- */
+  .cal{--rh:72px;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+  .cal-top{display:flex;align-items:center;flex-wrap:wrap;gap:12px 14px;padding:16px 20px;border-bottom:1px solid var(--border)}
+  .cal-top .navbtns{display:flex;gap:6px}
+  .cal-nav{height:34px;min-width:34px;padding:0 10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);display:inline-grid;place-items:center;color:var(--fg);cursor:pointer;font:inherit;font-size:.8rem;font-weight:600;transition:background .14s}
+  .cal-nav:hover{background:var(--muted-bg)}
+  .cal-nav svg{width:18px;height:18px}
+  .cal-title{font-size:1.2rem;font-weight:800;letter-spacing:-.01em}
+  .cal-week{font-size:.76rem;font-weight:600;color:var(--muted-fg);background:var(--muted-bg);border:1px solid var(--border);border-radius:20px;padding:5px 13px}
+  .cal-filters{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .cal-filters select{height:34px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font:inherit;font-size:.82rem;padding:0 10px}
+  .cal-filters label{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--muted-fg);cursor:pointer}
+
+  .cal-scroll{overflow-x:auto}
+  .cal-inner{min-width:760px}
+  .cal-days{display:grid;grid-template-columns:64px repeat(7,minmax(0,1fr));background:var(--muted-bg);border-bottom:1px solid var(--border)}
+  .cal-days .dh{text-align:center;padding:12px 4px;border-left:1px solid var(--border)}
+  .cal-days .dh:first-child{border-left:none}
+  .cal-days .dh small{display:block;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-fg);margin-bottom:3px}
+  .cal-days .dh b{font-size:1.3rem;font-weight:800;color:var(--fg)}
+  .cal-days .dh.today small,.cal-days .dh.today b{color:var(--info)}
+
+  .cal-body{display:grid;grid-template-columns:64px repeat(7,minmax(0,1fr))}
+  .cal-times{position:relative}
+  .cal-times span{position:absolute;right:10px;transform:translateY(-8px);font-size:.72rem;font-weight:600;color:var(--muted-fg);font-variant-numeric:tabular-nums}
+  .cal-col{position:relative;border-left:1px solid var(--border);background:repeating-linear-gradient(var(--card),var(--card) calc(var(--rh) - 1px),var(--border) calc(var(--rh) - 1px),var(--border) var(--rh))}
+  .cal-col.today{background:repeating-linear-gradient(color-mix(in srgb,var(--info-bg) 35%,var(--card)),color-mix(in srgb,var(--info-bg) 35%,var(--card)) calc(var(--rh) - 1px),var(--border) calc(var(--rh) - 1px),var(--border) var(--rh))}
+
+  .ev{position:absolute;border-radius:9px;padding:6px 8px;border-left:4px solid var(--c);background:var(--cbg);display:flex;flex-direction:column;overflow:hidden;z-index:2;cursor:pointer;transition:transform .14s,box-shadow .14s;text-align:left;font:inherit;color:inherit;border-top:0;border-right:0;border-bottom:0}
+  .ev:hover,.ev:focus-visible{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.12);z-index:4;outline:none}
+  .ev b{font-weight:700;font-size:.78rem;color:var(--c);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ev small{font-size:.7rem;color:var(--muted-fg);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ev .t{font-size:.7rem;font-weight:600;color:var(--c);margin-top:auto;opacity:.85;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ev.compact{padding:3px 7px;flex-direction:row;align-items:center;gap:6px}
+  .ev.compact small{display:none}.ev.compact .t{margin:0 0 0 auto}
+  .ev.narrow .t,.ev.narrow small{display:none}
+  .ev.narrow{padding:5px 6px}.ev.narrow b{font-size:.74rem}
+  .ev.pendente{border-left-style:dashed}
+  .ev.cancelado{opacity:.45}.ev.cancelado b{text-decoration:line-through}
+  .ev .ok-ico{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-right:3px}
+  .c0{--c:var(--info);--cbg:var(--info-bg)} .c1{--c:var(--pos);--cbg:var(--pos-bg)} .c2{--c:var(--violet);--cbg:var(--violet-bg)}
+  .c3{--c:var(--warn);--cbg:var(--warn-bg)} .c4{--c:var(--teal);--cbg:var(--teal-bg)} .c5{--c:var(--pink);--cbg:var(--pink-bg)}
+  /* ---- Foco numa consulta (link "Ver no calendário") ---- */
+  .ev,.cal-days .dh,.cal-times,.now{transition:filter .35s ease,opacity .35s ease,transform .14s,box-shadow .14s}
+  .cal.focusing .ev:not(.focus-target),.cal.focusing .now{filter:blur(1.5px);opacity:.4}
+  .cal.focusing .cal-days .dh:not(.focus-day){opacity:.55}
+  .ev.focus-target{z-index:6;animation:ev-pulse 1.1s cubic-bezier(.33,0,.2,1) 1}
+  .cal-days .dh.focus-day{animation:day-pulse 1.1s ease-in-out 1}
+  @keyframes ev-pulse{
+    0%{transform:scale(1);box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 40%,transparent)}
+    35%{transform:scale(1.035);box-shadow:0 0 0 5px color-mix(in srgb,var(--c) 22%,transparent)}
+    100%{transform:scale(1);box-shadow:0 0 0 12px color-mix(in srgb,var(--c) 0%,transparent)}
+  }
+  @keyframes day-pulse{0%,100%{background:transparent}40%{background:color-mix(in srgb,var(--info-bg) 70%,transparent)}}
+  @media (prefers-reduced-motion:reduce){
+    .ev.focus-target,.cal-days .dh.focus-day{animation:none}
+    .ev.focus-target{outline:2px solid var(--c);outline-offset:2px}
+    .cal.focusing .ev:not(.focus-target){filter:none}
+  }
+  .now{position:absolute;left:0;right:0;height:0;border-top:2px solid var(--neg);z-index:5;pointer-events:none}
+  .now::before{content:"";position:absolute;left:-5px;top:-6px;width:10px;height:10px;border-radius:50%;background:var(--neg)}
+
+  .cal-legend{display:flex;flex-wrap:wrap;gap:8px 16px;padding:12px 20px;border-top:1px solid var(--border);font-size:.78rem;color:var(--muted-fg)}
+  .cal-legend span{display:inline-flex;align-items:center;gap:6px}
+  .cal-legend i{width:10px;height:10px;border-radius:3px;background:var(--c);display:inline-block}
+  .cal-empty{padding:10px 20px;font-size:.82rem;color:var(--muted-fg);border-top:1px solid var(--border)}
+
+  /* ---- Ocupação da semana ---- */
+  .wk{display:flex;flex-direction:column;gap:14px}
+  .wk .row{display:flex;align-items:center;gap:12px}
+  .wk .d{width:38px;font-size:.82rem;color:var(--muted-fg)}
+  .wk .track{flex:1;height:8px;border-radius:8px;background:var(--muted-bg);overflow:hidden}
+  .wk .track i{display:block;height:100%;background:var(--info);border-radius:8px}
+  .wk .n{font-size:.82rem;font-weight:700;width:28px;text-align:right}
+
+  /* ---- Detalhe da consulta ---- */
+  .ev-dialog{border:1px solid var(--border);border-radius:16px;background:var(--card);color:var(--fg);padding:0;width:min(420px,calc(100vw - 32px))}
+  .ev-dialog::backdrop{background:rgba(0,0,0,.35)}
+  .ev-dialog .hd{padding:18px 20px 6px;display:flex;align-items:flex-start;gap:10px}
+  .ev-dialog .hd h3{margin:0;font-size:1.05rem;flex:1}
+  .ev-dialog dl{margin:0;padding:6px 20px 14px;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:.86rem}
+  .ev-dialog dt{color:var(--muted-fg)} .ev-dialog dd{margin:0;font-weight:600}
+  .ev-dialog .ft{display:flex;flex-wrap:wrap;gap:8px;padding:14px 20px;border-top:1px solid var(--border)}
+  .ev-dialog .ft .grow{flex:1}
+  @media (max-width:640px){.cal-top{padding:14px 16px}.cal-filters{margin-left:0;width:100%}}
 </style>
 {% endblock %}
 {% block content %}
 <div class="content">
   <div class="page-head">
-    <div><h1>Agendamentos</h1><div class="sub">{{ total }} consulta(s) registrada(s)</div></div>
+    <div><h1>Agendamentos</h1><div class="sub" id="cal-sub">{{ total }} consulta(s) registrada(s)</div></div>
     <button class="btn-primary" id="novo"><i data-lucide="plus"></i> Nova consulta</button>
   </div>
 
   <div class="kpis">
-    <div class="kpi"><div class="k-top"><span>Total</span><i data-lucide="calendar-days"></i></div><div class="val num">{{ total }}</div><div class="foot mut">na agenda</div></div>
-    <div class="kpi"><div class="k-top"><span>Confirmados</span><i data-lucide="check-circle"></i></div><div class="val num">{{ agendamentos|selectattr('status','equalto','confirmado')|list|length }}</div><div class="foot pos">confirmados</div></div>
-    <div class="kpi"><div class="k-top"><span>Pendentes</span><i data-lucide="clock"></i></div><div class="val num">{{ agendamentos|selectattr('status','equalto','pendente')|list|length }}</div><div class="foot warn-c">aguardando</div></div>
-    <div class="kpi"><div class="k-top"><span>Cancelados</span><i data-lucide="calendar-x"></i></div><div class="val num">{{ agendamentos|selectattr('status','equalto','cancelado')|list|length }}</div><div class="foot neg">cancelados</div></div>
+    <div class="kpi"><div class="k-top"><span>Consultas na semana</span><i data-lucide="calendar-days"></i></div><div class="val num" id="k-total">0</div><div class="foot mut" id="k-total-foot">&nbsp;</div></div>
+    <div class="kpi"><div class="k-top"><span>Confirmadas</span><i data-lucide="check-circle"></i></div><div class="val num" id="k-conf">0</div><div class="foot pos" id="k-conf-foot">&nbsp;</div></div>
+    <div class="kpi"><div class="k-top"><span>Pendentes</span><i data-lucide="clock"></i></div><div class="val num" id="k-pend">0</div><div class="foot warn-c">aguardando confirmação</div></div>
+    <div class="kpi"><div class="k-top"><span>Canceladas</span><i data-lucide="calendar-x"></i></div><div class="val num" id="k-canc">0</div><div class="foot neg">nesta semana</div></div>
   </div>
 
-  <div class="card">
-    <h3>Consultas</h3><div class="desc">Ordenadas por data e horário</div>
-    {% for a in agendamentos|sort(attribute='horario')|sort(attribute='data') %}
-    <div class="slot">
-      <div class="time num">{{ a.horario[:5] if a.horario else '--:--' }}</div>
-      <div class="bar" style="background:{{ {'confirmado':'var(--pos)','pendente':'var(--warn)','cancelado':'var(--neg)'}[a.status] }}"></div>
-      <div class="info"><b>{{ a.paciente }}</b><small>{{ a.procedimento }} · {{ a.dentista }} · {{ a.data }}</small></div>
-      <span class="badge {{ {'confirmado':'ok','pendente':'warn','cancelado':'neg'}[a.status] }}">{{ {'confirmado':'Confirmado','pendente':'Pendente','cancelado':'Cancelado'}[a.status] }}</span>
-      <div class="row-actions"><button class="icon-sm" data-edit="{{ a.id }}"><i data-lucide="pencil"></i></button><button class="icon-sm danger" data-del="{{ a.id }}"><i data-lucide="trash-2"></i></button></div>
+  <div class="cal">
+    <div class="cal-top">
+      <div class="navbtns">
+        <button class="cal-nav" id="prev" title="Semana anterior" aria-label="Semana anterior"><i data-lucide="chevron-left"></i></button>
+        <button class="cal-nav" id="hoje">Hoje</button>
+        <button class="cal-nav" id="next" title="Próxima semana" aria-label="Próxima semana"><i data-lucide="chevron-right"></i></button>
+      </div>
+      <div class="cal-title num" id="cal-title"></div>
+      <span class="cal-week" id="cal-week"></span>
+      <div class="cal-filters">
+        <select id="agenda-professional" aria-label="Profissional"><option value="">Todos os profissionais</option></select>
+        <label><input type="checkbox" id="f-canc"> Mostrar canceladas</label>
+      </div>
     </div>
-    {% else %}
-    <p class="muted">Nenhuma consulta registrada.</p>
-    {% endfor %}
+    <div class="cal-scroll"><div class="cal-inner">
+      <div class="cal-days" id="cal-days"></div>
+      <div class="cal-body" id="cal-body"></div>
+    </div></div>
+    <div class="cal-empty" id="cal-empty" hidden>Nenhuma consulta nesta semana para o filtro escolhido.</div>
+    <div class="cal-legend" id="cal-legend"></div>
+  </div>
+
+  <div class="card" style="margin-top:20px">
+    <h3>Ocupação da semana</h3><div class="desc">Consultas não canceladas por dia</div>
+    <div class="wk" id="wk"></div>
   </div>
 </div>
+
+<dialog class="ev-dialog" id="ev-dialog">
+  <div class="hd"><h3 id="d-title"></h3><span class="badge" id="d-badge"></span></div>
+  <dl id="d-list"></dl>
+  <div class="ft">
+    <button class="btn-primary" id="d-edit"><i data-lucide="pencil"></i> Editar</button>
+    <button class="cal-nav" id="d-done" hidden></button>
+    <span class="grow"></span>
+    <button class="cal-nav" id="d-del" style="color:var(--neg)"><i data-lucide="trash-2"></i></button>
+    <button class="cal-nav" id="d-close">Fechar</button>
+  </div>
+</dialog>
+
 <script id="ag-data" type="application/json">{{ agendamentos|tojson }}</script>
 <script id="prof-data" type="application/json">{{ profissionais|tojson }}</script>
+<script id="cfg-data" type="application/json">{{ {'permite_realizacao': permite_realizacao}|tojson }}</script>
 {% endblock %}
 {% block extra_scripts %}
 <script>
   (function(){
-    const data=JSON.parse(document.getElementById('ag-data').textContent);
-    const PROFS=(JSON.parse(document.getElementById('prof-data').textContent)||[]).filter(p=>p.ativo!==false);
+    const data=JSON.parse(document.getElementById('ag-data').textContent)||[];
+    const ALL_PROFS=JSON.parse(document.getElementById('prof-data').textContent)||[];
+    const PROFS=ALL_PROFS.filter(p=>p.ativo!==false);
+    const CFG=JSON.parse(document.getElementById('cfg-data').textContent)||{};
     const statusOpts=[{value:'confirmado',label:'Confirmado'},{value:'pendente',label:'Pendente'},{value:'cancelado',label:'Cancelado'}];
+    const STATUS={confirmado:['Confirmada','ok'],pendente:['Pendente','warn'],cancelado:['Cancelada','neg']};
+    const DOW=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+    const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+    // ── formulário (mesmo comportamento da lista anterior) ──
     let _pat=null;
     async function patients(){ if(!_pat) _pat=await SmartDent.api('GET','/api/pacientes'); return _pat; }
-    function build(a,pac){
+    function build(a,pac,preset){
       const hasProfs=PROFS.length>0;
       const procs=[...new Set(PROFS.flatMap(p=>p.procedimentos||[]))];
-      const fields=[{name:'paciente_id',label:'Paciente',type:'select',numeric:true,value:a&&a.paciente_id,options:pac.map(p=>({value:p.id,label:p.nome}))}];
+      const v=k=>a?a[k]:preset&&preset[k];
+      const fields=[{name:'paciente_id',label:'Paciente',type:'select',numeric:true,value:v('paciente_id'),options:pac.map(p=>({value:p.id,label:p.nome}))}];
       if(hasProfs){
-        fields.push({name:'profissional_id',label:'Profissional',type:'select',numeric:true,value:a&&a.profissional_id,options:PROFS.map(p=>({value:p.id,label:p.nome}))});
-        fields.push({name:'procedimento',label:'Procedimento',type:'select',value:a&&a.procedimento,options:procs.map(x=>({value:x,label:x}))});
+        fields.push({name:'profissional_id',label:'Profissional',type:'select',numeric:true,value:v('profissional_id'),options:PROFS.map(p=>({value:p.id,label:p.nome}))});
+        fields.push({name:'procedimento',label:'Procedimento',type:'select',value:v('procedimento'),options:procs.map(x=>({value:x,label:x}))});
       }else{
-        fields.push({name:'dentista',label:'Dentista',type:'text',required:true,value:a&&a.dentista});
-        fields.push({name:'procedimento',label:'Procedimento',type:'text',required:true,value:a&&a.procedimento});
+        fields.push({name:'dentista',label:'Dentista',type:'text',required:true,value:v('dentista')});
+        fields.push({name:'procedimento',label:'Procedimento',type:'text',required:true,value:v('procedimento')});
       }
-      fields.push({name:'data',label:'Data',type:'date',required:true,value:a&&a.data});
-      fields.push({name:'horario',label:'Horário',type:'time',required:true,value:a&&(a.horario||'').slice(0,5)});
+      fields.push({name:'data',label:'Data',type:'date',required:true,value:v('data')});
+      fields.push({name:'horario',label:'Horário',type:'time',required:true,value:(v('horario')||'').slice(0,5)});
       fields.push({name:'duracao',label:'Duração (min)',type:'number',value:a?a.duracao:30});
       fields.push({name:'status',label:'Status',type:'select',value:(a&&a.status)||'pendente',options:statusOpts});
       return {title:a?'Editar consulta':'Nova consulta',fields,
         transform:b=>{ if(hasProfs){const p=PROFS.find(x=>x.id===b.profissional_id); if(p)b.dentista=p.nome;} },
         submit:a?{method:'PUT',url:'/api/agendamentos/'+a.id}:{method:'POST',url:'/api/agendamentos'}};
     }
-    async function open(a){ try{ const pac=await patients(); SmartDent.openForm(build(a,pac)); }catch(e){ SmartDent.toast(e.message,'err'); } }
+    async function open(a,preset){ try{ const pac=await patients(); SmartDent.openForm(build(a,pac,preset)); }catch(e){ SmartDent.toast(e.message,'err'); } }
+
+    // ── datas ──
+    const pad=n=>String(n).padStart(2,'0');
+    const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+    const parse=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
+    const addDays=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
+    const monday=d=>{const r=new Date(d.getFullYear(),d.getMonth(),d.getDate());r.setDate(r.getDate()-((r.getDay()+6)%7));return r;};
+    const mins=h=>{const [a,b]=(h||'0:0').split(':').map(Number);return a*60+b;};
+    const hhmm=m=>pad(Math.floor(m/60))+':'+pad(m%60);
+    function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7));const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y)/864e5+1)/7);}
+    function rangeTitle(a,b){
+      if(a.getMonth()===b.getMonth()) return a.getDate()+' – '+b.getDate()+' de '+MESES[a.getMonth()];
+      return a.getDate()+' de '+MESES[a.getMonth()]+' – '+b.getDate()+' de '+MESES[b.getMonth()];
+    }
+
+    // ── cores por profissional ──
+    const names=[...new Set([...ALL_PROFS.map(p=>p.nome),...data.map(a=>a.dentista)])];
+    const colorOf=n=>'c'+(Math.max(names.indexOf(n),0)%6);
+
+    // ── faixa de horas exibida: expedientes + consultas ──
+    let startH=8,endH=18;
+    ALL_PROFS.forEach(p=>Object.values(p.expediente||{}).flat().forEach(([a,b])=>{startH=Math.min(startH,Math.floor(mins(a)/60));endH=Math.max(endH,Math.ceil(mins(b)/60));}));
+    data.forEach(a=>{const s=mins(a.horario);startH=Math.min(startH,Math.floor(s/60));endH=Math.max(endH,Math.min(24,Math.ceil((s+a.duracao)/60)));});
+
+    // ── estado ──
+    const sel=document.getElementById('agenda-professional');
+    PROFS.forEach(p=>sel.add(new Option(p.nome,p.nome)));
+    // link vindo da página de profissionais: /agendamentos?profissional_id=3
+    const fromLink=ALL_PROFS.find(p=>String(p.id)===new URLSearchParams(location.search).get('profissional_id'));
+    if(fromLink&&PROFS.includes(fromLink)) sel.value=fromLink.nome;
+    const h=location.hash.slice(1);
+    let week=monday(/^\d{4}-\d{2}-\d{2}$/.test(h)?parse(h):new Date());
+    const rh=()=>parseFloat(getComputedStyle(document.querySelector('.cal')).getPropertyValue('--rh'))||72;
+
+    function render(){
+      const days=[...Array(7)].map((_,i)=>addDays(week,i));
+      const keys=days.map(iso), todayKey=iso(new Date());
+      const prof=sel.value, showCanc=document.getElementById('f-canc').checked;
+      const inWeek=data.filter(a=>keys.includes(a.data)&&(!prof||a.dentista===prof));
+      const shown=inWeek.filter(a=>showCanc||a.status!=='cancelado');
+      const active=inWeek.filter(a=>a.status!=='cancelado');
+
+      document.getElementById('cal-title').textContent=rangeTitle(days[0],days[6]);
+      document.getElementById('cal-week').textContent='Semana '+isoWeek(days[0]);
+      document.getElementById('cal-sub').textContent=data.length+' consulta(s) registrada(s)'+(prof?' · '+prof:'');
+      try{ history.replaceState(null,'',location.pathname+location.search+'#'+keys[0]); }catch(e){}
+
+      // KPIs da semana
+      const conf=active.filter(a=>a.status==='confirmado').length;
+      const profCount=new Set(active.map(a=>a.dentista)).size;
+      document.getElementById('k-total').textContent=active.length;
+      document.getElementById('k-total-foot').textContent=profCount+' profissional(is)';
+      document.getElementById('k-conf').textContent=conf;
+      document.getElementById('k-conf-foot').textContent=active.length?Math.round(100*conf/active.length)+'% confirmadas':'sem consultas';
+      document.getElementById('k-pend').textContent=active.length-conf;
+      document.getElementById('k-canc').textContent=inWeek.length-active.length;
+
+      // cabeçalho dos dias
+      document.getElementById('cal-days').innerHTML='<div class="dh"></div>'+days.map((d,i)=>
+        `<div class="dh${keys[i]===todayKey?' today':''}" data-date="${keys[i]}"><small>${DOW[i]}</small><b class="num">${d.getDate()}</b></div>`).join('');
+
+      // corpo
+      const R=rh(), height=(endH-startH)*R;
+      const body=document.getElementById('cal-body');
+      body.innerHTML='';
+      const times=document.createElement('div');times.className='cal-times';times.style.height=height+'px';
+      for(let hr=startH+1;hr<endH;hr++){const s=document.createElement('span');s.style.top=((hr-startH)*R)+'px';s.textContent=pad(hr)+':00';times.appendChild(s);}
+      body.appendChild(times);
+      keys.forEach((key,i)=>{
+        const col=document.createElement('div');
+        col.className='cal-col'+(key===todayKey?' today':'');col.style.height=height+'px';col.dataset.date=key;
+        const evs=shown.filter(a=>a.data===key).map(a=>({a,s:mins(a.horario),e:mins(a.horario)+a.duracao})).sort((x,y)=>x.s-y.s||y.e-x.e);
+        // agrupa sobreposições e distribui em faixas lado a lado
+        let cluster=[],clusterEnd=-1;
+        const flush=()=>{const lanes=[];cluster.forEach(ev=>{let l=lanes.findIndex(end=>end<=ev.s);if(l<0){l=lanes.length;lanes.push(0);}lanes[l]=ev.e;ev.lane=l;});cluster.forEach(ev=>ev.lanes=lanes.length);cluster=[];};
+        evs.forEach(ev=>{if(cluster.length&&ev.s>=clusterEnd){flush();clusterEnd=-1;}cluster.push(ev);clusterEnd=Math.max(clusterEnd,ev.e);});
+        flush();
+        evs.forEach(ev=>{
+          const a=ev.a, top=(ev.s-startH*60)/60*R, hgt=Math.max((ev.e-ev.s)/60*R-3,18);
+          const b=document.createElement('button');
+          b.type='button';b.dataset.id=a.id;
+          b.className=`ev ${colorOf(a.dentista)} ${a.status}${hgt<46?' compact':''}${ev.lanes>=3||(hgt<46&&ev.lanes>=2)?' narrow':''}`;
+          const w=100/ev.lanes;
+          b.style.cssText=`top:${top+1}px;height:${hgt}px;left:calc(${w*ev.lane}% + 3px);width:calc(${w}% - 6px)`;
+          const done=a.realizado_em?'<svg class="ok-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>':'';
+          // menos texto no bloco: nome curto e procedimento (a cor já indica o profissional); o resto fica no clique/tooltip
+          const parts=String(a.paciente||'').split(' ').filter(Boolean);
+          const short=parts.length>1?parts[0]+' '+parts[parts.length-1][0]+'.':(parts[0]||'');
+          b.innerHTML=`<b>${done}${esc(short)}</b><small>${esc(a.procedimento)}</small><span class="t">${hhmm(ev.s)} – ${hhmm(ev.e)}</span>`;
+          b.title=`${a.paciente} · ${a.procedimento} · ${a.dentista} · ${hhmm(ev.s)}–${hhmm(ev.e)} · ${STATUS[a.status][0]}`;
+          b.onclick=e=>{e.stopPropagation();details(a);};
+          col.appendChild(b);
+        });
+        // clique duplo no espaço vazio abre "Nova consulta" já com data e hora
+        col.ondblclick=e=>{if(e.target!==col)return;const y=e.offsetY;const m=startH*60+Math.floor(y/R*2)*30;open(null,{data:key,horario:hhmm(m),profissional_id:PROFS.find(p=>p.nome===prof)?.id});};
+        body.appendChild(col);
+      });
+      drawNow();
+
+      document.getElementById('cal-empty').hidden=shown.length>0;
+      const legendNames=prof?[prof]:[...new Set(PROFS.map(p=>p.nome).concat(active.map(a=>a.dentista)))];
+      document.getElementById('cal-legend').innerHTML=legendNames.map(n=>`<span class="${colorOf(n)}"><i></i>${esc(n)}</span>`).join('')+
+        '<span>· borda tracejada = pendente</span><span>· ✓ = realizada</span><span>· duplo clique no horário vazio cria consulta</span>';
+
+      // ocupação
+      const counts=keys.map(k=>active.filter(a=>a.data===k).length), max=Math.max(...counts,1);
+      document.getElementById('wk').innerHTML=counts.map((n,i)=>
+        `<div class="row"><span class="d">${DOW[i]}</span><div class="track"><i style="width:${Math.round(100*n/max)}%"></i></div><span class="n num">${n}</span></div>`).join('');
+    }
+
+    function drawNow(){
+      document.querySelectorAll('.now').forEach(n=>n.remove());
+      const col=document.querySelector(`.cal-col[data-date="${iso(new Date())}"]`);
+      if(!col) return;
+      const d=new Date(), m=d.getHours()*60+d.getMinutes();
+      if(m<startH*60||m>endH*60) return;
+      const line=document.createElement('div');line.className='now';line.style.top=((m-startH*60)/60*rh())+'px';
+      col.appendChild(line);
+    }
+    setInterval(drawNow,60000);
+
+    function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+    // ── detalhe da consulta ──
+    const dlg=document.getElementById('ev-dialog');
+    let current=null;
+    function details(a){
+      current=a;
+      const s=mins(a.horario);
+      document.getElementById('d-title').textContent=a.paciente;
+      const badge=document.getElementById('d-badge');
+      badge.textContent=a.realizado_em?'Realizada':STATUS[a.status][0];
+      badge.className='badge '+(a.realizado_em?'info':STATUS[a.status][1]);
+      const d=parse(a.data);
+      document.getElementById('d-list').innerHTML=[
+        ['Data',DOW[(d.getDay()+6)%7]+', '+d.getDate()+' de '+MESES[d.getMonth()]+' de '+d.getFullYear()],
+        ['Horário',hhmm(s)+' – '+hhmm(s+a.duracao)+' ('+a.duracao+' min)'],
+        ['Procedimento',a.procedimento],['Profissional',a.dentista],
+      ].map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
+      const doneBtn=document.getElementById('d-done');
+      const ended=new Date(a.data+'T'+(a.horario||'00:00').slice(0,5))<=new Date(Date.now()-a.duracao*60000);
+      doneBtn.hidden=!CFG.permite_realizacao||a.status==='cancelado'||(!a.realizado_em&&!ended);
+      doneBtn.textContent=a.realizado_em?'Desfazer realizada':'Marcar como realizada';
+      document.getElementById('d-edit').hidden=!!a.realizado_em;
+      dlg.showModal();
+    }
+    document.getElementById('d-close').onclick=()=>dlg.close();
+    dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
+    document.getElementById('d-edit').onclick=()=>{dlg.close();open(current);};
+    document.getElementById('d-del').onclick=()=>{dlg.close();SmartDent.del('/api/agendamentos/'+current.id,'Excluir esta consulta?');};
+    document.getElementById('d-done').onclick=async()=>{
+      try{ await SmartDent.api('PUT','/api/agendamentos/'+current.id+'/realizacao',{realizado:!current.realizado_em}); SmartDent.toast('Consulta atualizada.','ok'); location.reload(); }
+      catch(e){ SmartDent.toast(e.message,'err'); }
+    };
+
+    // ── controles ──
     document.getElementById('novo').onclick=()=>open(null);
-    document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>open(data.find(a=>String(a.id)===b.dataset.edit)));
-    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>SmartDent.del('/api/agendamentos/'+b.dataset.del,'Excluir esta consulta?'));
+    document.getElementById('prev').onclick=()=>{week=addDays(week,-7);render();};
+    document.getElementById('next').onclick=()=>{week=addDays(week,7);render();};
+    document.getElementById('hoje').onclick=()=>{week=monday(new Date());render();};
+    sel.onchange=render;
+    document.getElementById('f-canc').onchange=render;
+
+    // ── foco: leva à semana da consulta, filtra pelo profissional, desfoca o resto por 1s e pulsa a consulta ──
+    const calEl=document.querySelector('.cal');
+    let focusTimer=null;
+    const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function spotlight(target,dayKey){
+      clearTimeout(focusTimer);
+      calEl.classList.remove('focusing');
+      document.querySelectorAll('.focus-target,.focus-day').forEach(el=>el.classList.remove('focus-target','focus-day'));
+      const header=document.querySelector(`.cal-days .dh[data-date="${dayKey}"]`);
+      (target||header||calEl).scrollIntoView({behavior:reduced?'auto':'smooth',block:'center',inline:'center'});
+      // espera a rolagem assentar antes de animar, para o movimento não competir com o scroll
+      setTimeout(()=>{
+        void calEl.offsetWidth; // reinicia a animação se o mesmo item for destacado de novo
+        if(target) target.classList.add('focus-target');
+        if(header) header.classList.add('focus-day');
+        calEl.classList.add('focusing');
+        focusTimer=setTimeout(()=>calEl.classList.remove('focusing'),1000);
+        setTimeout(()=>{target?.classList.remove('focus-target');header?.classList.remove('focus-day');},1300);
+      },reduced?0:380);
+    }
+    function focusAppointment(id){
+      const a=data.find(x=>String(x.id)===String(id));
+      if(!a){SmartDent.toast('Consulta não encontrada na agenda.','err');return false;}
+      week=monday(parse(a.data));
+      if(PROFS.some(p=>p.nome===a.dentista)) sel.value=a.dentista;
+      if(a.status==='cancelado') document.getElementById('f-canc').checked=true;
+      render();
+      spotlight(document.querySelector(`.ev[data-id="${a.id}"]`),a.data);
+      return true;
+    }
+    function focusDay(key){
+      week=monday(parse(key));render();
+      spotlight(null,key);
+    }
+
+    const params=new URLSearchParams(location.search);
+    const wantedId=params.get('agendamento_id'), wantedDay=params.get('data');
+    if(wantedDay&&/^\d{4}-\d{2}-\d{2}$/.test(wantedDay)) week=monday(parse(wantedDay));
+    render();
+    if(wantedId) focusAppointment(wantedId);
+    else if(wantedDay&&/^\d{4}-\d{2}-\d{2}$/.test(wantedDay)) focusDay(wantedDay);
+    if(wantedId||wantedDay){
+      // tira os parâmetros de foco da URL para recarregar a página não repetir a animação
+      params.delete('agendamento_id');params.delete('data');
+      try{ history.replaceState(null,'',location.pathname+(params.toString()?'?'+params:'')+location.hash); }catch(e){}
+    }
+
+    // agendamento feito pelo assistente com a agenda aberta: busca os dados novos e destaca a consulta
+    document.addEventListener('smartdent-agenda-updated',async e=>{
+      try{
+        const fresh=await SmartDent.api('GET','/api/agendamentos');
+        data.splice(0,data.length,...fresh);
+        known=new Set(fresh.map(a=>a.id));
+        focusAppointment(e.detail.id);
+      }catch(err){ SmartDent.toast(err.message,'err'); }
+    });
+    // tempo real: consultas criadas em outro lugar (ex.: paciente agendando com a IA) aparecem sozinhas e são destacadas
+    let known=new Set(data.map(a=>a.id)), polling=false;
+    async function poll(){
+      if(polling||document.hidden||dlg.open||document.querySelector('dialog[open]')) return;
+      polling=true;
+      try{
+        const fresh=await SmartDent.api('GET','/api/agendamentos');
+        const added=fresh.filter(a=>!known.has(a.id));
+        const changed=JSON.stringify(fresh)!==JSON.stringify(data);
+        if(!changed) return;
+        data.splice(0,data.length,...fresh);
+        known=new Set(fresh.map(a=>a.id));
+        if(added.length){
+          const newest=added.sort((x,y)=>String(y.criado_em||'').localeCompare(String(x.criado_em||''))||y.id-x.id)[0];
+          SmartDent.toast(`Nova consulta: ${newest.paciente} · ${newest.procedimento} com ${newest.dentista}`,'ok');
+          focusAppointment(newest.id);
+        }else render();
+      }catch(e){ /* sessão expirada ou rede: tenta de novo no próximo ciclo */ }
+      finally{ polling=false; }
+    }
+    setInterval(poll,4000);
+    addEventListener('focus',poll);
+
+    // clicar em "Ver no calendário" estando já na agenda não recarrega a página
+    document.addEventListener('click',e=>{
+      const link=e.target.closest('a.act[href^="/agendamentos"]');
+      if(!link) return;
+      const u=new URL(link.href,location.origin);
+      const id=u.searchParams.get('agendamento_id'), day=u.searchParams.get('data'), pid=u.searchParams.get('profissional_id');
+      if(!id&&!day&&!pid) return;
+      e.preventDefault();
+      const doc=ALL_PROFS.find(p=>String(p.id)===pid);
+      if(doc&&PROFS.includes(doc)) sel.value=doc.nome;
+      if(id) focusAppointment(id);
+      else if(day) focusDay(day);
+      else render();
+    });
+    if(window.lucide) lucide.createIcons();
   })();
 </script>
 {% endblock %}

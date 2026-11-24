@@ -8,6 +8,18 @@ from services import Appointment, ClinicRecords
 from booking_input import BOOKING_INTENT, NAMED_DAY, named_date, patient_datetime
 
 RESUME_BOOKING = 'continuar agendamento'
+CONFIRM_WORDS = frozenset({'confirmar', 'confirmo', 'sim', 'pode agendar'})
+# Respostas curtas que só valem como confirmação quando o rascunho já foi revisado e está pronto.
+EASY_CONFIRM_WORDS = CONFIRM_WORDS | frozenset({
+    'ok', 'okay', 'okk', 'ok pode', 'ok pode agendar', 'ok pode marcar', 'ok confirma', 'ok confirmar',
+    'pode', 'pode sim', 'pode marcar', 'pode confirmar', 'sim pode agendar', 'sim pode', 'confirma', 'confirmado',
+    'agende', 'agenda', 'agendar', 'marca', 'marcar', 'isso', 'beleza', 'fechado', 'perfeito', 'certo', 'ta bom',
+    'tudo certo', 'claro', 'positivo', 'manda', 'vai',
+})
+
+
+def confirmation_text(message):
+    return ' '.join(re.sub(r'[^\w ]', ' ', message).split())
 
 
 class AppointmentConflict(ValueError):
@@ -80,7 +92,8 @@ class SchedulingAgent:
         if not state or state.get('done'):
             state = dict(user=self.user['id'], clinic=self.user['empresa_id'], time=self.now.timestamp(), data={}, key=uuid4().hex)
         data = state['data']
-        if message in ('confirmar', 'confirmo', 'sim', 'pode agendar'):
+        loose = confirmation_text(message)
+        if message in CONFIRM_WORDS or (state.get('ready') and loose in EASY_CONFIRM_WORDS):
             if not state.get('ready'):
                 return self.result('Precisamos completar os dados e revisar o agendamento antes de confirmar.', 'coletando')
             try:
@@ -95,7 +108,9 @@ class SchedulingAgent:
                                    options=self.slot_options(data))
             state['done'] = created['id']
             self.session['booking'] = state
-            return self.result(f"Confirmação processada: {self.description(created)}. Número {created['id']}, situação atual: {created['status']}. Confira na agenda.", 'concluido', created['id'])
+            reply = self.result(f"Agendado com sucesso: {self.description(created)}. Número {created['id']}, situação atual: {created['status']}.", 'concluido', created['id'])
+            reply['agendado'] = True
+            return reply
 
         old = dict(data)
         waiting = state.get('waiting')
@@ -296,6 +311,7 @@ class SchedulingAgent:
 
     @staticmethod
     def result(text, state, appointment_id=None, *, options=None):
+        action = (dict(rotulo='Ver no calendário', url=f'/agendamentos?agendamento_id={appointment_id}') if appointment_id
+                  else dict(rotulo='Conferir agenda', url='/agendamentos'))
         return dict(resposta=text, origem='agendamento', estado=state, agendamento_id=appointment_id,
-                    gerado_por_llm=False, fontes=[], acoes=[dict(rotulo='Conferir agenda', url='/agendamentos')],
-                    opcoes=options or [])
+                    gerado_por_llm=False, fontes=[], acoes=[action], opcoes=options or [])

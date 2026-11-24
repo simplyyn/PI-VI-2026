@@ -122,7 +122,11 @@
         try{sessionStorage.setItem(ASST_CTX,asstCtx||'');}catch(e){}
         typing.remove();asstAdd(reply.resposta,false,reply.acoes,reply.origem);
         asstOptions(reply.opcoes||[]);
-        if(reply.registro_tipo==='appointments'||reply.estado==='concluido') SmartDent.toast('Agenda atualizada.','ok');
+        if(reply.agendado) SmartDent.toast('Agendado com sucesso','ok');
+        else if(reply.registro_tipo==='appointments') SmartDent.toast('Agenda atualizada.','ok');
+        // Se a agenda estiver aberta, ela recarrega os dados e destaca a consulta.
+        const changedId=reply.agendado?reply.agendamento_id:(reply.registro_tipo==='appointments'?reply.registro_id:null);
+        if(changedId) document.dispatchEvent(new CustomEvent('smartdent-agenda-updated',{detail:{id:changedId}}));
       }catch(error){typing.remove();asstAdd(error.message,false);}
       finally{asstBusy=false;if(!document.getElementById('asstPanel').hasAttribute('hidden'))input.focus();}
     }

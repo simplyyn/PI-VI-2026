@@ -247,6 +247,16 @@ class SQLiteRepository:
             if not db.execute("DELETE FROM records WHERE kind='complaints' AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,attendance_id)).rowcount:
                 raise LookupError('Registro não encontrado')
 
+    def clear_messages(self, clinic, identifier):
+        """Apaga o histórico de uma conversa e o que dependia dele (resumo, avaliações, classificação)."""
+        with self.connect() as db:
+            if not db.in_transaction: db.execute('BEGIN IMMEDIATE')
+            if not db.execute("UPDATE records SET data=json_set(data,'$.mensagens',json('[]')) WHERE id=? AND kind='attendance' AND clinic=?",
+                              (identifier,clinic)).rowcount:
+                raise LookupError('Registro não encontrado')
+            db.execute("DELETE FROM records WHERE kind IN ('summaries','answer_ratings','complaints','attendance_meta') "
+                       "AND clinic=? AND json_extract(data,'$.attendance_id')=?",(clinic,identifier))
+
     def append_message(self, clinic, identifier, message):
         with self.connect() as db:
             if not db.in_transaction: db.execute('BEGIN IMMEDIATE')

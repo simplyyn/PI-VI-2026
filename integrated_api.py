@@ -78,6 +78,26 @@ def resume_customer_ai(request:Request):
     return customer_view(request, CustomerChat(repo,user).get())
 
 
+@router.post('/api/cliente/limpar')
+def clear_customer_conversation(request:Request):
+    """O paciente apaga todo o histórico da própria conversa (útil para demonstrações).
+    Consultas já agendadas continuam na agenda; só as mensagens e o rascunho de agendamento são descartados."""
+    from workflows import customer_conversation as own_conversation,audit
+    from fastapi import HTTPException
+    user=require_user(request,{'customer'});csrf_check(request)
+    repo=request.app.state.repository;require_workflows(repo)
+    if not hasattr(repo,'clear_messages'):raise HTTPException(409,'O banco configurado não permite apagar conversas.')
+    with repo.transaction() as tx:
+        item=own_conversation(tx,user);identifier=item.pop('id')
+        tx.clear_messages(user['empresa_id'],identifier)
+        item.update(mensagens=[],status='pending',canal='ai',preview='Conversa do paciente')
+        tx.save('attendance',user['empresa_id'],item,identifier)
+        audit(tx,user,'customer_conversation_cleared',identifier)
+    request.session.pop('patient_booking',None)
+    request.session.pop('booking',None)
+    return customer_view(request, CustomerChat(repo,user).get())
+
+
 @router.post('/api/cliente/mensagens')
 def customer_send(request:Request,data:CustomerMessage):
     user=require_user(request,{'customer'});csrf_check(request)
@@ -91,6 +111,10 @@ def customer_send(request:Request,data:CustomerMessage):
 
 def customer_view(request, result):
     action = result.get('acao')
+    if action and action.get('estado') in {'escolher_procedimento', 'escolher_profissional'}:
+        # Escolhas sem rascunho salvo: só valem enquanto forem a última resposta da conversa.
+        last = (result.get('mensagens') or [{}])[-1]
+        return result if last.get('acao') == action else dict(result, acao=None)
     if action and action.get('estado') not in {'concluido', 'cancelado'} and not request.session.get('patient_booking'):
         return dict(result, acao=None)
     return result
